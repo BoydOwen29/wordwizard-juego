@@ -819,7 +819,7 @@ body.jugando #luces { opacity: 0; }
    ===================================================================== */
 .modal-caja.con-carrusel { padding-left: 0; padding-right: 0; overflow: hidden; }
 .modal-caja.con-carrusel > .fila:last-child:empty { display: none; }
-.carrusel { overflow: hidden; touch-action: pan-y; user-select: none; cursor: grab; }
+.carrusel { overflow: hidden; touch-action: none; user-select: none; cursor: grab; }   /* el gesto es todo del carrusel: con pan-y el celular a veces se quedaba con el arrastre */
 .carrusel:active { cursor: grabbing; }
 .carrusel-pista { display: flex; transition: transform .38s cubic-bezier(.2,.8,.3,1); will-change: transform; }
 .carrusel-paso { flex: 0 0 100%; min-width: 0; padding: 0 20px; box-sizing: border-box; min-height: 300px; }

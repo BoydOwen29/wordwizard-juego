@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.14.1',
+    version: '2.14.2',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -1536,7 +1536,8 @@
       car.addEventListener('pointermove', (e) => {
         if (!arrastrando) return;
         dx = e.clientX - x0;
-        if (horizontal === null && (Math.abs(dx) > 8 || Math.abs(e.clientY - y0) > 8)) { horizontal = Math.abs(dx) > Math.abs(e.clientY - y0); if (horizontal) car.setPointerCapture(e.pointerId); }
+        // generoso con el pulgar: alcanza con que vaya más o menos de costado
+        if (horizontal === null && (Math.abs(dx) > 6 || Math.abs(e.clientY - y0) > 10)) { horizontal = Math.abs(dx) >= Math.abs(e.clientY - y0) * .6; if (horizontal) { try { car.setPointerCapture(e.pointerId); } catch (err) { /* ya soltó */ } } }
         if (!horizontal) return;
         const borde = (i === 0 && dx > 0) || (i === n - 1 && dx < 0) ? .35 : 1;
         pista.style.transition = 'none';
