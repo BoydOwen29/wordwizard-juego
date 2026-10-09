@@ -996,7 +996,7 @@ body.con-tabbar .pantalla.con-tabs, body.con-tabbar #p-mapa { padding-bottom: ca
 .modal-misiones .misiones { margin: 0; }
 
 /* ===================== v2.11 · idiomas ===================== */
-html:not([lang="es"]) [data-idioma="es"], html[lang="es"] [data-idioma]:not([data-idioma="es"]) { display: none !important; }
+html:not([lang="es"]) [data-idioma="es"], html:not([lang="en"]) [data-idioma="en"], html:not([lang="pt"]) [data-idioma="pt"] { display: none !important; }
 .idioma-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 6px; font-weight: 800; }
 .idioma-fila select { font: 600 15px var(--display); padding: 6px 10px; border-radius: 12px; border: 3px solid var(--borde-m); background: var(--madera); color: #f3f6ee; }
 

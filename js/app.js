@@ -5,6 +5,15 @@
   'use strict';
   const T = (es, v) => window.WWI18n.t(es, v), EN = window.WWI18n.idioma === 'en';
   const IDIOMA_DATOS = window.WWI18n.idiomaDatos;
+  /** Lo que cambia con el idioma y no es una traducción: ejemplos del tutorial, letras del fondo, texto para compartir. */
+  const LOCAL = {
+    es: { base: 'CAMINAR', arma: 'CAMA', ejemplos: ['cama', 'mina', 'rima'], y: 'y', letras: 'ABCDEFGHIJLMNÑOPRSTUV',
+      torre: 'Torre Arcana', piso: 'Piso', palabras: 'palabras', jefe: (n) => `${n} jefe${n > 1 ? 's' : ''}`, reto: '¿Me superás?', racha: 'racha' },
+    en: { base: 'PLANETS', arma: 'PLAN', ejemplos: ['plan', 'lane', 'slant'], y: 'and', letras: 'ABCDEFGHIKLMNOPRSTUWY',
+      torre: 'Arcane Tower', piso: 'Floor', palabras: 'words', jefe: (n) => `${n} boss${n > 1 ? 'es' : ''}`, reto: 'Can you beat me?', racha: 'streak' },
+    pt: { base: 'PLANETA', arma: 'PENA', ejemplos: ['pena', 'tela', 'planta'], y: 'e', letras: 'ABCDEFGHIJLMNOPRSTUVÇ',
+      torre: 'Torre Arcana', piso: 'Andar', palabras: 'palavras', jefe: (n) => `${n} chef${n > 1 ? 'ões' : 'ão'}`, reto: 'Consegue me superar?', racha: 'sequência' },
+  }[window.WWI18n.idioma] || {};
   /** Clave del desafío diario en el perfil: cada idioma tiene el suyo (en español, solo la fecha, como siempre). */
   const K = (fecha) => (IDIOMA_DATOS === 'es' ? fecha : `${IDIOMA_DATOS}:${fecha}`);
   /** El desafío empezado, si es de este idioma (uno empezado en otro idioma espera a que se vuelva a ese). */
@@ -16,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.13.1',
+    version: '2.13.2',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -393,7 +402,9 @@
       $('aj-idioma').closest('.idioma-fila').classList.toggle('oculto', window.WWI18n.disponibles.length < 2);
       $('aj-idioma').querySelectorAll('option').forEach((o) => { o.hidden = !window.WWI18n.disponibles.includes(o.value); });
       $('aj-idioma').value = window.WWI18n.idioma;
-      if (EN) document.querySelectorAll('#p-ajustes a[href="privacidad.html"], #p-ajustes a[href="terminos.html"]').forEach((a) => { a.href = a.getAttribute('href') === 'privacidad.html' ? 'privacy.html' : 'terms.html'; });
+      // privacidad y términos en el idioma del juego
+      const PAGINAS = { en: ['privacy.html', 'terms.html'], pt: ['privacidade.html', 'termos.html'] }[window.WWI18n.idioma];
+      if (PAGINAS) document.querySelectorAll('#p-ajustes a[href="privacidad.html"], #p-ajustes a[href="terminos.html"]').forEach((a) => { a.href = a.getAttribute('href') === 'privacidad.html' ? PAGINAS[0] : PAGINAS[1]; });
       $('aj-idioma').addEventListener('change', (e) => { Audio.click(); Estado.guardar(); window.WWI18n.cambiar(e.target.value); });
       $('aj-sonido').addEventListener('change', (e) => { Estado.perfil.ajustes.sonido = e.target.checked; Audio.setSonido(e.target.checked); Estado.guardar(); Audio.click(); });
       $('aj-musica').addEventListener('change', (e) => { Estado.perfil.ajustes.musica = e.target.checked; Audio.setMusica(e.target.checked); Estado.guardar(); this.pintarMusica(); });
@@ -1304,14 +1315,13 @@
       const url = /^https?:/.test(location.protocol) ? '\n' + location.origin + location.pathname : '';
       let texto;
       if (r.modo === 'arcade') {
-        texto = EN
-          ? `🗼 Word Wizard · Arcane Tower\n🏁 Floor ${r.piso} · ${r.puntos} pts · ${r.palabrasTotal} words${r.jefes ? ` · ${r.jefes} boss${r.jefes > 1 ? 'es' : ''} ⚔️` : ''}\nCan you beat me?${url}`
-          : `🗼 Word Wizard · Torre Arcana\n🏁 Piso ${r.piso} · ${r.puntos} pts · ${r.palabrasTotal} palabras${r.jefes ? ` · ${r.jefes} jefe${r.jefes > 1 ? 's' : ''} ⚔️` : ''}\n¿Me superás?${url}`;
+        const Lc = LOCAL || {};
+        texto = `🗼 Word Wizard · ${Lc.torre}\n🏁 ${Lc.piso} ${r.piso} · ${r.puntos} pts · ${r.palabrasTotal} ${Lc.palabras}${r.jefes ? ` · ${Lc.jefe(r.jefes)} ⚔️` : ''}\n${Lc.reto}${url}`;
       } else {
         const idx = WW.RANGOS.indexOf(r.rango);
         const barra = WW.RANGOS.slice(1).map((_, i) => (i < idx ? '🟩' : '⬛')).join('');
         const racha = Estado.rachaVigente(this.hoy);
-        texto = `🧙 Word Wizard #${r.numero} · ${r.rango.icono} ${T(r.rango.nombre)}\n⭐ ${r.puntos} pts · ${r.nEnc}/${r.total} ${T('palabras')}\n${barra}${racha > 1 ? ` ${EN ? 'streak' : 'racha'} ${racha}🔥` : ''}${url}`;
+        texto = `🧙 Word Wizard #${r.numero} · ${r.rango.icono} ${T(r.rango.nombre)}\n⭐ ${r.puntos} pts · ${r.nEnc}/${r.total} ${T('palabras')}\n${barra}${racha > 1 ? ` ${LOCAL.racha} ${racha}🔥` : ''}${url}`;
       }
       Audio.click();
       if (navigator.share && !window.WW_ARTIFACT) navigator.share({ text: texto }).catch(() => this.copiar(texto));
@@ -1488,7 +1498,7 @@
       const fila = (ic, b, t) => `<div class="tut-fila">${I(ic)}<div><b>${b}</b><small>${t}</small></div></div>`;
       const pasos = [
         { t: '¡HOLA! SOY SILABO', h: `<div class="tut-mago tut-saluda">${window.Silabo.mago(window.Silabo.OFICIAL)}</div><p>Soy el mago de las palabras. Te doy las letras de una palabra y vos armás todas las que puedas.</p>` },
-        { t: 'ARMÁ PALABRAS', h: `${fichas(EN ? 'PLANETS' : 'CAMINAR')}<div class="tut-flecha">↓</div><div class="tut-arma">${(EN ? 'PLAN' : 'CAMA').split('').map((l, i) => `<span style="--i:${i}">${l}</span>`).join('')}<em style="--i:4">✓</em></div><p>Tocá las letras y mandá con <b>Enviar</b>. Mínimo 3 letras, cada una las veces que aparece. ${EN ? '<b data-no-t>plan</b>, <b data-no-t>lane</b>, <b data-no-t>slant</b>… <span data-no-t>and</span> <b data-no-t>planets</b>.' : '<b>cama</b>, <b>mina</b>, <b>rima</b>… y <b>caminar</b>.'}</p>` },
+        { t: 'ARMÁ PALABRAS', h: `${fichas(LOCAL.base)}<div class="tut-flecha">↓</div><div class="tut-arma">${LOCAL.arma.split('').map((l, i) => `<span style="--i:${i}">${l}</span>`).join('')}<em style="--i:4">✓</em></div><p>Tocá las letras y mandá con <b>Enviar</b>. Mínimo 3 letras, cada una las veces que aparece. ${LOCAL.ejemplos.map((w) => `<b data-no-t>${w}</b>`).join(', ')}… <span data-no-t>${LOCAL.y}</span> <b data-no-t>${LOCAL.base.toLowerCase()}</b>.</p>` },
         { t: 'MÁS LARGAS, MÁS PUNTOS', h: `<div class="tut-puntos"><span><b>3</b> letras <i>1</i></span><span><b>5</b> letras <i>4</i></span><span><b>7</b> letras <i>10</i></span><span class="oro">la palabra entera <i>+15</i></span></div><p>Si acertás seguido armás <b>combo</b>: desde la tercera, cada palabra vale más, hasta ×2.</p>` },
         { t: 'TRES FORMAS DE JUGAR', h: `<div class="tut-filas">${fila('calendario', 'Desafío diario', 'La misma palabra para todos, 3 minutos, una vez por día.')}${fila('torre', 'Torre Arcana', 'Subí piso por piso, vencé jefes y juntá monedas.')}${fila('vela', 'Práctica', 'Sin reloj y con pistas, para aprender.')}</div>` },
         { t: 'VOLVÉ CADA DÍA', h: `<div class="tut-filas">${fila('llama', 'Racha', 'Jugá el desafío todos los días.')}${fila('vela', 'Vela de racha', 'Si un día faltás, salva tu racha.')}${fila('estrella', 'Misiones', 'Tres por día, con monedas de premio.')}</div><button class="link-reglas" id="tut-reglas">Ver las reglas completas</button>` },
@@ -1594,7 +1604,7 @@
       let W = 0, H = 0; const dpr = Math.min(2, window.devicePixelRatio || 1);
       const medir = () => { W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
       medir(); addEventListener('resize', medir);
-      const LETRAS = EN ? 'ABCDEFGHIKLMNOPRSTUWY' : 'ABCDEFGHIJLMNÑOPRSTUV';
+      const LETRAS = LOCAL.letras;
       const nueva = () => ({ x: Math.random() * W, y: H * (.3 + Math.random() * .7), vx: 0, vy: 0, r: 1 + Math.random() * 2, f: Math.random() * 6.28, l: LETRAS[Math.floor(Math.random() * LETRAS.length)] });
       const ps = Array.from({ length: 34 }, nueva);
       const ptr = { x: -999, y: -999, t: 0 };
@@ -1835,7 +1845,7 @@
         // tocar el fondo sacude los árboles
         if (window.WWEscena && !e.target.closest('button, input, textarea, a, label, select, .ficha, .mago, .modal-caja, .tarjeta-jugador, .misiones, .encontradas, .palabra-actual, .hud, .hud-inicio, .tabbar, .ranking, .stats, .logros-grilla, .ajustes, .ayuda')) {
           if (window.WWVida) WWVida.tocar(e.clientX, e.clientY);
-          if (WWEscena.tocar(e.clientX)) Audio.hojas();
+          WWEscena.tocar(e.clientX);   // sin sonido: repetido en cada toque molestaba
         }
       }, { passive: true });
       document.addEventListener('keydown', () => { this.ultimaAccion = Date.now(); this._consejoDado = false; const m = activo(); if (m && m.estado === 'dormido') m.despertar(); });

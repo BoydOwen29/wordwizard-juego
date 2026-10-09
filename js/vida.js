@@ -341,7 +341,7 @@
       }
       const luna = this.escena.querySelector('.esc-astro circle[stroke]');
       if (luna && cerca(luna, 8)) { this.guinoLuna(luna); return 'luna'; }
-      if (!this._tChispa || Date.now() - this._tChispa > 120) { this._tChispa = Date.now(); this.chispas(lx, ly); sonar('chispa'); }
+      if (!this._tChispa || Date.now() - this._tChispa > 120) { this._tChispa = Date.now(); this.chispas(lx, ly); }
       return null;
     },
 

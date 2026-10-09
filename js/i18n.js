@@ -17,7 +17,7 @@
   'use strict';
 
   const LS = 'ww.idioma';
-  const IDIOMAS = { es: 'Español', en: 'English' };
+  const IDIOMAS = { es: 'Español', en: 'English', pt: 'Português' };
 
   // idiomas con diccionario propio: solo esos se eligen solos o aparecen en Ajustes.
   // Para probar uno en preparación: localStorage 'ww.idioma.prueba' = '1'.

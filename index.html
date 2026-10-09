@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" href="assets/img/icon-192x192.png">
 <link rel="preload" href="assets/fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/estilo.css?v=2.13.1">
+<link rel="stylesheet" href="css/estilo.css?v=2.13.2">
 </head>
 <body>
 
@@ -320,6 +320,34 @@
       <h3>Keyboard</h3>
       <p>You can type with a physical keyboard: <kbd>Enter</kbd> submits, <kbd>⌫</kbd> deletes, <kbd>Space</kbd> shuffles, <kbd>Esc</kbd> clears.</p>
     </div>
+    <div class="ayuda" data-idioma="pt">
+      <h3>A ideia</h3>
+      <p>Silabo, o pequeno mago, te dá as letras de uma palavra. Forme todas as palavras que conseguir com elas, em qualquer ordem, usando cada letra quantas vezes ela aparecer. Mínimo 3 letras. Plurais e verbos conjugados valem. A palavra-base inteira dá um bônus grande.</p>
+      <div class="ejemplo"><b>Exemplo:</b> com <b>P L A N E T A</b> dá para formar <i>pena</i>, <i>tela</i>, <i>pata</i>, <i>lenta</i>, <i>planta</i>… e <i>planeta</i>.</div>
+      <h3>Pontos</h3>
+      <table class="tabla-puntos">
+        <tr><td>3 letras</td><td>1</td><td>4 letras</td><td>2</td></tr>
+        <tr><td>5 letras</td><td>4</td><td>6 letras</td><td>7</td></tr>
+        <tr><td>7 letras</td><td>10</td><td>8 letras</td><td>14</td></tr>
+        <tr><td>9 letras</td><td>18</td><td>Palavra-base</td><td>+15</td></tr>
+      </table>
+      <p><b>Combo:</b> se você acertar palavras seguidas (menos de 6 segundos entre uma e outra), a partir da terceira cada palavra vale mais: ×1,25, ×1,5, ×1,75 e até ×2. Um erro quebra o combo. O nível do desafio é calculado sem o combo, para ser justo com todos.</p>
+      <p><b>Palavras extras:</b> as palavras muito raras também valem e somam pontos, mas não entram na conta do total: ninguém precisa conhecê-las.</p>
+      <h3>Modos</h3>
+      <p><b>📅 Desafio diário:</b> a mesma palavra para todos, 3 minutos, uma vez por dia. Se você fechar o jogo, o relógio continua correndo. Aumente sua sequência e suba de nível: Aprendiz, Iniciado, Conjurador, Feiticeiro, Mago, Arquimago, Lenda e Onisciente. Compartilhe seu resultado.</p>
+      <p><b>🗼 Torre Arcana:</b> suba por quatro lugares (caverna de cristais, biblioteca encantada, pico nevado e céu). Cada andar é uma palavra e uma meta de pontos com 75 segundos. Você tem 3 vidas. A cada 5 andares um <b>chefão</b> te espera: suas palavras tiram a vida dele e você tem 90 segundos para vencê-lo. Junte moedas para os poderes.</p>
+      <p><b>🧘 Treino:</b> sem relógio, com dicas grátis. Para aprender palavras.</p>
+      <h3>Vela da sequência</h3>
+      <p>Toque na sua sequência no início para comprar uma vela (50 moedas, até 2). Se um dia você não jogar o desafio, uma vela se apaga e a sequência não se quebra.</p>
+      <h3>Missões</h3>
+      <p>Todo dia há três missões (as mesmas para todos). Cada uma dá 15 moedas e 30 XP; as três juntas, um bônus.</p>
+      <h3>Poderes</h3>
+      <p>💡 <b>Dica:</b> mostra o começo de uma palavra que falta. ⏳ <b>Ampulheta:</b> +20 segundos. 👁️ <b>Olho arcano:</b> revela uma palavra inteira (vale a metade). 🛡️ <b>Escudo:</b> os erros não quebram o combo. Compre com moedas na Torre; no desafio diário não são usados.</p>
+      <h3>Grade de dicas</h3>
+      <p>Embaixo das encontradas aparece quantas palavras há de cada tamanho e quantas você já tem. Dá para desligar nos Ajustes.</p>
+      <h3>Teclado</h3>
+      <p>Você pode digitar no teclado físico: <kbd>Enter</kbd> envia, <kbd>⌫</kbd> apaga, <kbd>Espaço</kbd> embaralha, <kbd>Esc</kbd> limpa.</p>
+    </div>
   </section>
 
   <!-- ===================== AJUSTES ===================== -->
@@ -330,7 +358,7 @@
       <label class="check"><input type="checkbox" id="aj-musica"> Música</label>
       <label class="check"><input type="checkbox" id="aj-vibracion"> Vibración (celular)</label>
       <label class="check"><input type="checkbox" id="aj-grilla"> Grilla de pistas por largo</label>
-      <label class="idioma-fila"><span data-no-t>Idioma · Language</span><select id="aj-idioma" data-no-t><option value="es">Español</option><option value="en">English</option></select></label>
+      <label class="idioma-fila"><span data-no-t>Idioma · Language</span><select id="aj-idioma" data-no-t><option value="es">Español</option><option value="en">English</option><option value="pt">Português</option></select></label>
       <h3>Colores de Silabo</h3>
       <div id="aj-sombreros" class="sombreros"></div>
       <h3>Perfil</h3>
@@ -364,23 +392,24 @@
 <div id="toasts" aria-live="polite"></div>
 <div id="modal" class="modal oculto"><div class="modal-caja" id="modal-caja" role="dialog" aria-modal="true"></div></div>
 
-<script src="js/i18n.js?v=2.13.1"></script>
-<script src="js/i18n-en.js?v=2.13.1"></script>
+<script src="js/i18n.js?v=2.13.2"></script>
+<script src="js/i18n-en.js?v=2.13.2"></script>
+<script src="js/i18n-pt.js?v=2.13.2"></script>
 <script>
   // diccionario, desafíos y totales del idioma elegido
-  for (const n of ['diccionario', 'desafios', 'totales']) document.write('<script src="' + WWI18n.datos + n + '.js?v=2.13.1"><\/script>');
+  for (const n of ['diccionario', 'desafios', 'totales']) document.write('<script src="' + WWI18n.datos + n + '.js?v=2.13.2"><\/script>');
 </script>
-<script src="js/motor.js?v=2.13.1"></script>
-<script src="js/silabo.js?v=2.13.1"></script>
-<script src="js/iconos.js?v=2.13.1"></script>
-<script src="js/mago.js?v=2.13.1"></script>
-<script src="js/mapa.js?v=2.13.1"></script>
-<script src="js/escena.js?v=2.13.1"></script>
-<script src="js/vida.js?v=2.13.1"></script>
-<script src="js/audio.js?v=2.13.1"></script>
-<script src="js/logros.js?v=2.13.1"></script>
-<script src="js/estado.js?v=2.13.1"></script>
-<script src="js/ranking.js?v=2.13.1"></script>
-<script src="js/app.js?v=2.13.1"></script>
+<script src="js/motor.js?v=2.13.2"></script>
+<script src="js/silabo.js?v=2.13.2"></script>
+<script src="js/iconos.js?v=2.13.2"></script>
+<script src="js/mago.js?v=2.13.2"></script>
+<script src="js/mapa.js?v=2.13.2"></script>
+<script src="js/escena.js?v=2.13.2"></script>
+<script src="js/vida.js?v=2.13.2"></script>
+<script src="js/audio.js?v=2.13.2"></script>
+<script src="js/logros.js?v=2.13.2"></script>
+<script src="js/estado.js?v=2.13.2"></script>
+<script src="js/ranking.js?v=2.13.2"></script>
+<script src="js/app.js?v=2.13.2"></script>
 </body>
 </html>

@@ -1,12 +1,12 @@
 /* Word Wizard — service worker (solo cuando se sirve por http/https).
    Estrategia: red primero y, si no hay conexión, caché. Así una versión nueva
    se ve al instante y el juego sigue abriendo sin internet. */
-const VERSION = 'ww-v2.13.1';
+const VERSION = 'ww-v2.13.2';
 const ARCHIVOS = [
   './', './index.html', './manifest.json',
-  './css/estilo.css?v=2.13.1',
-  './js/i18n.js?v=2.13.1', './js/i18n-en.js?v=2.13.1', './js/motor.js?v=2.13.1', './js/silabo.js?v=2.13.1', './js/iconos.js?v=2.13.1', './js/mago.js?v=2.13.1', './js/mapa.js?v=2.13.1', './js/escena.js?v=2.13.1', './js/vida.js?v=2.13.1', './js/audio.js?v=2.13.1', './js/logros.js?v=2.13.1', './js/estado.js?v=2.13.1', './js/ranking.js?v=2.13.1', './js/app.js?v=2.13.1',
-  './data/diccionario.js?v=2.13.1', './data/desafios.js?v=2.13.1', './data/totales.js?v=2.13.1',
+  './css/estilo.css?v=2.13.2',
+  './js/i18n.js?v=2.13.2', './js/i18n-en.js?v=2.13.2', './js/i18n-pt.js?v=2.13.2', './js/motor.js?v=2.13.2', './js/silabo.js?v=2.13.2', './js/iconos.js?v=2.13.2', './js/mago.js?v=2.13.2', './js/mapa.js?v=2.13.2', './js/escena.js?v=2.13.2', './js/vida.js?v=2.13.2', './js/audio.js?v=2.13.2', './js/logros.js?v=2.13.2', './js/estado.js?v=2.13.2', './js/ranking.js?v=2.13.2', './js/app.js?v=2.13.2',
+  './data/diccionario.js?v=2.13.2', './data/desafios.js?v=2.13.2', './data/totales.js?v=2.13.2',
   './assets/fonts/fredoka-latin.woff2', './assets/fonts/nunito-latin.woff2',
   './assets/img/icon-192x192.png', './assets/img/icon-512x512.png', './assets/img/wordwizard.ico',
 ];
