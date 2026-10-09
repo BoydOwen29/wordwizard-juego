@@ -16,7 +16,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.13.0',
+    version: '2.13.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -393,6 +393,7 @@
       $('aj-idioma').closest('.idioma-fila').classList.toggle('oculto', window.WWI18n.disponibles.length < 2);
       $('aj-idioma').querySelectorAll('option').forEach((o) => { o.hidden = !window.WWI18n.disponibles.includes(o.value); });
       $('aj-idioma').value = window.WWI18n.idioma;
+      if (EN) document.querySelectorAll('#p-ajustes a[href="privacidad.html"], #p-ajustes a[href="terminos.html"]').forEach((a) => { a.href = a.getAttribute('href') === 'privacidad.html' ? 'privacy.html' : 'terms.html'; });
       $('aj-idioma').addEventListener('change', (e) => { Audio.click(); Estado.guardar(); window.WWI18n.cambiar(e.target.value); });
       $('aj-sonido').addEventListener('change', (e) => { Estado.perfil.ajustes.sonido = e.target.checked; Audio.setSonido(e.target.checked); Estado.guardar(); Audio.click(); });
       $('aj-musica').addEventListener('change', (e) => { Estado.perfil.ajustes.musica = e.target.checked; Audio.setMusica(e.target.checked); Estado.guardar(); this.pintarMusica(); });

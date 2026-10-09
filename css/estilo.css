@@ -1061,3 +1061,6 @@ html:not([lang="es"]) [data-idioma="es"], html[lang="es"] [data-idioma]:not([dat
 /* logo en el inicio (copia del de la pantalla de título) */
 .inicio-logo { display: flex; justify-content: center; margin: 8px 0 0; pointer-events: none; }
 .inicio-logo .logo-titulo { width: min(42vw, 170px); }
+/* el título del capítulo se achica si no entra (en inglés es más largo) y los corazones no se salen */
+.cabecera h2.titulo-capitulo { min-width: 0; flex: 1 1 auto; font-size: clamp(15px, 4.6vw, 21px); overflow: hidden; text-overflow: ellipsis; }
+.mapa-vidas { flex: none; }
