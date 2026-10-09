@@ -952,3 +952,46 @@ body.jugando #luces { opacity: 0; }
 .mundo-sub button { border: 2px solid var(--borde-m); background: rgba(20,33,40,.55); color: var(--texto-suave); font: 600 14px var(--display); padding: 5px 14px; border-radius: 999px; }
 .mundo-sub button.activa { color: #2a2412; background: var(--oro); border-color: var(--borde-m); }
 .mundo-lista { display: flex; flex-direction: column; gap: 8px; }
+
+/* ===================== v2.10 · inicio limpio + pestañas ===================== */
+body.con-tabbar .pantalla.con-tabs, body.con-tabbar #p-mapa { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; max-width: 520px; margin: 0 auto; padding: 7px 6px calc(9px + env(safe-area-inset-bottom));
+  background: var(--madera) repeating-linear-gradient(180deg, transparent 0 10px, var(--veta) 10px 12px, transparent 12px 24px); border-top: 3px solid var(--borde-m); border-radius: 18px 18px 0 0;
+  box-shadow: inset 0 3px 0 var(--madera-hi), 0 -6px 18px rgba(10,20,25,.35); animation: entra .35s var(--suave); }
+.tabbar button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; padding: 2px 0; color: #c9d6cc; font: 600 11.5px var(--display); text-shadow: 0 1px 0 var(--borde-m); cursor: pointer; }
+.tabbar .ic { width: 30px; height: 30px; transition: transform .2s var(--spring); }
+.tabbar button.activa { color: var(--oro); }
+.tabbar button.activa .ic { transform: translateY(-2px) scale(1.08); filter: drop-shadow(0 0 6px rgba(242,198,109,.55)); }
+.tabbar button:active .ic { transform: translateY(2px); }
+
+#p-menu { justify-content: space-between; }
+.hud-inicio { display: flex; align-items: center; gap: 6px; position: relative; }
+.hud-yo { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; background: rgba(16,26,30,.55); border: 2px solid var(--borde-m); color: #f3f6ee; text-align: left; cursor: pointer; }
+.hud-nivel { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--oro); color: #2a2412; border: 2px solid var(--borde-m); font-size: 15px; box-shadow: inset 0 2px 0 #ffe2a0, inset 0 -3px 0 var(--bronce); }
+.hud-datos { min-width: 0; line-height: 1.1; }
+.hud-datos b { display: block; font: 600 15px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-datos small { display: block; font-size: 11px; color: var(--texto-suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-inicio .chip { flex: none; }
+#p-menu .btn-musica-menu { position: static; flex: none; width: 38px; height: 38px; }
+.inicio-mago { flex: 1; display: flex; align-items: flex-end; justify-content: center; min-height: 0; pointer-events: none; }
+.inicio-mago .mago { pointer-events: auto; }
+.mago-inicio { width: min(46vw, 200px); margin-bottom: 6px; }
+.inicio-abajo { display: flex; flex-direction: column; gap: 8px; padding: 0 6px 4px; }
+.btn-jugar { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 18px; border-radius: 22px; border: 3px solid var(--borde-m); background: var(--oro); color: #2a2412; text-align: left; cursor: pointer;
+  box-shadow: inset 0 3px 0 #ffe2a0, inset 0 -6px 0 var(--bronce), 0 6px 0 var(--borde-m), 0 14px 30px rgba(10,20,25,.35); transition: transform .12s; }
+.btn-jugar:active { transform: translateY(4px); box-shadow: inset 0 3px 0 #ffe2a0, inset 0 -3px 0 var(--bronce), 0 2px 0 var(--borde-m); }
+.btn-jugar > .ic { width: 40px; height: 40px; flex: none; }
+.btn-jugar-texto { flex: 1; min-width: 0; }
+.btn-jugar-texto b { display: block; font: 700 22px/1.1 var(--display); }
+.btn-jugar-texto small { display: block; font-size: 12.5px; font-weight: 800; opacity: .78; }
+.btn-jugar .btn-menu-estado { font: 600 11px var(--display); background: rgba(42,36,18,.15); padding: 3px 8px; border-radius: 999px; }
+.btn-jugar:empty { display: none; }
+.btn-jugar.hecho { background: var(--madera); color: #f3f6ee; box-shadow: inset 0 3px 0 var(--madera-hi), inset 0 -6px 0 var(--madera-sh), 0 6px 0 var(--borde-m); }
+.inicio-misiones { align-self: center; display: flex; align-items: center; gap: 8px; background: rgba(16,26,30,.5); border: 2px solid var(--borde-m); border-radius: 999px; padding: 5px 14px; color: #dfebd6; font: 600 13px var(--display); cursor: pointer; }
+.misiones-puntos { display: flex; gap: 5px; }
+.misiones-puntos i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--borde-m); background: rgba(223,235,214,.25); }
+.misiones-puntos i.ok { background: var(--oro); box-shadow: 0 0 6px rgba(242,198,109,.7); }
+
+.mago-medallones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 6px; margin: 14px 0 12px; }
+#p-mago .tarjeta-jugador { padding-left: 16px; }
+.modal-misiones .misiones { margin: 0; }

@@ -7,7 +7,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.9.0',
+    version: '2.10.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -207,6 +207,24 @@
       if (id === 'p-juego' && window.WWEscena) WWEscena.calmar();
       Audio.tema(id === 'p-juego' ? (this.partida && this.partida.jefe ? 'jefe' : 'juego') : id === 'p-mapa' ? 'juego' : 'menu');
       const s = $(id); if (s) s.scrollTop = 0;
+      this.pintarTabs(id);
+    },
+
+    /** La barra de pestañas va en las pantallas principales; en la Torre, solo si no hay una subida en curso. */
+    pintarTabs(id) {
+      const subida = id === 'p-mapa' && this._torre && this._torre.pa && !this._torre.pa.arcade.cerrada;
+      const con = ['p-menu', 'p-practica', 'p-rankings', 'p-mago', 'p-mapa'].includes(id) && !subida;
+      $('tabbar').classList.toggle('oculto', !con);
+      document.body.classList.toggle('con-tabbar', con);
+      document.querySelectorAll('#tabbar [data-tab]').forEach((b) => b.classList.toggle('activa', b.dataset.tab === id));
+    },
+
+    verMisiones() {
+      this.renderMisiones();
+      const copia = $('misiones').cloneNode(true);
+      copia.removeAttribute('id'); copia.querySelectorAll('[id]').forEach((e) => e.removeAttribute('id'));
+      this.modal('<div class="modal-misiones"></div>', [{ texto: 'Listo', clase: 'btn-primario' }]);
+      $('modal-caja').querySelector('.modal-misiones').appendChild(copia);
     },
 
     irMenu() {
@@ -215,6 +233,24 @@
       this.hoy = WW.claveDia();
       if (p.enCurso && p.enCurso.fecha !== this.hoy && !p.diarios[p.enCurso.fecha]) this.cerrarDiarioGuardado(p.enCurso);
       if (this.nivelPendiente) { const n = this.nivelPendiente; this.nivelPendiente = 0; setTimeout(() => this.anunciarNivel(n), 600); }
+      this.pintarPerfil();
+      this.mostrar('p-menu');
+    },
+
+    verMago() {
+      this.ponerLugar(null);
+      this.hoy = WW.claveDia();
+      this.pintarPerfil();
+      this.mostrar('p-mago');
+    },
+
+    /** Datos del mago en el inicio (barra de arriba, botón del desafío) y en Mi mago. */
+    pintarPerfil() {
+      const p = Estado.perfil;
+      $('hud-nombre').textContent = p.nombre;
+      $('hud-titulo').textContent = WW.tituloNivel(p.nivel);
+      $('hud-nivel').textContent = p.nivel;
+      $('hud-monedas').textContent = p.monedas;
       $('menu-nombre').textContent = p.nombre;
       $('menu-titulo').textContent = WW.tituloNivel(p.nivel);
       this.pintarXp('menu-xp-fill', 'menu-xp-txt', p.xp);
@@ -226,11 +262,11 @@
       const n = WW.numeroDia();
       const jugado = p.diarios[this.hoy];
       const enCurso = p.enCurso && p.enCurso.fecha === this.hoy && !jugado;
+      $('btn-diario-titulo').textContent = jugado ? 'Desafío de hoy ✓' : enCurso ? 'Seguir el desafío' : 'Jugar el desafío';
+      $('btn-diario').classList.toggle('hecho', !!jugado);
       $('btn-diario-sub').textContent = jugado ? `#${n} · ${jugado.rango} · ${jugado.puntos} pts` : enCurso ? `#${n} · en curso, ¡volvé rápido!` : `Desafío #${n} · 3 minutos`;
-      $('btn-diario-estado').textContent = jugado ? 'LISTO ✓' : enCurso ? 'EN CURSO' : '';
-      $('btn-arcade-sub').textContent = 'Capítulo 1 · ' + (p.arcade.mejorPiso ? `mejor: piso ${p.arcade.mejorPiso} · ${p.arcade.mejorPuntaje} pts${p.arcade.jefes ? ` · ${p.arcade.jefes} jefes` : ''}` : 'subí pisos y vencé jefes');
+      $('btn-diario-estado').textContent = enCurso ? 'EN CURSO' : '';
       this.renderMisiones();
-      this.mostrar('p-menu');
     },
 
     pintarXp(idFill, idTxt, xp, nivelForzado) {
@@ -263,11 +299,11 @@
         if (t.pa) this.nuevaPartida('arcade', { piso: t.sig, continuar: true, usadas: t.pa.arcade.usadas });
         else this.nuevaPartida('arcade');
       });
-      $('mapa-tienda').addEventListener('click', () => {
-        Audio.click();
-        this.modal(`<h3>TIENDA</h3><p class="tienda-saldo">TENÉS ${Estado.perfil.monedas} ${WWIconos.html('moneda')}</p><div class="tienda" id="tienda"></div>`, [{ texto: 'Listo', clase: 'btn-primario' }]);
+      $('mapa-tienda').addEventListener('click', () => { Audio.click(); this.abrirTienda(); });
+      this.abrirTienda = () => {
+        this.modal(`<h3>TIENDA</h3><p class="tienda-saldo">TENÉS ${Estado.perfil.monedas} ${WWIconos.html('moneda')}</p><div class="tienda" id="tienda"></div>`, [{ texto: 'Listo', clase: 'btn-primario', accion: () => this.pintarPerfil() }]);
         this.renderTienda();
-      });
+      };
       $('mapa-salir').addEventListener('click', () => {
         Audio.click();
         const t = this._torre;
@@ -289,7 +325,12 @@
       $('chip-racha').addEventListener('click', () => { Audio.click(); this.verVela(); });
       if (typeof Audio.vigilarVisibilidad === "function") Audio.vigilarVisibilidad();
       $('aj-instalar').addEventListener('click', () => this.instalar());
-      document.querySelectorAll('.btn-volver').forEach((b) => b.addEventListener('click', () => { Audio.click(); this.irMenu(); }));
+      document.querySelectorAll('.btn-volver').forEach((b) => b.addEventListener('click', () => { Audio.click(); if (b.dataset.volver === 'p-mago') this.verMago(); else this.irMenu(); }));
+      $('tab-inicio').addEventListener('click', () => { Audio.click(); this.irMenu(); });
+      $('tab-mago').addEventListener('click', () => { Audio.click(); this.verMago(); });
+      $('hud-yo').addEventListener('click', () => { Audio.click(); this.verMago(); });
+      $('btn-misiones').addEventListener('click', () => { Audio.click(); this.verMisiones(); });
+      $('btn-tienda').addEventListener('click', () => { Audio.click(); this.abrirTienda(); });
 
       document.querySelectorAll('#p-practica [data-largo]').forEach((b) => b.addEventListener('click', () => {
         Audio.click();
@@ -391,6 +432,7 @@
         cont.appendChild(d);
       }
       const hechas = m.lista.filter((x) => x.hecha).length;
+      $('misiones-puntos').innerHTML = m.lista.map((x) => `<i class="${x.hecha ? 'ok' : ''}"></i>`).join('');
       $('misiones-estado').innerHTML = hechas === m.lista.length ? '¡TODAS!' : `${hechas}/${m.lista.length} · ${WWIconos.html('moneda')}${WW.RECOMPENSA_MISION.monedas} c/u`;
       Estado.guardar();
     },

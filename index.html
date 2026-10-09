@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" href="assets/img/icon-192x192.png">
 <link rel="preload" href="assets/fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/estilo.css?v=2.9.0">
+<link rel="stylesheet" href="css/estilo.css?v=2.10.0">
 </head>
 <body>
 
@@ -84,57 +84,60 @@
   </section>
 
   <!-- ===================== MENÚ ===================== -->
-  <section id="p-menu" class="pantalla">
-    <header class="tarjeta-jugador">
-      <div id="mago-menu" class="mago mago-medio"></div>
+  <section id="p-menu" class="pantalla con-tabs">
+    <header class="hud-inicio">
+      <button class="hud-yo" id="hud-yo" title="Mi mago"><span class="hud-nivel pixel" id="hud-nivel">1</span><span class="hud-datos"><b id="hud-nombre">—</b><small id="hud-titulo">Aprendiz de letras</small></span></button>
+      <span class="chip" title="Monedas"><i class="ic" data-ic="moneda"></i> <b id="hud-monedas">0</b></span>
+      <button class="chip chip-racha" id="chip-racha" title="Racha diaria y velas"><i class="ic" data-ic="llama"></i> <b id="menu-racha">0</b><span class="chip-velas" id="menu-velas"></span></button>
+      <button class="btn-icono btn-musica btn-musica-menu" id="btn-musica-menu" title="Música"><i class="ic" data-ic="nota"></i></button>
+    </header>
+
+    <div class="inicio-mago"><div id="mago-menu" class="mago mago-inicio"></div></div>
+
+    <div class="inicio-abajo">
+      <button class="btn-jugar" id="btn-diario">
+        <i class="ic" data-ic="calendario"></i>
+        <span class="btn-jugar-texto"><b id="btn-diario-titulo">Jugar el desafío</b><small id="btn-diario-sub">Desafío #1 · 3 minutos</small></span>
+        <span class="btn-menu-estado" id="btn-diario-estado"></span>
+      </button>
+      <button class="inicio-misiones" id="btn-misiones"><span>Misiones de hoy</span><span class="misiones-puntos" id="misiones-puntos"></span></button>
+    </div>
+  </section>
+
+  <!-- ===================== MI MAGO ===================== -->
+  <section id="p-mago" class="pantalla con-tabs">
+    <header class="cabecera"><h2 class="pixel">MI MAGO</h2></header>
+    <div class="tarjeta-jugador">
       <div class="tarjeta-datos">
         <div class="tarjeta-nombre pixel" id="menu-nombre">—</div>
         <div class="tarjeta-titulo" id="menu-titulo">Aprendiz de letras</div>
         <div class="barra-xp"><div id="menu-xp-fill"></div><span id="menu-xp-txt" class="pixel">NV 1</span></div>
-        <button class="btn-icono btn-musica btn-musica-menu" id="btn-musica-menu" title="Música"><i class="ic" data-ic="nota"></i></button>
         <div class="tarjeta-chips">
           <span class="chip" title="Monedas"><i class="ic" data-ic="moneda"></i> <b id="menu-monedas">0</b></span>
-          <button class="chip chip-racha" id="chip-racha" title="Racha diaria y velas"><i class="ic" data-ic="llama"></i> <b id="menu-racha">0</b><span class="chip-velas" id="menu-velas"></span></button>
           <span class="chip" title="Logros"><i class="ic" data-ic="trofeo"></i> <b id="menu-logros">0</b></span>
         </div>
       </div>
-    </header>
+    </div>
 
-    <nav class="menu-principal">
-      <button class="btn-menu btn-diario" id="btn-diario">
-        <span class="btn-menu-icono"><i class="ic" data-ic="calendario"></i></span>
-        <span class="btn-menu-texto"><b>Desafío diario</b><small id="btn-diario-sub">Desafío #1 · 3 minutos</small></span>
-        <span class="btn-menu-estado" id="btn-diario-estado"></span>
-      </button>
-      <button class="btn-menu btn-arcade" id="btn-arcade">
-        <span class="btn-menu-icono"><i class="ic" data-ic="torre"></i></span>
-        <span class="btn-menu-texto"><b>La Torre Arcana</b><small id="btn-arcade-sub">Subí pisos, vencé jefes, juntá monedas</small></span>
-      </button>
-      <button class="btn-menu btn-practica" id="btn-practica">
-        <span class="btn-menu-icono"><i class="ic" data-ic="vela"></i></span>
-        <span class="btn-menu-texto"><b>Práctica</b><small>Sin reloj, con pistas</small></span>
-      </button>
+    <section class="misiones" id="misiones">
+      <div class="misiones-cab"><span class="pixel">MISIONES DE HOY</span><span id="misiones-estado" class="pixel chico"></span></div>
+      <div id="misiones-lista"></div>
+    </section>
 
-      <section class="misiones" id="misiones">
-        <div class="misiones-cab"><span class="pixel">MISIONES DE HOY</span><span id="misiones-estado" class="pixel chico"></span></div>
-        <div id="misiones-lista"></div>
-      </section>
-
-      <div class="menu-medallones">
-        <button class="medallon" id="btn-rankings"><i class="ic" data-ic="medalla"></i><span>Rankings</span></button>
-        <button class="medallon" id="btn-stats"><i class="ic" data-ic="grafico"></i><span>Números</span></button>
-        <button class="medallon" id="btn-logros"><i class="ic" data-ic="trofeo"></i><span>Logros</span></button>
-        <button class="medallon" id="btn-ayuda"><i class="ic" data-ic="pregunta"></i><span>Ayuda</span></button>
-        <button class="medallon" id="btn-ajustes"><i class="ic" data-ic="engranaje"></i><span>Ajustes</span></button>
-        <button class="medallon btn-instalar oculto" id="btn-instalar"><i class="ic" data-ic="instalar"></i><span>Instalar</span></button>
-      </div>
-      <button class="btn-opinar" id="btn-comentario"><i class="ic" data-ic="globo"></i><span><b>¿Qué te parece?</b> Contame, es una versión de prueba</span></button>
-    </nav>
+    <div class="mago-medallones">
+      <button class="medallon" id="btn-logros"><i class="ic" data-ic="trofeo"></i><span>Logros</span></button>
+      <button class="medallon" id="btn-stats"><i class="ic" data-ic="grafico"></i><span>Números</span></button>
+      <button class="medallon" id="btn-tienda"><i class="ic" data-ic="moneda"></i><span>Tienda</span></button>
+      <button class="medallon" id="btn-ayuda"><i class="ic" data-ic="pregunta"></i><span>Ayuda</span></button>
+      <button class="medallon" id="btn-ajustes"><i class="ic" data-ic="engranaje"></i><span>Ajustes</span></button>
+      <button class="medallon btn-instalar oculto" id="btn-instalar"><i class="ic" data-ic="instalar"></i><span>Instalar</span></button>
+    </div>
+    <button class="btn-opinar" id="btn-comentario"><i class="ic" data-ic="globo"></i><span><b>¿Qué te parece?</b> Contame, es una versión de prueba</span></button>
   </section>
 
   <!-- ===================== PRÁCTICA: CONFIG ===================== -->
-  <section id="p-practica" class="pantalla">
-    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-menu"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">PRÁCTICA</h2></header>
+  <section id="p-practica" class="pantalla con-tabs">
+    <header class="cabecera"><h2 class="pixel">PRÁCTICA</h2></header>
     <p class="texto">Elegí el largo de la palabra base. Sin reloj: jugás hasta que quieras y podés pedir pistas gratis.</p>
     <div class="opciones-largo">
       <button class="btn btn-secundario btn-grande" data-largo="7"><b>7</b><small>letras</small></button>
@@ -233,8 +236,8 @@
   </section>
 
   <!-- ===================== RANKINGS ===================== -->
-  <section id="p-rankings" class="pantalla">
-    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-menu"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">RANKINGS</h2></header>
+  <section id="p-rankings" class="pantalla con-tabs">
+    <header class="cabecera"><h2 class="pixel">RANKINGS</h2></header>
     <div class="tabs" id="tabs-ranking">
       <button class="tab oculto" data-tab="mundo" id="tab-mundo">Mundo</button>
       <button class="tab activa" data-tab="diario">Hoy</button>
@@ -247,20 +250,20 @@
 
   <!-- ===================== ESTADÍSTICAS ===================== -->
   <section id="p-stats" class="pantalla">
-    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-menu"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">ESTADÍSTICAS</h2></header>
+    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-mago"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">ESTADÍSTICAS</h2></header>
     <div id="stats-contenido" class="stats"></div>
   </section>
 
   <!-- ===================== LOGROS ===================== -->
   <section id="p-logros" class="pantalla">
-    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-menu"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">LOGROS</h2></header>
+    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-mago"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">LOGROS</h2></header>
     <p class="texto" id="logros-resumen"></p>
     <div id="logros-grilla" class="logros-grilla"></div>
   </section>
 
   <!-- ===================== AYUDA ===================== -->
   <section id="p-ayuda" class="pantalla">
-    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-menu"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">CÓMO JUGAR</h2></header>
+    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-mago"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">CÓMO JUGAR</h2></header>
     <div class="ayuda">
       <h3>La idea</h3>
       <p>Silabo, el maguito, te da las letras de una palabra. Tenés que armar todas las palabras que puedas con ellas, en cualquier orden, cada letra tantas veces como aparece. Mínimo 3 letras. Valen plurales y conjugaciones. La palabra base entera da un bonus grande.</p>
@@ -292,7 +295,7 @@
 
   <!-- ===================== AJUSTES ===================== -->
   <section id="p-ajustes" class="pantalla">
-    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-menu"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">AJUSTES</h2></header>
+    <header class="cabecera"><button class="btn-icono btn-volver" data-volver="p-mago"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">AJUSTES</h2></header>
     <div class="ajustes">
       <label class="check"><input type="checkbox" id="aj-sonido"> Efectos de sonido</label>
       <label class="check"><input type="checkbox" id="aj-musica"> Música</label>
@@ -318,24 +321,32 @@
     </div>
   </section>
 
+  <!-- ===================== PESTAÑAS ===================== -->
+  <nav class="tabbar oculto" id="tabbar">
+    <button data-tab="p-menu" id="tab-inicio"><i class="ic" data-ic="casa"></i><span>Inicio</span></button>
+    <button data-tab="p-mapa" id="btn-arcade"><i class="ic" data-ic="torre"></i><span>Torre</span></button>
+    <button data-tab="p-practica" id="btn-practica"><i class="ic" data-ic="vela"></i><span>Práctica</span></button>
+    <button data-tab="p-rankings" id="btn-rankings"><i class="ic" data-ic="medalla"></i><span>Rankings</span></button>
+    <button data-tab="p-mago" id="tab-mago"><i class="ic" data-ic="escudo"></i><span>Mi mago</span></button>
+  </nav>
 </main>
 
 <div id="toasts" aria-live="polite"></div>
 <div id="modal" class="modal oculto"><div class="modal-caja" id="modal-caja" role="dialog" aria-modal="true"></div></div>
 
-<script src="data/diccionario.js?v=2.9.0"></script>
-<script src="data/desafios.js?v=2.9.0"></script>
-<script src="data/totales.js?v=2.9.0"></script>
-<script src="js/motor.js?v=2.9.0"></script>
-<script src="js/silabo.js?v=2.9.0"></script>
-<script src="js/iconos.js?v=2.9.0"></script>
-<script src="js/mago.js?v=2.9.0"></script>
-<script src="js/mapa.js?v=2.9.0"></script>
-<script src="js/escena.js?v=2.9.0"></script>
-<script src="js/audio.js?v=2.9.0"></script>
-<script src="js/logros.js?v=2.9.0"></script>
-<script src="js/estado.js?v=2.9.0"></script>
-<script src="js/ranking.js?v=2.9.0"></script>
-<script src="js/app.js?v=2.9.0"></script>
+<script src="data/diccionario.js?v=2.10.0"></script>
+<script src="data/desafios.js?v=2.10.0"></script>
+<script src="data/totales.js?v=2.10.0"></script>
+<script src="js/motor.js?v=2.10.0"></script>
+<script src="js/silabo.js?v=2.10.0"></script>
+<script src="js/iconos.js?v=2.10.0"></script>
+<script src="js/mago.js?v=2.10.0"></script>
+<script src="js/mapa.js?v=2.10.0"></script>
+<script src="js/escena.js?v=2.10.0"></script>
+<script src="js/audio.js?v=2.10.0"></script>
+<script src="js/logros.js?v=2.10.0"></script>
+<script src="js/estado.js?v=2.10.0"></script>
+<script src="js/ranking.js?v=2.10.0"></script>
+<script src="js/app.js?v=2.10.0"></script>
 </body>
 </html>
