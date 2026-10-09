@@ -1005,3 +1005,59 @@ html:not([lang="es"]) [data-idioma="es"], html[lang="es"] [data-idioma]:not([dat
 .chip-palabra.extra { background: rgba(201,182,255,.22); color: #e9e2ff; border: 1.5px dashed rgba(201,182,255,.7); }
 .res-palabras .chip-palabra.extra { color: #3d2f6b; background: #ddd3ff; }
 .grilla .grilla-extra { color: #c9b6ff; border-color: rgba(201,182,255,.5); }
+
+/* ===================== v2.13 · la vida del bosque (vida.js) ===================== */
+#vida { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+#vida.vida-dormida, body.jugando #vida { display: none; }
+.v { position: absolute; left: 0; top: 0; }
+.v svg { display: block; overflow: visible; }
+
+/* telaraña y araña */
+.v-hilo-caja { position: absolute; width: 60px; height: 190px; overflow: hidden; }
+.v-colgante { position: absolute; left: 0; top: 0; width: 60px; }
+.v-colgante .v-arana { position: absolute; left: 8px; top: 0; transform-origin: 50% 0; }
+.v-hilo { position: absolute; left: 30px; top: -300px; width: 1.2px; height: 312px; background: rgba(238, 243, 234, .7); }
+.v-arana .v-cejas { opacity: 0; transition: opacity .15s; }
+.v-arana .v-boca { transform-box: fill-box; transform-origin: center; transition: transform .15s; }
+.v-arana.enojada .v-cejas { opacity: 1; }
+.v-arana.enojada .v-boca { transform: scaleY(-1) translateY(1px); }
+.v-arana.enojada .v-mejillas circle { fill: #c4553f; opacity: 1; }
+.v-arana.enojada .v-pupila { transform: translateY(1px); }
+
+/* conejo */
+.v-conejo-caja.izq svg, .v-caracol-caja.izq svg { transform: scaleX(-1); }
+.v-conejo .v-orejas { transform-box: view-box; transform-origin: 2px 22px; transition: transform .2s; }
+.v-conejo-caja.sentado .v-orejas { animation: vOrejas 2.6s ease-in-out infinite; }
+.v-conejo-caja.sentado .v-nariz { transform-box: fill-box; transform-origin: center; animation: vNariz .32s ease-in-out infinite; }
+.v-conejo-caja.susto .v-orejas { transform: rotate(-28deg); }
+@keyframes vOrejas { 0%, 70%, 100% { transform: rotate(0); } 78% { transform: rotate(-12deg); } 86% { transform: rotate(4deg); } }
+@keyframes vNariz { 50% { transform: translateY(-.8px) scale(1.15); } }
+
+/* caracol */
+.v-caracol .v-antenas { transform-box: fill-box; transform-origin: 50% 100%; animation: vAntenas 3s ease-in-out infinite; }
+.v-caracol .v-cuerpo { transform-box: view-box; transform-origin: 20px 17px; transition: transform .25s cubic-bezier(.5, 0, .6, 1.4), opacity .2s; }
+.v-caracol-caja.escondido .v-cuerpo { transform: scale(.2); opacity: 0; }
+@keyframes vAntenas { 50% { transform: rotate(-8deg); } }
+
+/* dragón */
+.v-dragon .v-ala { transform-box: view-box; transform-origin: 70px 30px; animation: vAleteo .46s ease-in-out infinite alternate; }
+.v-dragon .v-ala-atras { transform-box: view-box; transform-origin: 72px 34px; animation: vAleteo .46s ease-in-out infinite alternate-reverse; opacity: .9; }
+.v-dragon .v-fuego { transform-box: view-box; transform-origin: 121px 25px; transform: scale(0); opacity: 0; }
+.v-dragon-caja.izq svg { transform: scaleX(-1); }
+.v-dragon-caja.escupe .v-fuego { animation: vFuego 1.1s ease-out; }
+@keyframes vAleteo { from { transform: scaleY(1) rotate(0); } to { transform: scaleY(.22) rotate(8deg); } }
+@keyframes vFuego { 0% { transform: scale(0); opacity: 0; } 15% { transform: scale(1.15); opacity: 1; } 60% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+
+/* mariposas, chispas, burbujas, luna */
+.v-mariposa .v-alas { transform-box: fill-box; transform-origin: center; animation: vAlas .16s ease-in-out infinite alternate; }
+@keyframes vAlas { to { transform: scaleX(.25); } }
+.v-burbuja span { display: block; font: 700 13px var(--display); background: #fff6d8; color: #16262c; border: 2px solid #16262c; border-radius: 10px; padding: 1px 8px; white-space: nowrap; box-shadow: 0 3px 0 #16262c;
+  animation: vBurbuja 1.7s ease-out forwards; transform-origin: 0 100%; }
+.v-burbuja-enojo span { background: #e8907a; color: #2a1a12; }
+@keyframes vBurbuja { 0% { transform: scale(0); opacity: 0; } 12% { transform: scale(1.1); opacity: 1; } 20% { transform: scale(1); } 80% { opacity: 1; } 100% { transform: translateY(-8px); opacity: 0; } }
+.v-luna .v-ojo-luna { transform-box: fill-box; transform-origin: center; animation: vGuino 2.6s ease-in-out; }
+@keyframes vGuino { 0%, 35%, 60%, 100% { transform: scaleY(1); } 42%, 52% { transform: scaleY(.1); } }
+@media (prefers-reduced-motion: reduce) { #vida { display: none; } }
+/* logo en el inicio (copia del de la pantalla de título) */
+.inicio-logo { display: flex; justify-content: center; margin: 8px 0 0; pointer-events: none; }
+.inicio-logo .logo-titulo { width: min(42vw, 170px); }

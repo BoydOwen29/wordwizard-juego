@@ -8,12 +8,15 @@
   /** Clave del desafío diario en el perfil: cada idioma tiene el suyo (en español, solo la fecha, como siempre). */
   const K = (fecha) => (IDIOMA_DATOS === 'es' ? fecha : `${IDIOMA_DATOS}:${fecha}`);
   /** El desafío empezado, si es de este idioma (uno empezado en otro idioma espera a que se vuelva a ese). */
+  // fondo propio de algunas pantallas (el resto, el bosque)
+  const FONDOS = { 'p-practica': 'biblioteca', 'p-rankings': 'cumbre' };
+  const FONDOS_BOSQUE = ['p-menu', 'p-mago', 'p-titulo', 'p-stats', 'p-logros', 'p-ayuda', 'p-ajustes'];
   const enCursoAca = (p) => (p.enCurso && (p.enCurso.idioma || 'es') === IDIOMA_DATOS ? p.enCurso : null);
   const WW = window.WW, Estado = window.WWEstado, Audio = window.WWAudio, Logros = window.WWLogros, Magos = window.WWMago, Ranking = window.WWRanking;
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.12.0',
+    version: '2.13.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -65,6 +68,9 @@
       this.magos.jefe = new Magos.Mago($('mago-jefe'), { paleta: 'sombra' });
       this.magos.menu.visible = this.magos.juego.visible = this.magos.jefe.visible = false;
       if (window.WWEscena) { WWEscena.montar($('esc-atras'), $('esc-frente'), 'bosque'); WWEscena.intro(() => setTimeout(() => this.magos.titulo.animar('happy', 900), 2300)); }
+      if (window.WWVida) WWVida.montar($('vida'), $('fondo'));
+      const logo = document.querySelector('#p-titulo .logo-titulo');
+      if (logo) $('inicio-logo').appendChild(logo.cloneNode(true));
       this.vidaTitulo();
       setTimeout(() => $('p-titulo').classList.remove('con-intro'), 5000);
       this.silaboVivo();
@@ -214,7 +220,13 @@
       Audio.tema(id === 'p-juego' ? (this.partida && this.partida.jefe ? 'jefe' : 'juego') : id === 'p-mapa' ? 'juego' : 'menu');
       const s = $(id); if (s) s.scrollTop = 0;
       this.pintarTabs(id);
+      const fondo = FONDOS[id];
+      if (fondo && this.lugar !== fondo) this.ponerLugar({ id: fondo });
+      else if (!fondo && FONDOS_BOSQUE.includes(id) && this.lugar && Object.values(FONDOS).includes(this.lugar)) this.ponerLugar(null);
+      this.pintarVida();
     },
+
+    pintarVida() { if (window.WWVida) WWVida.activar((this.pantalla === 'p-titulo' || this.pantalla === 'p-menu') && !this.lugar); },
 
     /** La barra de pestañas va en las pantallas principales; en la Torre, solo si no hay una subida en curso. */
     pintarTabs(id) {
@@ -606,7 +618,7 @@
       };
       const pa = this.partida;
       if (pa.arcade) { pa.arcade.piso = piso; pa.arcade.usadas.push(base); }
-      const lugar = modo === 'arcade' ? WW_LUGARES.dePiso(piso) : null;
+      const lugar = modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' ? { id: FONDOS['p-practica'] } : null;
       const lugarNuevo = lugar && (piso === 1 || WW_LUGARES.dePiso(piso - 1).id !== lugar.id) && !opts.reintento;
       this.ponerLugar(lugar);
       if (lugarNuevo && !jefe) setTimeout(() => this.banner(lugar.icono, lugar.nombre, 'Pisos ' + lugar.rango), 250);
@@ -1571,6 +1583,7 @@
       this.lugar = lugar ? lugar.id : null;
       if (window.WWEscena) WWEscena.ponerLugar(lugar ? lugar.id : 'bosque');
       Audio.lugar(lugar ? lugar.id : null);
+      this.pintarVida();
     },
 
     /** Luciérnagas del bosque (o cristales, letras, nieve, motas según el lugar). Siguen al puntero. */
@@ -1819,7 +1832,8 @@
         if (m && m.estado === 'dormido' && !e.target.closest('.mago')) m.despertar();
         if (m) m.mirar(e.clientX, e.clientY);
         // tocar el fondo sacude los árboles
-        if (window.WWEscena && !e.target.closest('button, input, textarea, a, label, .ficha, .mago, .modal-caja, .tarjeta-jugador, .misiones, .encontradas, .palabra-actual, .hud')) {
+        if (window.WWEscena && !e.target.closest('button, input, textarea, a, label, select, .ficha, .mago, .modal-caja, .tarjeta-jugador, .misiones, .encontradas, .palabra-actual, .hud, .hud-inicio, .tabbar, .ranking, .stats, .logros-grilla, .ajustes, .ayuda')) {
+          if (window.WWVida) WWVida.tocar(e.clientX, e.clientY);
           if (WWEscena.tocar(e.clientX)) Audio.hojas();
         }
       }, { passive: true });
@@ -1828,10 +1842,28 @@
         this.magos[k].cont.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
           Audio.despertar();
-          const r = this.magos[k].toque();
-          ({ risa: () => Audio.risita(), giro: () => Audio.wiii(), estornudo: () => Audio.achis(), sombrerazo: () => Audio.boing(), despierta: () => Audio.boing() })[r]();
-          if (k === 'juego') this.globo(azar(MENSAJES.toque[r]), 'ok');
-          if (Estado.perfil) { Estado.perfil.stats.cosquillas = (Estado.perfil.stats.cosquillas || 0) + 1; }
+          const m = this.magos[k];
+          const cosquillas = () => {
+            const r = m.toque();
+            ({ risa: () => Audio.risita(), giro: () => Audio.wiii(), estornudo: () => Audio.achis(), sombrerazo: () => Audio.boing(), despierta: () => Audio.boing() })[r]();
+            if (k === 'juego') this.globo(azar(MENSAJES.toque[r]), 'ok');
+            if (Estado.perfil) { Estado.perfil.stats.cosquillas = (Estado.perfil.stats.cosquillas || 0) + 1; }
+          };
+          if (k === 'juego' || !window.WWVida) return cosquillas();
+          // en el título y el inicio, si lo dejás apretado hace un conjuro: mariposas que salen del sombrero
+          let conjuro = false;
+          const t = setTimeout(() => {
+            conjuro = true;
+            const sombrero = m.cont.querySelector('.sombrero'), r = (sombrero || m.cont).getBoundingClientRect();
+            if (m.estado === 'dormido') m.despertar();
+            m.animar('cast', 1200);
+            WWVida.conjuro(r.left + r.width / 2, r.top);
+          }, 450);
+          const soltar = () => {
+            clearTimeout(t); removeEventListener('pointerup', soltar); removeEventListener('pointercancel', soltar);
+            if (!conjuro) cosquillas();
+          };
+          addEventListener('pointerup', soltar); addEventListener('pointercancel', soltar);
         });
       }
       setInterval(() => {

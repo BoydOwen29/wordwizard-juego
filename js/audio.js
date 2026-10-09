@@ -104,6 +104,42 @@
       golpe(t, 2500, 0.25, 0.25); golpe(t + 0.15, 420, 0.55, 2.4); golpe(t + 0.7, 260, 0.35, 1.8);
     },
     ronquido() { if (this.sonido && this.ctx) this._nota(110, this.ctx.currentTime, 0.7, 'sine', 0.05, null, 80); },
+    // ---- bichos del bosque (vida.js): todos suaves, son detalles
+    /** Araña enojada: un refunfuño cortito, grr-grr. */
+    grunon() {
+      if (!this.sonido || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      [0, 0.13, 0.26].forEach((d, i) => this._nota(190 - i * 18, t + d, 0.11, 'square', 0.05, null, 120 - i * 10));
+    },
+    /** Búho: uh-uuuh. */
+    ulula() {
+      if (!this.sonido || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      this._nota(430, t, 0.22, 'sine', 0.12, null, 390); this._nota(450, t + 0.34, 0.5, 'sine', 0.12, null, 380);
+    },
+    /** Dragón lejano: soplido de fuego y un gruñido grave. */
+    rugido() {
+      if (!this.sonido || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      this._nota(95, t, 0.9, 'sawtooth', 0.06, null, 55);
+      if (!this._ruido) return;
+      const s = this.ctx.createBufferSource(); s.buffer = this._ruido; s.loop = true;
+      const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(1600, t); f.frequency.exponentialRampToValueAtTime(180, t + 1.1);
+      const g = this.ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+      s.connect(f); f.connect(g); g.connect(this._ganMaster); s.start(t, Math.random()); s.stop(t + 1.15);
+    },
+    /** Conejo: saltito. */
+    salto() { if (this.sonido && this.ctx) this._nota(320, this.ctx.currentTime, 0.12, 'sine', 0.09, null, 760); },
+    /** Caracol que se esconde: plop. */
+    plop() { if (this.sonido && this.ctx) this._nota(640, this.ctx.currentTime, 0.14, 'sine', 0.1, null, 180); },
+    /** Toque en el aire: chispitas. */
+    chispa() {
+      if (!this.sonido || !this.ctx) return;
+      const t = this.ctx.currentTime, b = 1400 + Math.random() * 400;
+      this._nota(b, t, 0.08, 'triangle', 0.035); this._nota(b * 1.5, t + 0.05, 0.1, 'triangle', 0.03);
+    },
+    /** Mariposas del conjuro de Silabo. */
+    conjuro() { this._secuencia([784, 1047, 1319, 1568, 2093], 'triangle', 0.08, 0.06); },
     hojas() {
       if (!this.sonido || !this.ctx || !this._ruido) return;
       const t = this.ctx.currentTime, s = this.ctx.createBufferSource(); s.buffer = this._ruido;

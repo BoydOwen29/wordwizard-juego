@@ -218,7 +218,7 @@ WWI18n.registrar('en', {
   'VOLVÉ CADA DÍA': 'COME BACK EVERY DAY', 'Racha': 'Streak', 'Jugá el desafío todos los días.': 'Play the challenge every day.',
   'Si un día faltás, salva tu racha.': 'If you miss a day, it saves your streak.', 'Misiones': 'Quests', 'Tres por día, con monedas de premio.': 'Three a day, with coin rewards.',
   'Ver las reglas completas': 'See the full rules', '¡A jugar!': "Let's play!", 'Siguiente': 'Next',
-  'CÓMO JUGAR': 'HOW TO PLAY', '¡Palabra extra!': 'Bonus word!', 'PALABRAS EXTRA': 'BONUS WORDS', '+{n} extra': '+{n} bonus', '{a}/{b} +{c}': '{a}/{b} +{c}', 'Saltar': 'Skip',
+  'CÓMO JUGAR': 'HOW TO PLAY', '¡Uh-uuh!': 'Hoo-hoo!', '¡Palabra extra!': 'Bonus word!', 'PALABRAS EXTRA': 'BONUS WORDS', '+{n} extra': '+{n} bonus', '{a}/{b} +{c}': '{a}/{b} +{c}', 'Saltar': 'Skip',
   'Rangos alcanzados': 'Ranks reached', '🧙 En total': '🧙 Overall', 'Palabras por largo': 'Words by length',
   '🕯️ Aprendiz': '🕯️ Apprentice', '📜 Iniciado': '📜 Initiate', '✨ Conjurador': '✨ Conjurer', '🔮 Hechicero': '🔮 Sorcerer',
   '🧙 Mago': '🧙 Wizard', '⚡ Archimago': '⚡ Archmage', '🌟 Leyenda': '🌟 Legend', '👑 Omnisciente': '👑 Omniscient',
