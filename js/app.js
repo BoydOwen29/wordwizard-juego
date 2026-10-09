@@ -4,11 +4,16 @@
 (function () {
   'use strict';
   const T = (es, v) => window.WWI18n.t(es, v), EN = window.WWI18n.idioma === 'en';
+  const IDIOMA_DATOS = window.WWI18n.idiomaDatos;
+  /** Clave del desafío diario en el perfil: cada idioma tiene el suyo (en español, solo la fecha, como siempre). */
+  const K = (fecha) => (IDIOMA_DATOS === 'es' ? fecha : `${IDIOMA_DATOS}:${fecha}`);
+  /** El desafío empezado, si es de este idioma (uno empezado en otro idioma espera a que se vuelva a ese). */
+  const enCursoAca = (p) => (p.enCurso && (p.enCurso.idioma || 'es') === IDIOMA_DATOS ? p.enCurso : null);
   const WW = window.WW, Estado = window.WWEstado, Audio = window.WWAudio, Logros = window.WWLogros, Magos = window.WWMago, Ranking = window.WWRanking;
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.11.0',
+    version: '2.12.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -71,7 +76,7 @@
       // cargar diccionario sin congelar la pantalla de título
       setTimeout(() => {
         try {
-          this.dic = new WW.Diccionario(window.WW_DICT || '');
+          this.dic = new WW.Diccionario(window.WW_DICT || '', { idioma: window.WWI18n.idiomaDatos, comunes: window.WW_COMUNES });
           this.pool = window.WW_DESAFIOS || [];
         } catch (e) { this.dic = new WW.Diccionario(''); this.pool = []; }
         if (!this.dic.tamano || !this.pool.length) {
@@ -232,7 +237,7 @@
       this.ponerLugar(null);
       const p = Estado.perfil;
       this.hoy = WW.claveDia();
-      if (p.enCurso && p.enCurso.fecha !== this.hoy && !p.diarios[p.enCurso.fecha]) this.cerrarDiarioGuardado(p.enCurso);
+      if (enCursoAca(p) && p.enCurso.fecha !== this.hoy && !p.diarios[K(p.enCurso.fecha)]) this.cerrarDiarioGuardado(p.enCurso);
       if (this.nivelPendiente) { const n = this.nivelPendiente; this.nivelPendiente = 0; setTimeout(() => this.anunciarNivel(n), 600); }
       this.pintarPerfil();
       this.mostrar('p-menu');
@@ -261,8 +266,8 @@
       $('menu-velas').innerHTML = nv ? WWIconos.html('vela') + (nv > 1 ? nv : '') : '';
       $('menu-logros').textContent = `${Object.keys(p.logros).length}/${Logros.LOGROS.length}`;
       const n = WW.numeroDia();
-      const jugado = p.diarios[this.hoy];
-      const enCurso = p.enCurso && p.enCurso.fecha === this.hoy && !jugado;
+      const jugado = p.diarios[K(this.hoy)];
+      const enCurso = enCursoAca(p) && p.enCurso.fecha === this.hoy && !jugado;
       $('btn-diario-titulo').textContent = jugado ? 'Desafío de hoy ✓' : enCurso ? 'Seguir el desafío' : 'Jugar el desafío';
       $('btn-diario').classList.toggle('hecho', !!jugado);
       $('btn-diario-sub').textContent = jugado ? `#${n} · ${jugado.rango} · ${jugado.puntos} pts` : enCurso ? `#${n} · en curso, ¡volvé rápido!` : `Desafío #${n} · 3 minutos`;
@@ -470,9 +475,9 @@
     // ============================================================ diario en curso (reanudar o cerrar)
     revisarEnCurso() {
       const p = Estado.perfil;
-      const c = p.enCurso;
+      const c = enCursoAca(p);
       if (!c) return;
-      if (p.diarios[c.fecha]) { p.enCurso = null; Estado.guardar(); return; }
+      if (p.diarios[K(c.fecha)]) { p.enCurso = null; Estado.guardar(); return; }
       if (c.fecha === this.hoy && Date.now() < c.deadline) {
         const seg = Math.ceil((c.deadline - Date.now()) / 1000);
         this.modal(`<h3>DESAFÍO EN CURSO</h3><div class="modal-silabo" data-pose="cast"></div><p>Dejaste el desafío #${c.numero} empezado: ${c.encontradas.length} palabras y ${c.puntos} pts. Quedan ${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}.</p>`, [
@@ -485,12 +490,12 @@
 
     cerrarDiarioGuardado(c) {
       const p = Estado.perfil;
-      const derivables = this.dic.derivables(c.base);
-      const totalPuntos = WW.totalPosible(derivables, c.base);
+      const nucleo = this.dic.nucleo(this.dic.derivables(c.base), c.base);
+      const totalPuntos = WW.totalPosible(nucleo, c.base);
       const base = c.encontradas.reduce((t, w) => t + WW.puntosPalabra(w, c.base), 0);
       const pct = totalPuntos ? (base / totalPuntos) * 100 : 0;
       const rango = WW.rangoPorPct(pct);
-      p.diarios[c.fecha] = { numero: c.numero, palabra: c.base, puntos: c.puntos, pct: Math.round(pct * 10) / 10, rango: rango.nombre, encontradas: c.encontradas.slice(), total: derivables.size, totalPuntos, combo: c.combo || 0, fecha: c.fecha };
+      p.diarios[K(c.fecha)] = { numero: c.numero, palabra: c.base, puntos: c.puntos, pct: Math.round(pct * 10) / 10, rango: rango.nombre, encontradas: c.encontradas.slice(), total: nucleo.size, totalPuntos, combo: c.combo || 0, fecha: c.fecha };
       Estado.registrarRacha(c.fecha);
       const ri = WW.RANGOS.indexOf(rango);
       const nv = Estado.sumarXp(Math.round(c.puntos * 1.5 + ri * 10));
@@ -507,7 +512,7 @@
     guardarEnCurso() {
       const pa = this.partida, p = Estado.perfil;
       if (!pa || pa.modo !== 'diario') return;
-      p.enCurso = { fecha: this.hoy, base: pa.base, numero: pa.numero, encontradas: pa.encontradas.slice(), deadline: pa.deadline, puntos: pa.puntos, combo: pa.mejorCombo };
+      p.enCurso = { fecha: this.hoy, idioma: IDIOMA_DATOS, base: pa.base, numero: pa.numero, encontradas: pa.encontradas.slice(), deadline: pa.deadline, puntos: pa.puntos, combo: pa.mejorCombo };
       Estado.guardar();
     },
 
@@ -515,10 +520,10 @@
     jugarDiario() {
       const p = Estado.perfil;
       this.hoy = WW.claveDia();
-      const hecho = p.diarios[this.hoy];
+      const hecho = p.diarios[K(this.hoy)];
       if (hecho) { this.mostrarResultadoGuardado(hecho); return; }
-      if (p.enCurso && p.enCurso.fecha !== this.hoy && !p.diarios[p.enCurso.fecha]) this.cerrarDiarioGuardado(p.enCurso);
-      if (p.enCurso && p.enCurso.fecha === this.hoy) {
+      if (enCursoAca(p) && p.enCurso.fecha !== this.hoy && !p.diarios[K(p.enCurso.fecha)]) this.cerrarDiarioGuardado(p.enCurso);
+      if (enCursoAca(p) && p.enCurso.fecha === this.hoy) {
         if (Date.now() < p.enCurso.deadline) return this.nuevaPartida('diario', { reanudar: p.enCurso });
         return this.cerrarDiarioGuardado(p.enCurso);
       }
@@ -571,7 +576,8 @@
       if (opts.reanudar) { base = opts.reanudar.base; numero = opts.reanudar.numero; }
       else ({ base, numero, ref } = this.elegirBase(modo, Object.assign({}, opts, { piso, jefe })));
       const derivables = this.dic.derivables(base);
-      const totalPuntos = WW.totalPosible(derivables, base);
+      const nucleo = this.dic.nucleo(derivables, base);   // las extra valen, pero no se exigen
+      const totalPuntos = WW.totalPosible(nucleo, base);
       const fichas = base.split('').map((l) => ({ l, usada: false }));
       let tiempo = null;
       if (modo === 'diario') tiempo = CONFIG.diario.tiempo;
@@ -588,7 +594,7 @@
       }
 
       this.partida = {
-        modo, opts, base, numero, derivables, total: derivables.size, totalPuntos,
+        modo, opts, base, numero, derivables, nucleo, total: nucleo.size, nEnc: 0, extras: 0, totalPuntos,
         fichas, orden: WW.mezclar(fichas.map((_, i) => i)), seleccion: [],
         encontradas: [], encontradasSet: new Set(), puntos: 0, puntosBase: 0, puntosPiso: 0,
         combo: 0, mejorCombo: 0, ultimoAcierto: 0,
@@ -608,7 +614,7 @@
       if (opts.reanudar) {
         const r = opts.reanudar;
         pa.deadline = r.deadline; pa.restante = Math.ceil((r.deadline - Date.now()) / 1000);
-        for (const w of r.encontradas) { pa.encontradas.push(w); pa.encontradasSet.add(w); pa.puntosBase += WW.puntosPalabra(w, base); }
+        for (const w of r.encontradas) { pa.encontradas.push(w); pa.encontradasSet.add(w); pa.puntosBase += WW.puntosPalabra(w, base); if (nucleo.has(w)) pa.nEnc++; else pa.extras++; }
         pa.puntos = r.puntos != null ? r.puntos : pa.puntosBase;
         pa.mejorCombo = r.combo || 0;
         pa.rangoIdx = WW.RANGOS.indexOf(WW.rangoPorPct(totalPuntos ? (pa.puntosBase / totalPuntos) * 100 : 0));
@@ -690,7 +696,7 @@
       for (let i = pa.encontradas.length - 1; i >= 0; i--) {
         const w = pa.encontradas[i];
         const c = document.createElement('span');
-        c.className = 'chip-palabra' + (w === pa.base ? ' completa' : w.length >= 6 ? ' larga' : '') + (pa.ojos.has(w) ? ' ojo' : '') + (w === this._ultimaNueva ? ' nueva' : '');
+        c.className = 'chip-palabra' + (w === pa.base ? ' completa' : !pa.nucleo.has(w) ? ' extra' : w.length >= 6 ? ' larga' : '') + (pa.ojos.has(w) ? ' ojo' : '') + (w === this._ultimaNueva ? ' nueva' : '');
         c.textContent = w;
         cont.appendChild(c);
       }
@@ -703,12 +709,12 @@
       if (p.ajustes.grilla === false) { cont.innerHTML = ''; cont.classList.add('oculto'); return; }
       cont.classList.remove('oculto');
       const tot = {}, enc = {};
-      for (const w of pa.derivables) tot[w.length] = (tot[w.length] || 0) + 1;
-      for (const w of pa.encontradas) enc[w.length] = (enc[w.length] || 0) + 1;
+      for (const w of pa.nucleo) tot[w.length] = (tot[w.length] || 0) + 1;
+      for (const w of pa.encontradas) if (pa.nucleo.has(w)) enc[w.length] = (enc[w.length] || 0) + 1;
       cont.innerHTML = Object.keys(tot).map(Number).sort((a, b) => a - b).map((L) => {
         const e = enc[L] || 0, t = tot[L];
         return `<span class="${e >= t ? 'lista' : ''}">${L}: <b>${e}</b>/${t}</span>`;
-      }).join('');
+      }).join('') + (pa.extras ? `<span class="grilla-extra">+${pa.extras} extra</span>` : '');
     },
 
     renderProgreso() {
@@ -734,7 +740,7 @@
       $('barra-rango-fill').style.width = Math.min(100, pct) + '%';
       $('rango-icono').textContent = r.icono;
       $('rango-nombre').textContent = r.nombre.toUpperCase();
-      $('progreso-txt').textContent = `${pa.encontradas.length}/${pa.total}`;
+      $('progreso-txt').textContent = `${pa.nEnc}/${pa.total}`;
     },
 
     renderPoderes() {
@@ -858,6 +864,8 @@
       pts = Math.round(pts * mult);
       pa.puntos += pts; pa.puntosPiso += pts;
       pa.encontradas.push(w); pa.encontradasSet.add(w);
+      const extra = !pa.nucleo.has(w);
+      if (extra) pa.extras++; else pa.nEnc++;
       if (revelada) pa.ojos.add(w);
       if (!pa.mejorPalabra || base > WW.puntosPalabra(pa.mejorPalabra, pa.base)) pa.mejorPalabra = w;
       if (pa.modo === 'arcade' && !revelada) { pa.arcade.monedas += 1; pa.monedasGanadas += 1; Estado.sumarMonedas(1); }
@@ -888,6 +896,7 @@
         });
         this.globo(`${azar(MENSAJES.jefeGolpe)} −${pts} HP`, w.length >= 6 ? 'wow' : 'ok');
       } else if (w === pa.base) { Audio.completa(); this.vineta('flash-oro'); this.banner('💎', 'PALABRA COMPLETA', '+' + pts + ' puntos', 'oro'); this.globo('¡PALABRA COMPLETA! +' + pts, 'wow'); this.magos.juego.animar('happy', 1200); }
+      else if (extra && !revelada) { Audio.acierto(w.length); this.globo(`${T('¡Palabra extra!')} +${pts}`, 'wow'); this.magos.juego.animar('cast', 900); }
       else if (w.length >= 6) { Audio.acierto(w.length); this.globo(`${azar(MENSAJES.largo)} +${pts}`, 'wow'); this.magos.juego.animar('cast', 900); }
       else { Audio.acierto(w.length); this.globo(`${azar(MENSAJES.ok)} +${pts}`, 'ok'); this.magos.juego.animar('cast', 600); }
       if (pa.combo >= 3 && !revelada) {
@@ -926,7 +935,7 @@
       if (pa.modo === 'diario') this.guardarEnCurso();
 
       if (pa.modo === 'arcade' && pa.puntosPiso >= pa.objetivo) { this.congelarReloj(pa); setTimeout(() => this.pisoSuperado(), 500); }
-      else if (pa.encontradas.length >= pa.total) { this.congelarReloj(pa); setTimeout(() => this.terminar('completo'), 600); }
+      else if (pa.nEnc >= pa.total) { this.congelarReloj(pa); setTimeout(() => this.terminar('completo'), 600); }
     },
 
     fallo(codigo) {
@@ -995,7 +1004,7 @@
 
     faltantes() {
       const pa = this.partida;
-      return Array.from(pa.derivables).filter((w) => !pa.encontradasSet.has(w));
+      return Array.from(pa.nucleo).filter((w) => !pa.encontradasSet.has(w));
     },
 
     darPista() {
@@ -1155,7 +1164,7 @@
       if (pa.modo === 'diario') {
         xp = Math.round(pa.puntos * 1.5 + rangoIdx * 10);
         monedas = pa.encontradas.length + rangoIdx * 4;
-        p.diarios[this.hoy] = { numero: pa.numero, palabra: pa.base, puntos: pa.puntos, pct: Math.round(pct * 10) / 10, rango: rango.nombre, encontradas: pa.encontradas.slice(), total: pa.total, totalPuntos: pa.totalPuntos, combo: pa.mejorCombo, fecha: this.hoy };
+        p.diarios[K(this.hoy)] = { numero: pa.numero, palabra: pa.base, puntos: pa.puntos, pct: Math.round(pct * 10) / 10, rango: rango.nombre, encontradas: pa.encontradas.slice(), total: pa.total, totalPuntos: pa.totalPuntos, combo: pa.mejorCombo, fecha: this.hoy };
         p.enCurso = null;
         const velasUsadas = Estado.registrarRacha(this.hoy);
         if (velasUsadas) setTimeout(() => this.toast(`${WWIconos.html('vela')}<div><b>La vela salvó tu racha</b><br><small>Se ${velasUsadas > 1 ? `consumieron ${velasUsadas} velas` : 'consumió una vela'}. Racha: ${p.racha} días</small></div>`, 'logro'), 1200);
@@ -1171,11 +1180,11 @@
       Estado.sumarXp(xp);
       const nivel = { antes: this.nivelSesion || p.nivel, despues: p.nivel, subio: p.nivel > (this.nivelSesion || p.nivel) };
       Estado.sumarMonedas(monedas);
-      const nuevos = Logros.evaluar(p, { tipo: 'fin', encontradas: pa.encontradas.length - pa.ojos.size, total: pa.total, modo: pa.modo });
+      const nuevos = Logros.evaluar(p, { tipo: 'fin', encontradas: pa.nEnc - [...pa.ojos].filter((w) => pa.nucleo.has(w)).length, total: pa.total, modo: pa.modo });
       if (nuevos.length) Estado.sumarMonedas(5 * nuevos.length);
       Estado.guardar();
 
-      this.resultadoActual = { modo: pa.modo, opts: pa.opts, base: pa.base, numero: pa.numero, puntos: pa.puntos, encontradas: pa.encontradas, total: pa.total, totalPuntos: pa.totalPuntos, pct, rango, xp, monedas, nivel, nuevos, mejorPalabra: pa.mejorPalabra, combo: pa.mejorCombo, derivables: pa.derivables, motivo };
+      this.resultadoActual = { modo: pa.modo, opts: pa.opts, base: pa.base, numero: pa.numero, puntos: pa.puntos, encontradas: pa.encontradas, nucleo: pa.nucleo, nEnc: pa.nEnc, extras: pa.extras, total: pa.total, totalPuntos: pa.totalPuntos, pct, rango, xp, monedas, nivel, nuevos, mejorPalabra: pa.mejorPalabra, combo: pa.mejorCombo, derivables: pa.derivables, motivo };
       this.mostrarResultado(this.resultadoActual);
     },
 
@@ -1195,10 +1204,10 @@
       p.stats.partidas += 1;
       Estado.sumarXp(xp);
       const nivel = { antes: this.nivelSesion || p.nivel, despues: p.nivel, subio: p.nivel > (this.nivelSesion || p.nivel) };
-      const nuevos = Logros.evaluar(p, { tipo: 'fin', encontradas: pa.encontradas.length, total: pa.total, modo: 'arcade' });
+      const nuevos = Logros.evaluar(p, { tipo: 'fin', encontradas: pa.nEnc, total: pa.total, modo: 'arcade' });
       if (nuevos.length) Estado.sumarMonedas(5 * nuevos.length);
       Estado.guardar();
-      this.resultadoActual = { modo: 'arcade', base: pa.base, puntos: a.puntajeTotal, encontradas: pa.encontradas, total: pa.total, totalPuntos: pa.totalPuntos, piso: a.piso, jefes: a.jefes, palabrasTotal: a.palabrasTotal, xp, monedas: a.monedas, nivel, nuevos, mejorPalabra: pa.mejorPalabra, combo: pa.mejorCombo, derivables: pa.derivables, esRecord };
+      this.resultadoActual = { modo: 'arcade', base: pa.base, puntos: a.puntajeTotal, encontradas: pa.encontradas, nucleo: pa.nucleo, nEnc: pa.nEnc, extras: pa.extras, total: pa.total, totalPuntos: pa.totalPuntos, piso: a.piso, jefes: a.jefes, palabrasTotal: a.palabrasTotal, xp, monedas: a.monedas, nivel, nuevos, mejorPalabra: pa.mejorPalabra, combo: pa.mejorCombo, derivables: pa.derivables, esRecord };
       this.mostrarResultado(this.resultadoActual);
     },
 
@@ -1213,7 +1222,7 @@
       $('res-rango-sub').textContent = esArcade ? (r.jefes ? `${r.jefes} jefe${r.jefes > 1 ? 's' : ''} vencido${r.jefes > 1 ? 's' : ''}` : 'Llegaste al') : 'Rango';
       $('res-rango-nombre').textContent = esArcade ? `PISO ${r.piso}` : r.rango.nombre;
       $('res-puntos').textContent = '0'; setTimeout(() => this.tween($('res-puntos'), r.puntos, 900), 200);
-      $('res-palabras-n').textContent = esArcade ? r.palabrasTotal : `${r.encontradas.length}/${r.total}`;
+      $('res-palabras-n').textContent = esArcade ? r.palabrasTotal : `${r.nEnc}/${r.total}` + (r.extras ? ` +${r.extras}` : '');
       $('res-mejor').textContent = r.mejorPalabra ? r.mejorPalabra.toUpperCase() : '—';
       $('res-combo').textContent = `x${r.combo || 0}`;
       $('res-xp-mas').textContent = `+${r.xp} XP`;
@@ -1239,7 +1248,9 @@
     renderResPalabras(r) {
       const cont = $('res-palabras');
       const enc = new Set(r.encontradas);
-      const todas = Array.from(r.derivables || this.dic.derivables(r.base));
+      const nucleo = r.nucleo || this.dic.nucleo(this.dic.derivables(r.base), r.base);
+      const todas = Array.from(nucleo);
+      const extras = r.encontradas.filter((w) => !nucleo.has(w)).sort();
       const porLargo = {};
       for (const w of todas) (porLargo[w.length] || (porLargo[w.length] = [])).push(w);
       let html = `<h4>BASE: ${r.base.toUpperCase()}</h4>`;
@@ -1248,12 +1259,15 @@
         html += `<h4>${L} LETRAS · ${ws.filter((w) => enc.has(w)).length}/${ws.length}</h4><div class="lista-chips">` +
           ws.map((w) => `<span class="chip-palabra ${enc.has(w) ? (w === r.base ? 'completa' : '') : 'falta'}">${w}</span>`).join('') + '</div>';
       }
+      if (extras.length) html += `<h4>${T('PALABRAS EXTRA')} · ${extras.length}</h4><div class="lista-chips">` + extras.map((w) => `<span class="chip-palabra extra">${w}</span>`).join('') + '</div>';
       cont.innerHTML = html;
     },
 
     mostrarResultadoGuardado(d) {
       const rango = WW.rangoPorPct(d.pct);
-      this.resultadoActual = { modo: 'diario', base: d.palabra, numero: d.numero, puntos: d.puntos, encontradas: d.encontradas, total: d.total, totalPuntos: d.totalPuntos, pct: d.pct, rango, xp: 0, monedas: 0, nuevos: [], mejorPalabra: d.encontradas.slice().sort((a, b) => b.length - a.length)[0] || '', combo: d.combo, guardado: true };
+      const nucleo = this.dic.nucleo(this.dic.derivables(d.palabra), d.palabra);
+      const nEnc = d.encontradas.filter((w) => nucleo.has(w)).length;
+      this.resultadoActual = { modo: 'diario', base: d.palabra, numero: d.numero, puntos: d.puntos, encontradas: d.encontradas, nucleo, nEnc, extras: d.encontradas.length - nEnc, total: nucleo.size, totalPuntos: d.totalPuntos, pct: d.pct, rango, xp: 0, monedas: 0, nuevos: [], mejorPalabra: d.encontradas.slice().sort((a, b) => b.length - a.length)[0] || '', combo: d.combo, guardado: true };
       this.mostrarResultado(this.resultadoActual);
       $('res-xp-mas').textContent = 'ya jugado';
       $('res-monedas').textContent = 'Volvé mañana por otro desafío';
@@ -1284,7 +1298,7 @@
         const idx = WW.RANGOS.indexOf(r.rango);
         const barra = WW.RANGOS.slice(1).map((_, i) => (i < idx ? '🟩' : '⬛')).join('');
         const racha = Estado.rachaVigente(this.hoy);
-        texto = `🧙 Word Wizard #${r.numero} · ${r.rango.icono} ${T(r.rango.nombre)}\n⭐ ${r.puntos} pts · ${r.encontradas.length}/${r.total} ${T('palabras')}\n${barra}${racha > 1 ? ` ${EN ? 'streak' : 'racha'} ${racha}🔥` : ''}${url}`;
+        texto = `🧙 Word Wizard #${r.numero} · ${r.rango.icono} ${T(r.rango.nombre)}\n⭐ ${r.puntos} pts · ${r.nEnc}/${r.total} ${T('palabras')}\n${barra}${racha > 1 ? ` ${EN ? 'streak' : 'racha'} ${racha}🔥` : ''}${url}`;
       }
       Audio.click();
       if (navigator.share && !window.WW_ARTIFACT) navigator.share({ text: texto }).catch(() => this.copiar(texto));
@@ -1308,7 +1322,7 @@
       if (tab === 'mundo') return this.verMundo(this.mundoSub || 'hoy');
       $('ranking-nota').textContent = 'Rankings de este dispositivo.';
       if (tab === 'diario') {
-        filas = Object.values(todos).filter((p) => p.diarios && p.diarios[this.hoy]).map((p) => ({ nombre: p.nombre, valor: p.diarios[this.hoy].puntos, sub: `${p.diarios[this.hoy].rango} · ${p.diarios[this.hoy].encontradas.length} palabras`, unidad: 'PTS', yo: p.nombre === yo }));
+        filas = Object.values(todos).filter((p) => p.diarios && p.diarios[K(this.hoy)]).map((p) => ({ nombre: p.nombre, valor: p.diarios[K(this.hoy)].puntos, sub: `${p.diarios[K(this.hoy)].rango} · ${p.diarios[K(this.hoy)].encontradas.length} palabras`, unidad: 'PTS', yo: p.nombre === yo }));
       } else if (tab === 'torre') {
         filas = Object.values(todos).filter((p) => p.arcade && p.arcade.mejorPuntaje > 0).map((p) => ({ nombre: p.nombre, valor: p.arcade.mejorPuntaje, sub: `piso ${p.arcade.mejorPiso} · ${p.arcade.partidas} subidas · ${p.arcade.jefes || 0} jefes`, unidad: 'PTS', yo: p.nombre === yo }));
       } else {

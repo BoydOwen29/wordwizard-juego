@@ -999,3 +999,9 @@ body.con-tabbar .pantalla.con-tabs, body.con-tabbar #p-mapa { padding-bottom: ca
 html:not([lang="es"]) [data-idioma="es"], html[lang="es"] [data-idioma]:not([data-idioma="es"]) { display: none !important; }
 .idioma-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 6px; font-weight: 800; }
 .idioma-fila select { font: 600 15px var(--display); padding: 6px 10px; border-radius: 12px; border: 3px solid var(--borde-m); background: var(--madera); color: #f3f6ee; }
+
+/* ===================== v2.12 · palabras extra ===================== */
+/* valen, pero no se exigen: violeta suave con borde punteado */
+.chip-palabra.extra { background: rgba(201,182,255,.22); color: #e9e2ff; border: 1.5px dashed rgba(201,182,255,.7); }
+.res-palabras .chip-palabra.extra { color: #3d2f6b; background: #ddd3ff; }
+.grilla .grilla-extra { color: #c9b6ff; border-color: rgba(201,182,255,.5); }

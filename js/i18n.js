@@ -21,7 +21,7 @@
 
   // idiomas con diccionario propio: solo esos se eligen solos o aparecen en Ajustes.
   // Para probar uno en preparación: localStorage 'ww.idioma.prueba' = '1'.
-  const LISTOS = ['es'];
+  const LISTOS = ['es', 'en'];
   let prueba = false;
   try { prueba = localStorage.getItem('ww.idioma.prueba') === '1'; } catch (e) { /* sin almacenamiento */ }
   const disponibles = prueba ? Object.keys(IDIOMAS) : LISTOS;
@@ -123,7 +123,8 @@
   };
 
   /** Prefijo de los archivos de datos (diccionario, desafíos, totales) de este idioma. */
-  I.datos = I.idioma === 'es' || !LISTOS.includes(I.idioma) ? 'data/' : `data/${I.idioma}/`;
+  I.idiomaDatos = LISTOS.includes(I.idioma) || prueba ? I.idioma : 'es';   // idioma del diccionario que se carga
+  I.datos = I.idiomaDatos === 'es' ? 'data/' : `data/${I.idiomaDatos}/`;
 
   if (I.idioma !== 'es') {
     const arrancar = () => {

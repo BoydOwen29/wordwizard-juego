@@ -12,6 +12,8 @@
     key: 'sb_publishable_vQ6qMxkyeKpOW0o3NgTWIg_WDcHmdvp',   // clave pública: la seguridad la dan las reglas de la base
   };
   const LS_SESIONES = 'ww.nube', LS_COLA = 'ww.nube.cola';
+  // cada idioma tiene su propio desafío y su propia Torre: los rankings van separados
+  const idioma = () => (window.WWI18n && window.WWI18n.idiomaDatos) || 'es';
 
   function activo() { return !!(CONFIG.url && CONFIG.key); }
 
@@ -72,8 +74,8 @@
     await asegurarNombre(item.clave, s, item.nombre);
     const d = item.datos;
     const res = item.tipo === 'diario'
-      ? await rest('partidas_diario', { method: 'POST', body: JSON.stringify({ fecha: d.fecha, numero: d.numero, puntos: d.puntos, palabras: d.palabras, rango: d.rango }) }, s)
-      : await rest('torre?on_conflict=usuario', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ mejor_puntaje: d.puntaje, mejor_piso: d.piso, jefes: Math.min(d.jefes || 0, 100) }) }, s);
+      ? await rest('partidas_diario', { method: 'POST', body: JSON.stringify({ fecha: d.fecha, numero: d.numero, puntos: d.puntos, palabras: d.palabras, rango: d.rango, idioma: d.idioma || 'es' }) }, s)
+      : await rest('torre?on_conflict=usuario,idioma', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ mejor_puntaje: d.puntaje, mejor_piso: d.piso, jefes: Math.min(d.jefes || 0, 100), idioma: d.idioma || 'es' }) }, s);
     // 409 = ya estaba cargada; otros 4xx = la base la rechaza (no tiene sentido reintentar)
     return res.ok || (res.status >= 400 && res.status < 500);
   }
@@ -93,25 +95,25 @@
 
   function encolar(tipo, clave, nombre, datos) {
     if (!activo()) return;
-    const cola = leer(LS_COLA, []).filter((x) => !(tipo === 'torre' && x.tipo === 'torre' && x.clave === clave));
+    const cola = leer(LS_COLA, []).filter((x) => !(tipo === 'torre' && x.tipo === 'torre' && x.clave === clave && (x.datos.idioma || 'es') === (datos.idioma || 'es')));
     cola.push({ uid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tipo, clave, nombre, datos });
     escribir(LS_COLA, cola.slice(-30));
     return vaciarCola();
   }
 
   /** r: {clave, nombre, fecha, numero, puntos, palabras, rango} */
-  function enviarDiario(r) { return encolar('diario', r.clave, r.nombre, r); }
+  function enviarDiario(r) { return encolar('diario', r.clave, r.nombre, Object.assign({ idioma: idioma() }, r)); }
   /** r: {clave, nombre, puntaje, piso, jefes} — el mejor resultado de la Torre de ese mago */
-  function enviarTorre(r) { return encolar('torre', r.clave, r.nombre, r); }
+  function enviarTorre(r) { return encolar('torre', r.clave, r.nombre, Object.assign({ idioma: idioma() }, r)); }
 
   // ------------------------------------------------------------ lecturas (públicas)
   async function leerVista(ruta) {
     if (!activo()) return null;
     try { const res = await rest(ruta); return res.ok ? await res.json() : null; } catch (e) { return null; }
   }
-  const topDiario = (fecha, n) => leerVista(`ranking_diario?fecha=eq.${fecha}&select=usuario,nombre,puntos,palabras,rango&order=puntos.desc&limit=${n || 50}`);
-  const topSemanal = (lunes, n) => leerVista(`ranking_semanal?semana=eq.${lunes}&select=usuario,nombre,puntos,dias&order=puntos.desc&limit=${n || 50}`);
-  const topTorre = (n) => leerVista(`ranking_torre?select=usuario,nombre,mejor_puntaje,mejor_piso,jefes&order=mejor_puntaje.desc&limit=${n || 50}`);
+  const topDiario = (fecha, n) => leerVista(`ranking_diario?idioma=eq.${idioma()}&fecha=eq.${fecha}&select=usuario,nombre,puntos,palabras,rango&order=puntos.desc&limit=${n || 50}`);
+  const topSemanal = (lunes, n) => leerVista(`ranking_semanal?idioma=eq.${idioma()}&semana=eq.${lunes}&select=usuario,nombre,puntos,dias&order=puntos.desc&limit=${n || 50}`);
+  const topTorre = (n) => leerVista(`ranking_torre?idioma=eq.${idioma()}&select=usuario,nombre,mejor_puntaje,mejor_piso,jefes&order=mejor_puntaje.desc&limit=${n || 50}`);
 
   function miId(clave) { const s = leer(LS_SESIONES, {})[clave]; return s ? s.id : null; }
 

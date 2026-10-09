@@ -147,11 +147,36 @@
   }
 
   // ------------------------------------------------------------ diccionario
+  /**
+   * Diccionario del juego.
+   * - `texto`: todas las palabras válidas, una por línea.
+   * - `opts.comunes`: las palabras conocidas (mismo formato). Son las que cuentan para el total, la grilla y el rango;
+   *   el resto son "palabras extra": valen y suman puntos, pero no se le exigen a nadie. Sin esta lista, todas cuentan.
+   * - `opts.idioma`: 'es' (default) genera plurales regulares; en otros idiomas la lista ya los trae.
+   */
   class Diccionario {
-    constructor(texto) {
+    constructor(texto, opts) {
       this.set = new Set();
       this.porLargo = {};
+      this.idioma = (opts && opts.idioma) || 'es';
+      this.comunes = null;
       if (texto) this.cargar(texto);
+      if (opts && opts.comunes) this.comunes = new Set(opts.comunes.split('\n').filter(Boolean));
+    }
+    plurales(w) { return this.idioma === 'es' ? plurales(w) : []; }
+
+    /** ¿Es una palabra conocida (cuenta para el total)? Los plurales de una conocida también lo son. */
+    esComun(w) {
+      if (!this.comunes || this.comunes.has(w)) return true;
+      if (this.idioma === 'es') for (const s of singulares(w)) if (this.comunes.has(s) && plurales(s).includes(w)) return true;
+      return false;
+    }
+
+    /** Las derivables que cuentan: las conocidas, y siempre la palabra base. */
+    nucleo(derivables, base) {
+      const out = new Set();
+      for (const w of derivables) if (w === base || this.esComun(w)) out.add(w);
+      return out;
     }
     cargar(texto) {
       const lineas = typeof texto === 'string' ? texto.split('\n') : texto;
@@ -167,6 +192,7 @@
     /** ¿`w` es palabra válida (directa o como plural regular)? */
     tiene(w) {
       if (this.set.has(w)) return true;
+      if (this.idioma !== 'es') return false;
       for (const s of singulares(w)) if (this.set.has(s) && plurales(s).includes(w)) return true;
       return false;
     }
@@ -182,7 +208,7 @@
         for (const w of lista) if (cabeEn(w, pool)) out.add(w);
       }
       for (const w of Array.from(out)) {
-        for (const pl of plurales(w)) {
+        for (const pl of this.plurales(w)) {
           if (pl.length <= L && !out.has(pl) && cabeEn(pl, pool)) out.add(pl);
         }
       }
