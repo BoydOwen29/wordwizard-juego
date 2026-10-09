@@ -21,7 +21,7 @@
 
   // idiomas con diccionario propio: solo esos se eligen solos o aparecen en Ajustes.
   // Para probar uno en preparación: localStorage 'ww.idioma.prueba' = '1'.
-  const LISTOS = ['es', 'en'];
+  const LISTOS = ['es', 'en', 'pt'];
   let prueba = false;
   try { prueba = localStorage.getItem('ww.idioma.prueba') === '1'; } catch (e) { /* sin almacenamiento */ }
   const disponibles = prueba ? Object.keys(IDIOMAS) : LISTOS;
@@ -81,7 +81,7 @@
   // ------------------------------------------------------------ traducción del DOM
   const LETRAS = /[a-záéíóúñü¿¡]/i;
   // lo que escribe el jugador o son palabras del juego: no se toca
-  const SALTAR = '[data-no-t], [data-idioma], .chip-palabra, .ficha, #palabra-actual, #hud-nombre, #menu-nombre, .hist-palabra, #res-mejor, .perfil-btn span, input, textarea, script, style';
+  const SALTAR = '[data-no-t], [data-idioma], .logo-titulo, .chip-palabra, .ficha, #palabra-actual, #hud-nombre, #menu-nombre, .hist-palabra, #res-mejor, .perfil-btn span, input, textarea, script, style';
   const SALTAR_PROPIO = '.rank-nombre';   // el nombre del mago no, pero lo que va adentro (<small>) sí
   const hechos = new WeakMap();   // nodo → texto que pusimos nosotros (para no traducir dos veces)
 

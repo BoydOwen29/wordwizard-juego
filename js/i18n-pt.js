@@ -218,7 +218,7 @@ WWI18n.registrar('pt', {
   'VOLVÉ CADA DÍA': 'VOLTE TODO DIA', 'Racha': 'Sequência', 'Jugá el desafío todos los días.': 'Jogue o desafio todos os dias.',
   'Si un día faltás, salva tu racha.': 'Se faltar um dia, salva sua sequência.', 'Misiones': 'Missões', 'Tres por día, con monedas de premio.': 'Três por dia, com moedas de prêmio.',
   'Ver las reglas completas': 'Ver as regras completas', '¡A jugar!': 'Bora jogar!', 'Siguiente': 'Próximo',
-  'CÓMO JUGAR': 'COMO JOGAR', '¡Uh-uuh!': 'Uh-uuh!', '¡Palabra extra!': 'Palavra extra!', 'PALABRAS EXTRA': 'PALAVRAS EXTRAS', '+{n} extra': '+{n} extra', '{a}/{b} +{c}': '{a}/{b} +{c}', 'Saltar': 'Pular',
+  'CÓMO JUGAR': 'COMO JOGAR', '¡Uh-uuh!': 'Uh-uuh!', '¡Palabra extra!': 'Palavra extra!', 'PALABRAS EXTRA': 'PALAVRAS EXTRAS', '+{n} extra': '+{n} extra', '{a}/{b} +{c}': '{a}/{b} +{c}', 'Saltar': 'Pular', 'Todavía nada. ¡A jugar!': 'Nada ainda. Bora jogar!',
   'Rangos alcanzados': 'Níveis alcançados', '🧙 En total': '🧙 No total', 'Palabras por largo': 'Palavras por tamanho',
   '🕯️ Aprendiz': '🕯️ Aprendiz', '📜 Iniciado': '📜 Iniciado', '✨ Conjurador': '✨ Conjurador', '🔮 Hechicero': '🔮 Feiticeiro',
   '🧙 Mago': '🧙 Mago', '⚡ Archimago': '⚡ Arquimago', '🌟 Leyenda': '🌟 Lenda', '👑 Omnisciente': '👑 Onisciente',

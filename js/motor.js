@@ -12,9 +12,10 @@
   const FECHA_LANZAMIENTO = '2026-10-07'; // día 1 del desafío diario
 
   // ------------------------------------------------------------ texto
-  const MAPA_TILDES = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'à': 'a', 'è': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u' };
+  // también las del portugués (â ã ê ô õ ç), que se juega sin tildes ni cedilla
+  const MAPA_TILDES = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'à': 'a', 'è': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u', 'â': 'a', 'ã': 'a', 'ê': 'e', 'ô': 'o', 'õ': 'o', 'ç': 'c' };
   function normalizar(s) {
-    return String(s || '').trim().toLowerCase().replace(/[áéíóúüàèìòù]/g, (c) => MAPA_TILDES[c]);
+    return String(s || '').trim().toLowerCase().replace(/[áéíóúüàèìòùâãêôõç]/g, (c) => MAPA_TILDES[c]);
   }
 
   function contarLetras(w) {
