@@ -45,6 +45,8 @@
     { id: 'misiones25', icono: '🗂️', nombre: 'Cumplidor', desc: 'Completá 25 misiones diarias.', cond: (p) => (p.stats.misiones || 0) >= 25 },
     { id: 'perfecto', icono: '💯', nombre: 'Omnisciente', desc: 'Encontrá todas las palabras de una base.', cond: (p, c) => c.tipo === 'fin' && c.total > 0 && c.encontradas >= c.total },
   ];
+  // la eñe solo existe en español
+  if (window.WWI18n && window.WWI18n.idioma !== 'es') LOGROS.splice(LOGROS.findIndex((l) => l.id === 'enie'), 1);
 
   /** Devuelve los logros nuevos que se desbloquean con este evento. */
   function evaluar(perfil, contexto) {
