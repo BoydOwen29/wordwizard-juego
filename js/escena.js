@@ -389,5 +389,7 @@
     },
   };
 
-  window.WWEscena = Object.assign(Escena, { generar, LUGARES });
+  // las formas sueltas, para que el camino de la Torre dibuje con el mismo trazo
+  const formas = { pino, cristal, libros, nube, estrella, azarCon, usarLugar: (id) => { LUG = LUGARES[id] || LUGARES.bosque; } };
+  window.WWEscena = Object.assign(Escena, { generar, LUGARES, formas });
 })();

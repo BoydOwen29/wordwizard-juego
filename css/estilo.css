@@ -902,3 +902,47 @@ body.jugando #luces { opacity: 0; }
 #mapa-jugar.pulso-listo { animation: pulsoListo 1.4s ease-in-out infinite; }
 @keyframes pulsoListo { 50% { transform: scale(1.04); } }
 .mapa-info small b { display: inline; font: inherit; font-weight: 800; color: var(--bronce-hi); text-shadow: none; }
+
+/* =====================================================================
+   v2.8 · Capítulo 1: mundo por zonas, cine, estela y jefes en el camino
+   ===================================================================== */
+.titulo-capitulo { display: flex; flex-direction: column; line-height: 1.05; font-size: 21px; white-space: nowrap; }
+.titulo-capitulo small { font-size: 11px; letter-spacing: 3px; color: var(--bronce-hi); }
+.mapa { -webkit-mask-image: none; mask-image: none; border-radius: 18px; border: 3px solid var(--borde-p); box-shadow: inset 0 0 0 2px rgba(223,235,214,.08), 0 5px 0 var(--borde-p); background: #203b45; }
+.mapa-brilla { animation: mapaBrilla 2.8s ease-in-out infinite; }
+@keyframes mapaBrilla { 50% { opacity: .65; } }
+.mapa-flota { animation: flotaCosa 4.5s ease-in-out infinite; }
+.mapa-copo { animation: mapaCopo linear infinite; }
+@keyframes mapaCopo { from { transform: translate(0, -40px); opacity: 0; } 15% { opacity: .9; } to { transform: translate(14px, 60px); opacity: 0; } }
+.mapa-titila { animation: titila 2.6s ease-in-out infinite; }
+.mapa-mota { animation: mapaMota 5s ease-in-out infinite; }
+@keyframes mapaMota { 0% { transform: translateY(10px); opacity: 0; } 30%, 70% { opacity: .85; } 100% { transform: translateY(-40px); opacity: 0; } }
+.mapa-chispas { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.mapa-chispas i { position: absolute; width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 8px 2px rgba(255, 241, 191, .6); }
+.mapa-onda { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; border: 4px solid; animation: mapaOnda .85s ease-out forwards; }
+@keyframes mapaOnda { from { transform: scale(.6); opacity: 1; } to { transform: scale(5); opacity: 0; } }
+.mapa-jefe { position: absolute; width: 72px; z-index: 2; pointer-events: none; opacity: 0; transform: scale(.3); transform-origin: 50% 100%; }
+.mapa-jefe .mago-dibujo { transform: scaleX(-1); }
+.mapa-jefe.ve { animation: jefeAparece .7s cubic-bezier(.3,1.6,.5,1) forwards; }
+@keyframes jefeAparece { 0% { opacity: 0; transform: scale(.3) translateY(20px); filter: brightness(3); } 60% { opacity: 1; filter: brightness(1.6); } 100% { opacity: 1; transform: scale(1); filter: none; } }
+.mapa-silabo .mago-dibujo { transition: transform .2s ease; }
+
+/* cine: franjas negras y cartel de capítulo o de zona */
+#p-mapa { position: relative; }
+.cine { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
+.cine.zona { pointer-events: none; }
+.cine-franja { position: absolute; left: 0; right: 0; height: 13%; background: #0b1418; transition: transform .6s cubic-bezier(.2,.8,.3,1); }
+.cine-franja.arriba { top: 0; transform: translateY(-100%); }
+.cine-franja.abajo { bottom: 0; transform: translateY(100%); }
+.cine.zona .cine-franja { height: 7%; }
+.cine.ve .cine-franja { transform: none; }
+.cine-caja { text-align: center; padding: 20px 22px; max-width: 320px; border-radius: 22px 22px 14px 14px; background: var(--piedra); border: 3px solid var(--borde-p);
+  box-shadow: inset 0 0 0 3px var(--bronce-hi), inset 0 -7px 0 var(--piedra-sh), 0 6px 0 var(--borde-p), 0 30px 60px rgba(0,0,0,.55);
+  opacity: 0; transform: scale(.7) translateY(20px); transition: opacity .45s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+.cine.ve .cine-caja { opacity: 1; transform: none; }
+.cine-caja small { display: block; font: 700 13px var(--display); letter-spacing: 4px; color: var(--bronce-hi); }
+.cine-caja b { display: block; font: 700 30px var(--display); color: #fff; text-shadow: 0 3px 0 var(--borde-p); margin: 4px 0; line-height: 1.1; }
+.cine-caja p { margin: 8px 0 0; color: #e3ece0; font-size: 14px; line-height: 1.45; }
+.cine-caja em { display: block; margin-top: 12px; font: 600 11px var(--texto-f); color: var(--texto-apagado); font-style: normal; animation: parpadeo 1.6s ease-in-out infinite; }
+.cine.zona .cine-caja { padding: 12px 20px; box-shadow: inset 0 0 0 3px var(--piedra-hi), inset 0 -6px 0 var(--piedra-sh), 0 5px 0 var(--borde-p), 0 20px 40px rgba(0,0,0,.5); }
+.cine.zona .cine-caja b { font-size: 24px; }

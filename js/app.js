@@ -7,7 +7,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.7.0',
+    version: '2.8.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -53,6 +53,7 @@
       this.magos.resultado = new Magos.Mago($('mago-resultado'));
       this.magos.mapa = new Magos.Mago(document.createElement('div'));
       this.magos.mapa.cont.classList.add('mago-mapa');
+      this.magos.mapaJefe = new Magos.Mago(document.createElement('div'), { paleta: 'sombra' });
       this.magos.menu = new Magos.Mago($('mago-menu'));
       this.magos.juego = new Magos.Mago($('mago-juego'));
       this.magos.jefe = new Magos.Mago($('mago-jefe'), { paleta: 'sombra' });
@@ -199,7 +200,7 @@
       this.magos.menu.visible = id === 'p-menu';
       this.magos.juego.visible = id === 'p-juego';
       this.magos.resultado.visible = id === 'p-resultado';
-      this.magos.mapa.visible = id === 'p-mapa';
+      this.magos.mapa.visible = this.magos.mapaJefe.visible = id === 'p-mapa';
       this.magos.jefe.visible = id === 'p-juego' && !!(this.partida && this.partida.jefe);
       Audio.musicaSuave(id === 'p-juego');
       document.body.classList.toggle('jugando', id === 'p-juego');
@@ -227,7 +228,7 @@
       const enCurso = p.enCurso && p.enCurso.fecha === this.hoy && !jugado;
       $('btn-diario-sub').textContent = jugado ? `#${n} · ${jugado.rango} · ${jugado.puntos} pts` : enCurso ? `#${n} · en curso, ¡volvé rápido!` : `Desafío #${n} · 3 minutos`;
       $('btn-diario-estado').textContent = jugado ? 'LISTO ✓' : enCurso ? 'EN CURSO' : '';
-      $('btn-arcade-sub').textContent = p.arcade.mejorPiso ? `Mejor: piso ${p.arcade.mejorPiso} · ${p.arcade.mejorPuntaje} pts${p.arcade.jefes ? ` · ${p.arcade.jefes} jefes` : ''}` : 'Subí pisos, vencé jefes, juntá monedas';
+      $('btn-arcade-sub').textContent = 'Capítulo 1 · ' + (p.arcade.mejorPiso ? `mejor: piso ${p.arcade.mejorPiso} · ${p.arcade.mejorPuntaje} pts${p.arcade.jefes ? ` · ${p.arcade.jefes} jefes` : ''}` : 'subí pisos y vencé jefes');
       this.renderMisiones();
       this.mostrar('p-menu');
     },
@@ -1630,8 +1631,8 @@
       const desde = Number(String(el.textContent).replace(/[^0-9-]/g, '')) || 0;
       if (desde === hasta) { el.textContent = hasta; return; }
       const t0 = performance.now();
-      const paso = (t) => {
-        const k = Math.min(1, (t - t0) / (ms || 500));
+      const paso = () => {
+        const k = Math.max(0, Math.min(1, (performance.now() - t0) / (ms || 500)));
         const e = 1 - Math.pow(1 - k, 3);
         el.textContent = Math.round(desde + (hasta - desde) * e);
         if (k < 1) requestAnimationFrame(paso);
@@ -1785,12 +1786,14 @@
     },
 
     /**
-     * El camino de la Torre. Sin datos: el arranque (Silabo camina de la entrada al piso 1).
-     * Con { pa, bonusPts, bonusMonedas, rest }: después de ganar un piso, camina al siguiente.
+     * Capítulo 1: La Torre Arcana. Sin datos: el arranque (presentación del capítulo y Silabo camina al piso 1).
+     * Con { pa, bonusPts, bonusMonedas, rest }: después de ganar un piso, camina al siguiente,
+     * con cartel si entra a una zona nueva, aparición si lo espera un jefe y cierre al terminar el capítulo.
      */
     verTorre(info) {
       const p = Estado.perfil, pa = info && info.pa;
       const hecho = pa ? pa.arcade.piso : 0, sig = hecho + 1;
+      const CAP = WWMapa.PISOS_CAPITULO;
       this._torre = { pa, sig };
       this.ponerLugar(WW_LUGARES.dePiso(Math.max(1, hecho)));
       this.mostrar('p-mapa');
@@ -1802,15 +1805,66 @@
         : `<b>Subí lo más alto que puedas</b><small>Cada piso es una palabra con un objetivo de puntos. Tenés 3 vidas y cada 5 pisos hay un jefe.${p.arcade.mejorPiso ? ` Tu mejor marca: piso ${p.arcade.mejorPiso}.` : ''}</small>`;
       const btn = $('mapa-jugar');
       btn.textContent = pa ? `Subir al piso ${sig}` : 'Empezar la subida';
-      btn.disabled = true;
-      WWMapa.pintar($('mapa'), { actual: hecho, hecho, lugares: WW_LUGARES.lista, esJefe: WW.esPisoJefe, nombreJefe: (n) => esc(WW.nombreJefe(n)), mago: this.magos.mapa });
-      setTimeout(() => WWMapa.avanzar(sig, () => Audio.tecla()).then(() => {
+      btn.disabled = true; btn.classList.remove('pulso-listo');
+      this.magos.mapaJefe.setEtapa(2);
+      WWMapa.pintar($('mapa'), { actual: hecho, hecho, esJefe: WW.esPisoJefe, nombreJefe: (n) => esc(WW.nombreJefe(n)), mago: this.magos.mapa, jefe: this.magos.mapaJefe });
+      const caminar = () => WWMapa.avanzar(sig, () => Audio.tecla()).then(() => {
         if (this.pantalla !== 'p-mapa') return;
-        Audio.poder(); btn.disabled = false; btn.classList.add('pulso-listo');
-        this.magos.mapa.animar('happy', 800);
-        const lugar = WW_LUGARES.dePiso(sig);
-        if (lugar.desde === sig) { this.ponerLugar(lugar); this.banner(lugar.icono, lugar.nombre, 'Pisos ' + lugar.rango); }
-      }), 450);
+        Audio.poder(); this.magos.mapa.animar('happy', 800);
+        const lugar = WW_LUGARES.dePiso(sig), zona = WWMapa.zonaDe(sig);
+        let espera = 0;
+        if (zona.desde === sig) {
+          this.ponerLugar(lugar);
+          this.cartelCapitulo(`ZONA ${WWMapa.ZONAS.indexOf(zona)}`, zona.nombre, '', 'zona');
+          Audio.rango(); espera = 1900;
+        }
+        if (WW.esPisoJefe(sig)) setTimeout(() => {
+          if (this.pantalla !== 'p-mapa') return;
+          WWMapa.mostrarJefe(sig); Audio.jefe(); this.vineta('flash-rojo'); this.sacudir(false);
+          this.magos.mapaJefe.animar('cast', 1200); this.magos.mapa.animar('sad', 700);
+        }, espera);
+        setTimeout(() => { btn.disabled = false; btn.classList.add('pulso-listo'); }, espera + (WW.esPisoJefe(sig) ? 900 : 0));
+      });
+      // presentación del capítulo: carteles y cámara que baja desde la cima
+      if (!pa) {
+        const primera = !(p.vistos && p.vistos.cap1);
+        p.vistos = Object.assign({}, p.vistos, { cap1: true }); Estado.guardar();
+        const cartel = this.cartelCapitulo('CAPÍTULO 1', 'La Torre Arcana', 'Nocturnia encerró las palabras del bosque en lo alto de la torre. Silabo va a subir piso por piso para liberarlas.', 'capitulo', primera ? 5200 : 2600);
+        setTimeout(() => WWMapa.recorrido(primera ? 4200 : 1800).then(() => { cartel.cerrar(); setTimeout(caminar, 350); }), 600);
+        cartel.alTocar = () => WWMapa.cortarRecorrido();
+        return;
+      }
+      // fin del capítulo: cartel y sigue la subida, más allá de la torre
+      if (hecho === CAP) {
+        this.confeti(120); Audio.victoria();
+        const cartel = this.cartelCapitulo('¡CAPÍTULO 1 COMPLETO!', 'Liberaste las palabras', 'Pero Nocturnia no estaba sola: el Archimago Gris espera más arriba. La subida sigue…', 'capitulo', 4200);
+        cartel.alCerrar = () => caminar();
+        return;
+      }
+      setTimeout(caminar, 450);
+    },
+
+    /**
+     * Cartel de cine sobre el camino (franjas negras arriba y abajo). Devuelve { cerrar, alTocar, alCerrar }.
+     * tipo 'capitulo' es grande y se queda hasta ms; 'zona' es más chico y se va solo.
+     */
+    cartelCapitulo(antetitulo, titulo, texto, tipo, ms) {
+      const pant = $('p-mapa');
+      pant.querySelectorAll('.cine').forEach((c) => c.remove());
+      const c = document.createElement('div');
+      c.className = 'cine ' + tipo;
+      c.innerHTML = `<i class="cine-franja arriba"></i><i class="cine-franja abajo"></i><div class="cine-caja"><small>${esc(antetitulo)}</small><b>${esc(titulo)}</b>${texto ? `<p>${esc(texto)}</p>` : ''}${tipo === 'capitulo' ? '<em>Tocá para seguir</em>' : ''}</div>`;
+      pant.appendChild(c);
+      void c.offsetWidth; c.classList.add('ve');
+      const ctl = { cerrado: false, alTocar: null, alCerrar: null };
+      ctl.cerrar = () => {
+        if (ctl.cerrado) return; ctl.cerrado = true;
+        c.classList.remove('ve'); setTimeout(() => c.remove(), 600);
+        if (ctl.alCerrar) ctl.alCerrar();
+      };
+      c.addEventListener('pointerdown', () => { if (ctl.alTocar) ctl.alTocar(); ctl.cerrar(); });
+      setTimeout(ctl.cerrar, ms || 1800);
+      return ctl;
     },
 
     limpiarEfectos() {
