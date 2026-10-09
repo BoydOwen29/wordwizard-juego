@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.capralabsgames.wordwizard",
+        "sha256_cert_fingerprints": ["30:AE:8A:9A:7A:AB:CD:7A:5E:5A:1A:A1:CC:EB:17:0A:6F:5F:28:5E:9D:36:BB:4D:C5:B4:CB:F5:76:EF:FB:F9"]
+      }
+    }]
