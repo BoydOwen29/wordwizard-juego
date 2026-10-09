@@ -7,7 +7,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.8.0',
+    version: '2.9.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -278,7 +278,7 @@
         ]);
       });
       $('btn-practica').addEventListener('click', () => { Audio.click(); this.mostrar('p-practica'); });
-      $('btn-rankings').addEventListener('click', () => { Audio.click(); this.verRankings('diario'); });
+      $('btn-rankings').addEventListener('click', () => { Audio.click(); this.verRankings(Ranking.activo() ? 'mundo' : 'diario'); });
       $('btn-stats').addEventListener('click', () => { Audio.click(); this.verEstadisticas(); });
       $('btn-logros').addEventListener('click', () => { Audio.click(); this.verLogros(); });
       $('btn-ayuda').addEventListener('click', () => { Audio.click(); this.tutorial(); });
@@ -339,9 +339,9 @@
       $('aj-tutorial').addEventListener('click', () => { Audio.click(); this.tutorial(); });
       $('aj-exportar').addEventListener('click', () => this.exportar());
       $('aj-borrar').addEventListener('click', () => {
-        this.modal(`<h3>¿BORRAR A ${esc(Estado.perfil.nombre).toUpperCase()}?</h3><p>Se pierde todo el progreso de este mago en este dispositivo.</p>`, [
+        this.modal(`<h3>¿BORRAR A ${esc(Estado.perfil.nombre).toUpperCase()}?</h3><p>Se pierde todo el progreso de este mago en este dispositivo${Ranking.activo() ? ' y sus resultados en el ranking mundial' : ''}.</p>`, [
           { texto: 'Cancelar', clase: 'btn-secundario' },
-          { texto: 'Borrar', clase: 'btn-peligro', accion: () => { Estado.borrar(Estado.perfil.nombre); this.renderPerfiles(); this.mostrar('p-titulo'); } },
+          { texto: 'Borrar', clase: 'btn-peligro', accion: () => { if (Ranking.activo()) Ranking.borrar(this.claveNube()); Estado.borrar(Estado.perfil.nombre); this.renderPerfiles(); this.mostrar('p-titulo'); } },
         ]);
       });
 
@@ -1112,7 +1112,7 @@
         const velasUsadas = Estado.registrarRacha(this.hoy);
         if (velasUsadas) setTimeout(() => this.toast(`${WWIconos.html('vela')}<div><b>La vela salvó tu racha</b><br><small>Se ${velasUsadas > 1 ? `consumieron ${velasUsadas} velas` : 'consumió una vela'}. Racha: ${p.racha} días</small></div>`, 'logro'), 1200);
         this.mision('diario', 1);
-        if (Ranking.activo()) Ranking.enviarDiario({ fecha: this.hoy, numero: pa.numero, nombre: p.nombre, puntos: pa.puntos, palabras: pa.encontradas.length, rango: rango.nombre });
+        if (Ranking.activo()) Ranking.enviarDiario({ clave: this.claveNube(), fecha: this.hoy, numero: pa.numero, nombre: p.nombre, puntos: pa.puntos, palabras: pa.encontradas.length, rango: rango.nombre });
       } else {
         xp = Math.round(pa.puntos * 0.5);
         monedas = Math.floor(pa.encontradas.length / 3);
@@ -1141,6 +1141,7 @@
       p.arcade.mejorPuntaje = Math.max(p.arcade.mejorPuntaje, a.puntajeTotal);
       p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, a.piso);
       p.arcade.partidas += 1;
+      if (Ranking.activo()) Ranking.enviarTorre({ clave: this.claveNube(), nombre: p.nombre, puntaje: p.arcade.mejorPuntaje, piso: p.arcade.mejorPiso, jefes: Math.floor(p.arcade.mejorPiso / 5) });
       p.arcade.historial.unshift({ fecha: this.hoy, puntos: a.puntajeTotal, piso: a.piso, jefes: a.jefes });
       p.arcade.historial = p.arcade.historial.slice(0, 20);
       p.stats.partidas += 1;
@@ -1254,17 +1255,8 @@
       const todos = Estado.todos(), yo = Estado.perfil.nombre;
       const cont = $('ranking-contenido');
       let filas = [];
-      if (tab === 'mundo') {
-        cont.innerHTML = '<div class="rank-vacio">Cargando ranking mundial…</div>';
-        $('ranking-nota').textContent = 'Ranking mundial del desafío de hoy.';
-        this.mostrar('p-rankings');
-        Ranking.topDiario(this.hoy, 50).then((rows) => {
-          const mio = Ranking.dispositivo();
-          this.pintarRanking(cont, rows.map((r) => ({ nombre: r.nombre, valor: r.puntos, sub: `${r.rango} · ${r.palabras} palabras`, unidad: 'PTS', yo: r.dispositivo === mio })), 'Nadie jugó todavía hoy en el mundo. ¡Sé el primero!');
-        });
-        return;
-      }
-      $('ranking-nota').textContent = 'Rankings de este dispositivo.' + (Ranking.activo() ? '' : ' El ranking mundial llega con la versión online.');
+      if (tab === 'mundo') return this.verMundo(this.mundoSub || 'hoy');
+      $('ranking-nota').textContent = 'Rankings de este dispositivo.';
       if (tab === 'diario') {
         filas = Object.values(todos).filter((p) => p.diarios && p.diarios[this.hoy]).map((p) => ({ nombre: p.nombre, valor: p.diarios[this.hoy].puntos, sub: `${p.diarios[this.hoy].rango} · ${p.diarios[this.hoy].encontradas.length} palabras`, unidad: 'PTS', yo: p.nombre === yo }));
       } else if (tab === 'torre') {
@@ -1274,6 +1266,33 @@
       }
       this.pintarRanking(cont, filas, tab === 'diario' ? 'Nadie jugó el desafío de hoy todavía.' : 'Todavía no hay registros.');
       this.mostrar('p-rankings');
+    },
+
+    /** Clave del mago para la nube: no cambia si se renombra. */
+    claveNube() { const p = Estado.perfil; return p.creado || p.nombre; },
+
+    verMundo(sub) {
+      this.mundoSub = sub;
+      const cont = $('ranking-contenido');
+      const subs = [['hoy', 'Hoy'], ['semana', 'Semana'], ['torre', 'Torre']];
+      cont.innerHTML = `<div class="mundo-sub">${subs.map(([k, t]) => `<button class="${k === sub ? 'activa' : ''}" data-sub="${k}">${t}</button>`).join('')}</div><div class="mundo-lista"><div class="rank-vacio">Cargando ranking mundial…</div></div>`;
+      cont.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => { Audio.click(); this.verMundo(b.dataset.sub); }));
+      $('ranking-nota').textContent = { hoy: 'Desafío de hoy, en todo el mundo.', semana: 'Puntos del desafío sumados desde el lunes.', torre: 'La mejor subida a la Torre Arcana de cada mago.' }[sub];
+      if (!$('p-rankings').classList.contains('activa')) this.mostrar('p-rankings');
+      const mio = Ranking.miId(this.claveNube());
+      const lunes = (() => { const d = new Date(this.hoy + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); })();
+      const pedido = sub === 'hoy' ? Ranking.topDiario(this.hoy) : sub === 'semana' ? Ranking.topSemanal(lunes) : Ranking.topTorre();
+      pedido.then((rows) => {
+        const lista = cont.querySelector('.mundo-lista');
+        if (this.mundoSub !== sub || !lista) return;
+        if (rows === null) { lista.innerHTML = '<div class="rank-vacio">Sin conexión. El ranking mundial necesita internet.</div>'; return; }
+        const filas = rows.map((r) => sub === 'torre'
+          ? { nombre: r.nombre, valor: r.mejor_puntaje, sub: `piso ${r.mejor_piso} · ${r.jefes} ${r.jefes === 1 ? 'jefe' : 'jefes'}`, unidad: 'PTS', yo: r.usuario === mio }
+          : sub === 'semana'
+            ? { nombre: r.nombre, valor: r.puntos, sub: `${r.dias} ${r.dias === 1 ? 'día' : 'días'}`, unidad: 'PTS', yo: r.usuario === mio }
+            : { nombre: r.nombre, valor: r.puntos, sub: `${r.rango} · ${r.palabras} palabras`, unidad: 'PTS', yo: r.usuario === mio });
+        this.pintarRanking(lista, filas, sub === 'torre' ? 'Nadie subió la Torre todavía. ¡Estrenala!' : 'Nadie jugó todavía. ¡Sé el primero!');
+      });
     },
 
     pintarRanking(cont, filas, vacio) {

@@ -946,3 +946,9 @@ body.jugando #luces { opacity: 0; }
 .cine-caja em { display: block; margin-top: 12px; font: 600 11px var(--texto-f); color: var(--texto-apagado); font-style: normal; animation: parpadeo 1.6s ease-in-out infinite; }
 .cine.zona .cine-caja { padding: 12px 20px; box-shadow: inset 0 0 0 3px var(--piedra-hi), inset 0 -6px 0 var(--piedra-sh), 0 5px 0 var(--borde-p), 0 20px 40px rgba(0,0,0,.5); }
 .cine.zona .cine-caja b { font-size: 24px; }
+
+/* ===================== v2.9 · ranking mundial ===================== */
+.mundo-sub { display: flex; gap: 6px; justify-content: center; margin: -4px 0 4px; }
+.mundo-sub button { border: 2px solid var(--borde-m); background: rgba(20,33,40,.55); color: var(--texto-suave); font: 600 14px var(--display); padding: 5px 14px; border-radius: 999px; }
+.mundo-sub button.activa { color: #2a2412; background: var(--oro); border-color: var(--borde-m); }
+.mundo-lista { display: flex; flex-direction: column; gap: 8px; }
