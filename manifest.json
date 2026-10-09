@@ -1,16 +1,22 @@
 {
+  "id": "./",
   "name": "Word Wizard",
-  "short_name": "WordWizard",
-  "description": "Armá todas las palabras que puedas con las letras de la palabra del día. Desafíos diarios, Torre Arcana y rankings.",
+  "short_name": "Word Wizard",
+  "description": "Armá todas las palabras que puedas con las letras de una palabra, junto a Silabo, el maguito. Desafío diario, Torre Arcana con jefes, misiones y logros.",
   "lang": "es",
-  "start_url": "./index.html",
+  "dir": "ltr",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone"],
   "orientation": "portrait",
   "background_color": "#1c2f38",
   "theme_color": "#1c2f38",
+  "categories": ["games", "education", "entertainment"],
   "icons": [
-    { "src": "assets/img/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "assets/img/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "assets/img/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/img/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/img/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/img/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

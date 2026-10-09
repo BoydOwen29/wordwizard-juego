@@ -1,3 +1,6 @@
+/* Fuentes incluidas en el juego (SIL Open Font License), así la app anda sin conexión */
+@font-face { font-family: 'Fredoka'; src: url(../assets/fonts/fredoka-latin.woff2) format('woff2'); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: 'Nunito'; src: url(../assets/fonts/nunito-latin.woff2) format('woff2'); font-weight: 200 1000; font-display: swap; }
 /* =====================================================================
    Word Wizard — Interfaz B · Bruma nocturna (ver lab/brandbook.html)
    Bosque con niebla, vidrio esmerilado, fichas claras, oro solo para lo importante.
@@ -810,3 +813,92 @@ body.jugando #luces { opacity: 0; }
 .tarjeta-chips { flex-wrap: nowrap; gap: 5px; }
 .tarjeta-chips .chip { padding: 3px 8px; white-space: nowrap; }
 .chip-velas .ic { width: 14px; height: 14px; }
+
+/* =====================================================================
+   v2.7 · Tutorial deslizable (carrusel con el dedo)
+   ===================================================================== */
+.modal-caja.con-carrusel { padding-left: 0; padding-right: 0; overflow: hidden; }
+.modal-caja.con-carrusel > .fila:last-child:empty { display: none; }
+.carrusel { overflow: hidden; touch-action: pan-y; user-select: none; cursor: grab; }
+.carrusel:active { cursor: grabbing; }
+.carrusel-pista { display: flex; transition: transform .38s cubic-bezier(.2,.8,.3,1); will-change: transform; }
+.carrusel-paso { flex: 0 0 100%; min-width: 0; padding: 0 20px; box-sizing: border-box; min-height: 300px; }
+.carrusel-paso h3 { margin-top: 18px; }
+.carrusel-paso .tutorial-paso > * { opacity: 0; transform: translateY(10px); transition: opacity .35s ease, transform .35s var(--spring); }
+.carrusel-paso.activo .tutorial-paso > * { opacity: 1; transform: none; }
+.carrusel-paso.activo .tutorial-paso > *:nth-child(2) { transition-delay: .08s; }
+.carrusel-paso.activo .tutorial-paso > *:nth-child(3) { transition-delay: .16s; }
+.carrusel-paso.activo .tutorial-paso > *:nth-child(4) { transition-delay: .24s; }
+.tut-botones { padding: 0 18px; margin-top: 10px; }
+.tut-saluda svg { animation: flota 2.6s ease-in-out infinite; }
+.tutorial-paso .ej span { background: var(--perg); border: 2.5px solid var(--borde-m); box-shadow: inset 0 -3px 0 var(--perg-sh); color: #1c2f38; }
+.tut-flecha { font: 700 20px var(--display); color: var(--bronce-hi); line-height: 1; }
+.tut-arma { display: flex; gap: 5px; align-items: center; min-height: 40px; }
+.tut-arma span { width: 32px; height: 36px; display: flex; align-items: center; justify-content: center; font: 700 20px var(--display); border-radius: 10px;
+  background: var(--bronce-hi); color: #2a2412; border: 2.5px solid var(--borde-m); box-shadow: inset 0 -3px 0 var(--bronce); opacity: 0; }
+.carrusel-paso.activo .tut-arma span, .carrusel-paso.activo .tut-arma em { animation: armaLetra 3.4s calc(var(--i) * .35s) infinite both; }
+.tut-arma em { font: 700 24px var(--display); color: var(--menta); font-style: normal; opacity: 0; margin-left: 4px; }
+@keyframes armaLetra { 0% { opacity: 0; transform: translateY(-26px) scale(.7); } 8% { opacity: 1; transform: translateY(3px) scale(1.06); } 12% { transform: none; } 80% { opacity: 1; } 92%, 100% { opacity: 0; transform: scale(.9); } }
+.tut-puntos { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 260px; }
+.tut-puntos span { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-radius: 12px; background: var(--piedra-sh); border: 2px solid var(--borde-p); color: #e3ece0; font-weight: 700; }
+.tut-puntos span b { font-family: var(--display); color: #fff; margin-right: 4px; }
+.tut-puntos span i { font: 700 17px var(--display); color: var(--bronce-hi); font-style: normal; }
+.tut-puntos span.oro { background: var(--bronce-hi); color: #2a2412; border-color: var(--borde-m); }
+.tut-puntos span.oro i { color: #2a2412; }
+.tut-filas { display: flex; flex-direction: column; gap: 10px; width: 100%; text-align: left; }
+.tut-fila { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 14px; background: var(--piedra-sh); border: 2px solid var(--borde-p); }
+.tut-fila .ic { width: 36px; height: 36px; }
+.tut-fila b { display: block; font-family: var(--display); color: #fff; font-size: 16px; }
+.tut-fila small { color: #cfe0d6; font-size: 13px; }
+.link-reglas { background: none; border: 0; color: var(--bronce-hi); text-decoration: underline; font: 600 13px var(--texto-f); cursor: pointer; }
+
+/* =====================================================================
+   v2.7 · Camino de la Torre (js/mapa.js)
+   ===================================================================== */
+#p-mapa { gap: 10px; }
+#p-mapa .cabecera { align-items: center; }
+.mapa-vidas { margin-left: auto; display: flex; gap: 2px; }
+.mapa-vidas .ic { width: 22px; height: 22px; }
+.mapa { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; position: relative;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 40px, #000 calc(100% - 30px), transparent 100%); mask-image: linear-gradient(180deg, transparent 0, #000 40px, #000 calc(100% - 30px), transparent 100%); }
+.mapa::-webkit-scrollbar { display: none; }
+.mapa-lienzo { position: relative; margin: 0 auto; }
+.mapa-svg { display: block; overflow: visible; }
+.tramo path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.tramo-futuro { stroke: rgba(223,235,214,.4); stroke-width: 4; stroke-dasharray: 1 13; }
+.tramo-borde { stroke: #16262c; stroke-width: 20; }
+.tramo-tierra { stroke: #c7a874; stroke-width: 13; }
+.tramo-piedras { stroke: #e3cf9f; stroke-width: 4; stroke-dasharray: 6 16; }
+.tramo:not(.listo) .tramo-borde, .tramo:not(.listo) .tramo-tierra, .tramo:not(.listo) .tramo-piedras { stroke-dashoffset: 9999; }
+.nodo-halo { fill: none; stroke: none; }
+.nodo-base { fill: #16262c; }
+.nodo-cara { stroke: #16262c; stroke-width: 3.5; }
+.nodo.futuro .nodo-cara { fill: #2c4d58; } .nodo.futuro .nodo-num { fill: #86a097; }
+.nodo.futuro.jefe .nodo-cara { fill: #5a3442; }
+.nodo.actual .nodo-cara { fill: #4c5a4b; } .nodo.actual .nodo-num { fill: #f3f6ee; }
+.nodo.actual .nodo-halo { stroke: var(--bronce-hi); stroke-width: 3; animation: haloNodo 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.nodo.actual.jefe .nodo-cara { fill: #c9705c; } .nodo.actual.jefe .nodo-halo { stroke: var(--coral); }
+.nodo.hecho .nodo-cara { fill: var(--bronce-hi); }
+.nodo-num { font: 700 20px var(--display); text-anchor: middle; }
+.nodo.llega, .nodo.recien { transform-box: fill-box; }
+.nodo.llega .nodo-cara, .nodo.recien .nodo-cara { animation: nodoPop .5s cubic-bezier(.3,1.6,.5,1); transform-box: fill-box; transform-origin: center; }
+@keyframes nodoPop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes haloNodo { 0%, 100% { transform: scale(.9); opacity: .9; } 50% { transform: scale(1.12); opacity: .35; } }
+.nodo-jefe { font: 700 12px var(--display); text-anchor: middle; fill: #f3c7b8; paint-order: stroke; stroke: #16262c; stroke-width: 3px; }
+.nodo-jefe.hecho { fill: var(--bronce-hi); }
+.cartel text { font: 700 12px var(--display); fill: #f3f6ee; text-anchor: middle; }
+.mapa-silabo { position: absolute; left: 0; top: 0; width: 72px; z-index: 2; pointer-events: none; will-change: transform; }
+.mapa-silabo.izq .mago-dibujo { transform: scaleX(-1); }
+.mapa-panel { flex: none; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 18px; background: var(--piedra); border: 3px solid var(--borde-p);
+  box-shadow: inset 0 0 0 3px var(--piedra-hi), inset 0 -6px 0 var(--piedra-sh), 0 5px 0 var(--borde-p); }
+.mapa-info b { display: block; font: 700 18px var(--display); color: var(--bronce-hi); text-shadow: 0 2px 0 var(--borde-p); }
+.mapa-info small { display: block; color: #e3ece0; font-size: 13px; margin-top: 3px; line-height: 1.4; }
+.mapa-info small .ic { width: 1.1em; height: 1.1em; vertical-align: -.2em; }
+.mapa-aviso { margin: 8px 0 0; color: #f3c7b8; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.mapa-aviso .ic { width: 22px; height: 22px; }
+.mapa-panel .fila .btn { flex: 1; }
+.mapa-panel .fila .btn-primario { flex: 1.6; }
+#mapa-jugar:disabled { opacity: .55; }
+#mapa-jugar.pulso-listo { animation: pulsoListo 1.4s ease-in-out infinite; }
+@keyframes pulsoListo { 50% { transform: scale(1.04); } }
+.mapa-info small b { display: inline; font: inherit; font-weight: 800; color: var(--bronce-hi); text-shadow: none; }

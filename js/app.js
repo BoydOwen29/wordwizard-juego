@@ -7,7 +7,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.6.1',
+    version: '2.7.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -34,10 +34,10 @@
   const azar = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const WW_LUGARES = {
     lista: [
-      { id: 'cueva', nombre: 'Cueva de cristales', icono: '💎', desde: 1, rango: '1 a 5' },
-      { id: 'biblioteca', nombre: 'Biblioteca encantada', icono: '📚', desde: 6, rango: '6 a 10' },
-      { id: 'cumbre', nombre: 'Cumbre nevada', icono: '🏔️', desde: 11, rango: '11 a 15' },
-      { id: 'cielo', nombre: 'Cielo sobre las nubes', icono: '☁️', desde: 16, rango: '16 en adelante' },
+      { id: 'cueva', nombre: 'Cueva de cristales', corto: 'Cueva', icono: '💎', desde: 1, rango: '1 a 5' },
+      { id: 'biblioteca', nombre: 'Biblioteca encantada', corto: 'Biblioteca', icono: '📚', desde: 6, rango: '6 a 10' },
+      { id: 'cumbre', nombre: 'Cumbre nevada', corto: 'Cumbre', icono: '🏔️', desde: 11, rango: '11 a 15' },
+      { id: 'cielo', nombre: 'Cielo sobre las nubes', corto: 'Cielo', icono: '☁️', desde: 16, rango: '16 en adelante' },
     ],
     dePiso(p) { let l = this.lista[0]; for (const x of this.lista) if (p >= x.desde) l = x; return l; },
   };
@@ -51,6 +51,8 @@
       WWIconos.pintar();
       this.magos.titulo = new Magos.Mago($('mago-titulo'));
       this.magos.resultado = new Magos.Mago($('mago-resultado'));
+      this.magos.mapa = new Magos.Mago(document.createElement('div'));
+      this.magos.mapa.cont.classList.add('mago-mapa');
       this.magos.menu = new Magos.Mago($('mago-menu'));
       this.magos.juego = new Magos.Mago($('mago-juego'));
       this.magos.jefe = new Magos.Mago($('mago-jefe'), { paleta: 'sombra' });
@@ -182,7 +184,7 @@
       if (!Estado.almacenamientoOk()) this.toast('Este navegador no deja guardar: tu progreso se pierde al cerrar.');
       Audio.setSonido(p.ajustes.sonido);
       if (p.ajustes.musica) Audio.musica = true; else Audio.setMusica(false);
-      for (const k of ['titulo', 'menu', 'juego', 'resultado']) { this.magos[k].setPaleta(p.sombrero); this.magos[k].setNivel(p.nivel); }
+      for (const k of ['titulo', 'menu', 'juego', 'resultado', 'mapa']) { this.magos[k].setPaleta(p.sombrero); this.magos[k].setNivel(p.nivel); }
       this.hoy = WW.claveDia();
       this.pintarMusica();
       this.irMenu();
@@ -197,11 +199,12 @@
       this.magos.menu.visible = id === 'p-menu';
       this.magos.juego.visible = id === 'p-juego';
       this.magos.resultado.visible = id === 'p-resultado';
+      this.magos.mapa.visible = id === 'p-mapa';
       this.magos.jefe.visible = id === 'p-juego' && !!(this.partida && this.partida.jefe);
       Audio.musicaSuave(id === 'p-juego');
       document.body.classList.toggle('jugando', id === 'p-juego');
       if (id === 'p-juego' && window.WWEscena) WWEscena.calmar();
-      Audio.tema(id === 'p-juego' ? (this.partida && this.partida.jefe ? 'jefe' : 'juego') : 'menu');
+      Audio.tema(id === 'p-juego' ? (this.partida && this.partida.jefe ? 'jefe' : 'juego') : id === 'p-mapa' ? 'juego' : 'menu');
       const s = $(id); if (s) s.scrollTop = 0;
     },
 
@@ -252,12 +255,32 @@
       });
 
       $('btn-diario').addEventListener('click', () => { Audio.click(); this.jugarDiario(); });
-      $('btn-arcade').addEventListener('click', () => { Audio.click(); this.nuevaPartida('arcade'); });
+      $('btn-arcade').addEventListener('click', () => { Audio.click(); this.verTorre(); });
+      $('mapa-jugar').addEventListener('click', () => {
+        const t = this._torre; if (!t || $('mapa-jugar').disabled) return;
+        Audio.click();
+        if (t.pa) this.nuevaPartida('arcade', { piso: t.sig, continuar: true, usadas: t.pa.arcade.usadas });
+        else this.nuevaPartida('arcade');
+      });
+      $('mapa-tienda').addEventListener('click', () => {
+        Audio.click();
+        this.modal(`<h3>TIENDA</h3><p class="tienda-saldo">TENÉS ${Estado.perfil.monedas} ${WWIconos.html('moneda')}</p><div class="tienda" id="tienda"></div>`, [{ texto: 'Listo', clase: 'btn-primario' }]);
+        this.renderTienda();
+      });
+      $('mapa-salir').addEventListener('click', () => {
+        Audio.click();
+        const t = this._torre;
+        if (!t || !t.pa || t.pa.arcade.cerrada) return this.irMenu();
+        this.modal('<h3>¿BAJAR DE LA TORRE?</h3><p>Se termina la subida y se guarda tu puntaje.</p>', [
+          { texto: 'Seguir subiendo', clase: 'btn-secundario' },
+          { texto: 'Terminar', clase: 'btn-peligro', accion: () => this.cerrarArcade(t.pa) },
+        ]);
+      });
       $('btn-practica').addEventListener('click', () => { Audio.click(); this.mostrar('p-practica'); });
       $('btn-rankings').addEventListener('click', () => { Audio.click(); this.verRankings('diario'); });
       $('btn-stats').addEventListener('click', () => { Audio.click(); this.verEstadisticas(); });
       $('btn-logros').addEventListener('click', () => { Audio.click(); this.verLogros(); });
-      $('btn-ayuda').addEventListener('click', () => { Audio.click(); this.mostrar('p-ayuda'); });
+      $('btn-ayuda').addEventListener('click', () => { Audio.click(); this.tutorial(); });
       $('btn-ajustes').addEventListener('click', () => { Audio.click(); this.verAjustes(); });
       $('btn-instalar').addEventListener('click', () => this.instalar());
       for (const id of ['btn-musica-menu', 'btn-musica-juego']) $(id).addEventListener('click', () => this.alternarMusica());
@@ -1012,14 +1035,7 @@
       const sig = pa.arcade.piso + 1;
       this.mision('piso', sig);
       this.anunciarLogros(Logros.evaluar(p, { tipo: 'piso' }));
-      this._tModalPiso = setTimeout(() => this.modal(`
-        <h3>${pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`}</h3>
-        <div class="modal-silabo" data-pose="happy"></div>
-        <p>+${bonusPts} pts de bonus (${pa.jefe ? 'jefe, ' : ''}piso ${pa.arcade.piso} y ${rest}s sobrantes)<br>+${bonusMonedas} ${WWIconos.html('moneda')} · total <b>${pa.arcade.puntajeTotal}</b> pts</p>
-        ${WW.esPisoJefe(sig) ? `<p>⚠️ En el piso ${sig} te espera <b>${esc(WW.nombreJefe(sig))}</b>.</p>` : ''}
-        <p class="tienda-saldo">TENÉS ${p.monedas} ${WWIconos.html('moneda')}</p>
-        <div class="tienda" id="tienda"></div>
-      `, [{ texto: `Subir al piso ${sig} →`, clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { piso: sig, continuar: true, usadas: pa.arcade.usadas }) }]) || this.renderTienda(), 1400);
+      this._tModalPiso = setTimeout(() => this.verTorre({ pa, bonusPts, bonusMonedas, rest }), 1400);
     },
 
     renderTienda() {
@@ -1195,7 +1211,7 @@
 
     anunciarNivel(n) {
       const etapaAntes = Magos.etapaPorNivel(n - 1), etapaAhora = Magos.etapaPorNivel(n);
-      for (const k of ['titulo', 'menu', 'juego', 'resultado']) this.magos[k].setNivel(n);
+      for (const k of ['titulo', 'menu', 'juego', 'resultado', 'mapa']) this.magos[k].setNivel(n);
       const crecio = etapaAhora > etapaAntes ? window.Silabo.CRECIMIENTO[etapaAhora] : null;
       Audio.nivel();
       this.magos.menu.animar('happy', 2000);
@@ -1368,22 +1384,73 @@
     },
 
     // ============================================================ tutorial
+    /** Cómo jugar: carrusel que se desliza con el dedo (o con las flechas). alTerminar: al tocar "¡A jugar!". */
     tutorial(alTerminar) {
+      const I = (n) => WWIconos.html(n);
+      const fichas = (txt, clase) => `<div class="ej">${txt.split('').map((l) => `<span class="${clase || ''}">${l}</span>`).join('')}</div>`;
+      const fila = (ic, b, t) => `<div class="tut-fila">${I(ic)}<div><b>${b}</b><small>${t}</small></div></div>`;
       const pasos = [
-        { titulo: '¡HOLA! SOY SILABO', html: `<div class="tutorial-paso"><div class="tut-mago">${window.Silabo.mago(window.Silabo.OFICIAL)}</div><p>Soy el mago de las palabras. Te doy las letras de una palabra y vos armás todas las que puedas con ellas.</p><div class="ej"><span>C</span><span>A</span><span>M</span><span>I</span><span>N</span><span>A</span><span>R</span></div></div>` },
-        { titulo: 'ARMÁ PALABRAS', html: `<div class="tutorial-paso"><p>Tocá las letras (o escribí con el teclado) y mandá con <b>Enviar</b>. Mínimo 3 letras, cada una tantas veces como aparece. Valen plurales y conjugaciones.</p><div class="ej"><span class="on">C</span><span class="on">A</span><span class="on">M</span><span class="on">A</span></div><p><b>cama</b> ✓ · <b>mina</b> ✓ · <b>rima</b> ✓ · <b>caminar</b> ✓ +15</p></div>` },
-        { titulo: 'SUBÍ DE RANGO', html: `<div class="tutorial-paso"><p>Cuantas más y más largas, más puntos y mejor rango: de 🕯️ Aprendiz a 👑 Omnisciente. En el <b>desafío diario</b> tenés 3 minutos; en la <b>Torre</b> hay pisos, jefes y poderes. ¡Suerte!</p></div>` },
+        { t: '¡HOLA! SOY SILABO', h: `<div class="tut-mago tut-saluda">${window.Silabo.mago(window.Silabo.OFICIAL)}</div><p>Soy el mago de las palabras. Te doy las letras de una palabra y vos armás todas las que puedas.</p>` },
+        { t: 'ARMÁ PALABRAS', h: `${fichas('CAMINAR')}<div class="tut-flecha">↓</div><div class="tut-arma">${'CAMA'.split('').map((l, i) => `<span style="--i:${i}">${l}</span>`).join('')}<em style="--i:4">✓</em></div><p>Tocá las letras y mandá con <b>Enviar</b>. Mínimo 3 letras, cada una las veces que aparece. <b>cama</b>, <b>mina</b>, <b>rima</b>… y <b>caminar</b>.</p>` },
+        { t: 'MÁS LARGAS, MÁS PUNTOS', h: `<div class="tut-puntos"><span><b>3</b> letras <i>1</i></span><span><b>5</b> letras <i>4</i></span><span><b>7</b> letras <i>10</i></span><span class="oro">la palabra entera <i>+15</i></span></div><p>Si acertás seguido armás <b>combo</b>: desde la tercera, cada palabra vale más, hasta ×2.</p>` },
+        { t: 'TRES FORMAS DE JUGAR', h: `<div class="tut-filas">${fila('calendario', 'Desafío diario', 'La misma palabra para todos, 3 minutos, una vez por día.')}${fila('torre', 'Torre Arcana', 'Subí piso por piso, vencé jefes y juntá monedas.')}${fila('vela', 'Práctica', 'Sin reloj y con pistas, para aprender.')}</div>` },
+        { t: 'VOLVÉ CADA DÍA', h: `<div class="tut-filas">${fila('llama', 'Racha', 'Jugá el desafío todos los días.')}${fila('vela', 'Vela de racha', 'Si un día faltás, salva tu racha.')}${fila('estrella', 'Misiones', 'Tres por día, con monedas de premio.')}</div><button class="link-reglas" id="tut-reglas">Ver las reglas completas</button>` },
       ];
+      const n = pasos.length;
+      this.modal(`<div class="carrusel" id="carrusel"><div class="carrusel-pista" id="carrusel-pista">${pasos.map((s) => `<section class="carrusel-paso"><h3>${s.t}</h3><div class="tutorial-paso">${s.h}</div></section>`).join('')}</div></div>
+        <div class="puntitos" id="tut-puntos">${pasos.map((_, j) => `<i class="${j ? '' : 'on'}"></i>`).join('')}</div>
+        <div class="fila tut-botones"><button class="btn btn-secundario" id="tut-saltar">Saltar</button><button class="btn btn-primario" id="tut-sig">Siguiente</button></div>`, []);
+      const caja = $('modal-caja'), car = $('carrusel'), pista = $('carrusel-pista');
+      caja.classList.add('con-carrusel');
       let i = 0;
-      const pintar = () => {
-        const s = pasos[i];
-        const ultimo = i === pasos.length - 1;
-        this.modal(`<h3>${s.titulo}</h3>${s.html}<div class="puntitos">${pasos.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>`, [
-          { texto: ultimo ? '¡A jugar!' : 'Siguiente →', clase: 'btn-primario', accion: () => { if (ultimo) { if (alTerminar) alTerminar(); } else { i++; pintar(); } } },
-        ]);
+      const ir = (k, animar) => {
+        i = Math.max(0, Math.min(n - 1, k));
+        pista.style.transition = animar === false ? 'none' : '';
+        pista.style.transform = `translateX(${-i * 100}%)`;
+        $('tut-puntos').querySelectorAll('i').forEach((d, j) => d.classList.toggle('on', j === i));
+        $('tut-sig').textContent = i === n - 1 ? '¡A jugar!' : 'Siguiente';
+        $('tut-saltar').style.visibility = i === n - 1 ? 'hidden' : '';
+        pista.querySelectorAll('.carrusel-paso').forEach((p, j) => p.classList.toggle('activo', j === i));
       };
-      pintar();
+      const cerrar = (jugar) => {
+        $('modal').classList.add('oculto'); caja.classList.remove('con-carrusel');
+        document.removeEventListener('keydown', teclas);
+        removeEventListener('pointerup', soltar); removeEventListener('pointercancel', soltar);
+        if (jugar && alTerminar) alTerminar();
+      };
+      const teclas = (e) => { if (e.key === 'ArrowRight') ir(i + 1); else if (e.key === 'ArrowLeft') ir(i - 1); };
+      document.addEventListener('keydown', teclas);
+      $('tut-sig').addEventListener('click', () => { Audio.click(); if (i === n - 1) cerrar(true); else ir(i + 1); });
+      $('tut-saltar').addEventListener('click', () => { Audio.click(); cerrar(true); });
+      $('tut-reglas').addEventListener('click', () => { Audio.click(); cerrar(false); if (!alTerminar) this.mostrar('p-ayuda'); else alTerminar(); });
+      // arrastre con el dedo: la pista sigue al dedo y al soltar va al paso más cercano
+      let x0 = 0, y0 = 0, dx = 0, arrastrando = false, horizontal = null, t0 = 0;
+      car.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; x0 = e.clientX; y0 = e.clientY; dx = 0; arrastrando = true; horizontal = null; t0 = performance.now(); });
+      car.addEventListener('pointermove', (e) => {
+        if (!arrastrando) return;
+        dx = e.clientX - x0;
+        if (horizontal === null && (Math.abs(dx) > 8 || Math.abs(e.clientY - y0) > 8)) { horizontal = Math.abs(dx) > Math.abs(e.clientY - y0); if (horizontal) car.setPointerCapture(e.pointerId); }
+        if (!horizontal) return;
+        const borde = (i === 0 && dx > 0) || (i === n - 1 && dx < 0) ? .35 : 1;
+        pista.style.transition = 'none';
+        pista.style.transform = `translateX(calc(${-i * 100}% + ${dx * borde}px))`;
+      });
+      const soltar = () => {
+        if (!arrastrando) return; arrastrando = false;
+        if (!horizontal) return;
+        const rapido = Math.abs(dx) / Math.max(1, performance.now() - t0) > .45;
+        if (dx < -car.clientWidth * .22 || (rapido && dx < -20)) ir(i + 1);
+        else if (dx > car.clientWidth * .22 || (rapido && dx > 20)) ir(i - 1);
+        else ir(i);
+        if (Math.abs(dx) > 20) Audio.click();
+      };
+      // se escucha en la ventana: el dedo puede soltarse fuera del carrusel
+      addEventListener('pointerup', soltar);
+      addEventListener('pointercancel', soltar);
+      car.addEventListener('lostpointercapture', soltar);
+      ir(0, false);
     },
+
 
     // ============================================================ efectos
     juice() {
@@ -1715,6 +1782,35 @@
       ]);
       const b = document.querySelector('#modal-caja .fila:last-child .btn-primario');
       if (b && (lleno || p.monedas < precio)) b.disabled = true;
+    },
+
+    /**
+     * El camino de la Torre. Sin datos: el arranque (Silabo camina de la entrada al piso 1).
+     * Con { pa, bonusPts, bonusMonedas, rest }: después de ganar un piso, camina al siguiente.
+     */
+    verTorre(info) {
+      const p = Estado.perfil, pa = info && info.pa;
+      const hecho = pa ? pa.arcade.piso : 0, sig = hecho + 1;
+      this._torre = { pa, sig };
+      this.ponerLugar(WW_LUGARES.dePiso(Math.max(1, hecho)));
+      this.mostrar('p-mapa');
+      const vidas = pa ? pa.arcade.vidas : CONFIG.arcade.vidas;
+      $('mapa-vidas').innerHTML = WWIconos.html('corazon').repeat(vidas) + WWIconos.html('corazonVacio').repeat(CONFIG.arcade.vidas - vidas);
+      const jefeSig = WW.esPisoJefe(sig) ? `<p class="mapa-aviso">${WWIconos.html('calavera')} En el piso ${sig} te espera <b>${esc(WW.nombreJefe(sig))}</b></p>` : '';
+      $('mapa-info').innerHTML = pa
+        ? `<b>${pa.jefe ? `¡${esc(pa.nombreJefe)} vencido!` : `¡Piso ${hecho} superado!`}</b><small>+${info.bonusPts} pts de bonus (${info.rest} s sobrantes) · +${info.bonusMonedas} ${WWIconos.html('moneda')} · total <b>${pa.arcade.puntajeTotal}</b> pts</small>${jefeSig}`
+        : `<b>Subí lo más alto que puedas</b><small>Cada piso es una palabra con un objetivo de puntos. Tenés 3 vidas y cada 5 pisos hay un jefe.${p.arcade.mejorPiso ? ` Tu mejor marca: piso ${p.arcade.mejorPiso}.` : ''}</small>`;
+      const btn = $('mapa-jugar');
+      btn.textContent = pa ? `Subir al piso ${sig}` : 'Empezar la subida';
+      btn.disabled = true;
+      WWMapa.pintar($('mapa'), { actual: hecho, hecho, lugares: WW_LUGARES.lista, esJefe: WW.esPisoJefe, nombreJefe: (n) => esc(WW.nombreJefe(n)), mago: this.magos.mapa });
+      setTimeout(() => WWMapa.avanzar(sig, () => Audio.tecla()).then(() => {
+        if (this.pantalla !== 'p-mapa') return;
+        Audio.poder(); btn.disabled = false; btn.classList.add('pulso-listo');
+        this.magos.mapa.animar('happy', 800);
+        const lugar = WW_LUGARES.dePiso(sig);
+        if (lugar.desde === sig) { this.ponerLugar(lugar); this.banner(lugar.icono, lugar.nombre, 'Pisos ' + lugar.rango); }
+      }), 450);
     },
 
     limpiarEfectos() {

@@ -18,10 +18,9 @@
 <link rel="icon" href="assets/img/wordwizard.ico">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/img/icon-192x192.png">
 <link rel="apple-touch-icon" href="assets/img/icon-192x192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/estilo.css?v=2.6.1">
+<link rel="preload" href="assets/fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/estilo.css?v=2.7.0">
 </head>
 <body>
 
@@ -143,6 +142,16 @@
       <button class="btn btn-secundario btn-grande" data-largo="9"><b>9</b><small>letras</small></button>
     </div>
     <label class="check"><input type="checkbox" id="practica-reloj"> Con reloj de 3 minutos</label>
+  </section>
+
+  <!-- ===================== CAMINO DE LA TORRE ===================== -->
+  <section id="p-mapa" class="pantalla">
+    <header class="cabecera"><button class="btn-icono btn-volver" id="mapa-salir"><i class="ic" data-ic="volver"></i></button><h2 class="pixel">TORRE ARCANA</h2><div class="mapa-vidas" id="mapa-vidas"></div></header>
+    <div class="mapa" id="mapa"></div>
+    <div class="mapa-panel">
+      <div class="mapa-info" id="mapa-info"></div>
+      <div class="fila"><button class="btn btn-secundario" id="mapa-tienda"><i class="ic" data-ic="moneda"></i> Tienda</button><button class="btn btn-primario" id="mapa-jugar">Empezar</button></div>
+    </div>
   </section>
 
   <!-- ===================== JUEGO ===================== -->
@@ -305,6 +314,7 @@
         <button class="btn btn-peligro" id="aj-borrar">Borrar este mago</button>
       </div>
       <p class="nota" id="aj-info"></p>
+      <p class="nota"><a href="privacidad.html" target="_blank" rel="noopener" style="color:var(--bronce-hi)">Política de privacidad</a></p>
     </div>
   </section>
 
@@ -313,18 +323,19 @@
 <div id="toasts" aria-live="polite"></div>
 <div id="modal" class="modal oculto"><div class="modal-caja" id="modal-caja" role="dialog" aria-modal="true"></div></div>
 
-<script src="data/diccionario.js?v=2.6.1"></script>
-<script src="data/desafios.js?v=2.6.1"></script>
-<script src="data/totales.js?v=2.6.1"></script>
-<script src="js/motor.js?v=2.6.1"></script>
-<script src="js/silabo.js?v=2.6.1"></script>
-<script src="js/iconos.js?v=2.6.1"></script>
-<script src="js/mago.js?v=2.6.1"></script>
-<script src="js/escena.js?v=2.6.1"></script>
-<script src="js/audio.js?v=2.6.1"></script>
-<script src="js/logros.js?v=2.6.1"></script>
-<script src="js/estado.js?v=2.6.1"></script>
-<script src="js/ranking.js?v=2.6.1"></script>
-<script src="js/app.js?v=2.6.1"></script>
+<script src="data/diccionario.js?v=2.7.0"></script>
+<script src="data/desafios.js?v=2.7.0"></script>
+<script src="data/totales.js?v=2.7.0"></script>
+<script src="js/motor.js?v=2.7.0"></script>
+<script src="js/silabo.js?v=2.7.0"></script>
+<script src="js/iconos.js?v=2.7.0"></script>
+<script src="js/mago.js?v=2.7.0"></script>
+<script src="js/mapa.js?v=2.7.0"></script>
+<script src="js/escena.js?v=2.7.0"></script>
+<script src="js/audio.js?v=2.7.0"></script>
+<script src="js/logros.js?v=2.7.0"></script>
+<script src="js/estado.js?v=2.7.0"></script>
+<script src="js/ranking.js?v=2.7.0"></script>
+<script src="js/app.js?v=2.7.0"></script>
 </body>
 </html>
