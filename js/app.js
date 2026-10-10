@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.20.0',
+    version: '2.21.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -782,6 +782,9 @@
     renderFichas() {
       const pa = this.partida, cont = $('fichas');
       cont.innerHTML = '';
+      // dos filas de fichas grandes (7 → 4 + 3, 8 → 4 + 4, 9 → 5 + 4): para dedos de verdad (lab/controles.html)
+      const n = pa.orden.length;
+      cont.style.setProperty('--cols', n > 5 ? Math.ceil(n / 2) : n);
       for (const i of pa.orden) {
         const f = pa.fichas[i];
         const d = document.createElement('button');
