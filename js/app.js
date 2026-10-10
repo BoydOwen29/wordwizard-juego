@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.17.0',
+    version: '2.18.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -57,6 +57,8 @@
   };
   const QUIETO = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const ICONO_MISION = { palabra: 'libro', larga: 'objetivo', completa: 'trofeo', diario: 'calendario', piso: 'torre', combo: 'llama', practica: 'vela', puntos: 'estrella', seis: 'rayo' };
+  // ícono de logro: medallón dibujado (logros-iconos.js); si falta, el emoji de siempre
+  const iconoLogro = (l, bloq) => (window.WWLogrosIconos && WWLogrosIconos.SIMBOLOS && WWLogrosIconos.SIMBOLOS[l.id]) ? WWLogrosIconos.html(l.id, bloq) : (bloq ? '🔒' : l.icono);
   const iconoMision = (x) => ICONO_MISION[x.evento] ? WWIconos.html(ICONO_MISION[x.evento]) : x.icono;
   const azar = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const WW_LUGARES = {
@@ -1055,7 +1057,7 @@
 
     anunciarLogros(nuevos) {
       if (!nuevos || !nuevos.length) return;
-      nuevos.forEach((l, i) => setTimeout(() => { Audio.logro(); this.toast(`<span>${l.icono}</span><div><b>Logro: ${l.nombre}</b><br><small>${l.desc}</small></div>`, 'logro'); }, 600 + i * 900));
+      nuevos.forEach((l, i) => setTimeout(() => { Audio.logro(); this.toast(`<span class="toast-logro">${iconoLogro(l)}</span><div><b>Logro: ${l.nombre}</b><br><small>${l.desc}</small></div>`, 'logro'); }, 600 + i * 900));
       Estado.sumarMonedas(5 * nuevos.length); Estado.guardar();
     },
 
@@ -1177,7 +1179,7 @@
       const filas = [];
       for (let n = hoyN - 1, i = 0; n >= 1 && i < CONFIG.archivoDias; n--, i++) {
         const fecha = new Date(); fecha.setDate(fecha.getDate() - (hoyN - n));
-        const libre = i < CONFIG.archivoGratis || !!p.pase;
+        const libre = i < CONFIG.archivoGratis || this.tienePase();
         const jugado = (p.archivo && p.archivo[n]) || p.diarios[K(WW.claveDia(fecha))];
         const r = jugado && WW.RANGOS.find((x) => x.nombre === jugado.rango);
         const dia = `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}`;
@@ -1191,6 +1193,16 @@
         const fecha = new Date(); fecha.setDate(fecha.getDate() - Number(b.dataset.dias));
         this.nuevaPartida('archivo', { fecha });
       };
+    },
+
+    /** Pase de Mago activo (mensual o anual). Los derechos los anota el servidor al validar la compra en Play. */
+    tienePase() {
+      const d = Estado.perfil && Estado.perfil.derechos;
+      return !!(d && (d.pase_mensual || d.pase_anual));
+    },
+
+    avisoCompra(v) {
+      this.modal(`<h3>${esc(v.nombre.toUpperCase())}</h3><div class="modal-silabo" data-paleta="${Object.keys(Magos.PALETAS).find((k) => Magos.PALETAS[k] === v)}"></div><p>${v.especial.apoyo ? 'Gracias por querer bancar a Silabo. 💚' : 'Un traje para lucirte: no da ninguna ventaja.'} Se va a poder comprar <b>muy pronto</b>, desde la app.</p>`, [{ texto: '¡Dale!', clase: 'btn-primario' }]);
     },
 
     avisoPase() {
@@ -1316,11 +1328,11 @@
       // trajes de Silabo: llegan solos con el nivel, o se adelantan con monedas (solo se ven distinto, no dan ventaja)
       const cab = document.createElement('h4'); cab.className = 'tienda-cab'; cab.textContent = 'Trajes de Silabo'; cont.appendChild(cab);
       for (const [k, v] of Object.entries(Magos.PALETAS)) {
-        if (v.nivel <= 1 || v.nivel > 100) continue;
+        if (v.especial || v.nivel <= 1 || v.nivel > 100) continue;
         const tiene = this.tieneTraje(k), precio = PRECIO_TRAJE(v.nivel);
         const d = document.createElement('div');
         d.className = 'tienda-item traje' + (tiene ? ' tiene' : '');
-        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : `Gratis en el nivel ${v.nivel}`}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : `${WWIconos.html('moneda')}${precio}`}</button>`;
+        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : `Gratis en el nivel ${v.nivel}`}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : `${WWIconos.html('moneda')}${precio}`}</button>`;
         const b = d.querySelector('button');
         if (!tiene) b.disabled = p.monedas < precio;
         if (tiene && p.sombrero === k) b.disabled = true;
@@ -1338,15 +1350,38 @@
         });
         cont.appendChild(d);
       }
-      const pronto = document.createElement('p'); pronto.className = 'tienda-pronto';
-      pronto.textContent = 'Muy pronto: trajes especiales y el Pase de Mago, para apoyar a Silabo.';
-      cont.appendChild(pronto);
+      // especiales y apoyo: pagos desde la app de Play (todavía no: "pronto"). Nunca dan ventaja.
+      const cabE = document.createElement('h4'); cabE.className = 'tienda-cab'; cabE.textContent = 'Especiales'; cont.appendChild(cabE);
+      for (const [k, v] of Object.entries(Magos.PALETAS)) {
+        if (!v.especial) continue;
+        const tiene = this.tieneTraje(k);
+        const d = document.createElement('div');
+        d.className = 'tienda-item traje especial' + (tiene ? ' tiene' : '') + (v.especial.apoyo ? ' apoyo' : '');
+        const sub = v.especial.apoyo ? 'Invitale un mate a Silabo: para quien quiera bancar el juego' : `Temporada: ${v.especial.temporada}`;
+        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : sub}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : v.especial.precio}</button>`;
+        const b = d.querySelector('button');
+        if (tiene && p.sombrero === k) b.disabled = true;
+        b.addEventListener('click', () => {
+          Audio.click();
+          if (!tiene) return this.avisoCompra(v);
+          p.sombrero = k; Estado.guardar();
+          for (const mg of ['titulo', 'menu', 'juego', 'mapa']) this.magos[mg].setPaleta(k);
+          this.renderTienda();
+        });
+        cont.appendChild(d);
+      }
+      const pase = document.createElement('button'); pase.className = 'tienda-pase';
+      pase.innerHTML = `<b>Pase de Mago</b><small>Todo el archivo de desafíos, el traje de cada temporada y tus estadísticas completas</small><em>pronto</em>`;
+      pase.addEventListener('click', () => { Audio.click(); this.avisoPase(); });
+      cont.insertBefore(pase, cont.firstChild);
     },
 
     /** Un traje es del jugador si llegó al nivel o si lo compró con monedas. */
     tieneTraje(k) {
       const p = Estado.perfil, v = Magos.PALETAS[k];
-      return !!v && v.nivel < 100 && (p.nivel >= v.nivel || !!(p.trajes && p.trajes[k]));
+      if (!v) return false;
+      if (v.especial) return !!((p.trajes && p.trajes[k]) || (p.derechos && p.derechos[v.especial.sku]));
+      return v.nivel < 100 && (p.nivel >= v.nivel || !!(p.trajes && p.trajes[k]));
     },
 
     terminar(motivo) {
@@ -1465,7 +1500,7 @@
       const lg = $('res-logros'); lg.innerHTML = '';
       for (const l of (r.nuevos || [])) {
         const d = document.createElement('div'); d.className = 'res-logro';
-        d.innerHTML = `<span>${l.icono}</span><div><b>${l.nombre}</b><small>${l.desc}</small></div>`; lg.appendChild(d);
+        d.innerHTML = `<span>${iconoLogro(l)}</span><div><b>${l.nombre}</b><small>${l.desc}</small></div>`; lg.appendChild(d);
       }
       $('btn-compartir').classList.toggle('oculto', r.modo === 'practica' || r.modo === 'archivo');
       $('btn-otra').innerHTML = esArcade ? WWIconos.html('repetir') + ' Otra subida' : r.modo === 'practica' ? WWIconos.html('repetir') + ' Otra palabra' : r.modo === 'archivo' ? WWIconos.html('calendario') + ' Otro del archivo' : WWIconos.html('calendario') + ' Mañana hay más';
@@ -1685,7 +1720,7 @@
         const d = document.createElement('div');
         const ok = !!p.logros[l.id];
         d.className = 'logro' + (ok ? '' : ' bloqueado');
-        d.innerHTML = `<span>${ok ? l.icono : '🔒'}</span><b>${l.nombre}</b><small>${l.desc}</small>`;
+        d.innerHTML = `<span>${iconoLogro(l, !ok)}</span><b>${l.nombre}</b><small>${l.desc}</small>`;
         cont.appendChild(d);
       }
       this.mostrar('p-logros');
@@ -1700,11 +1735,11 @@
       const cont = $('aj-sombreros'); cont.innerHTML = '';
       for (const [k, v] of Object.entries(Magos.PALETAS)) {
         const b = document.createElement('button');
-        if (v.nivel > 100) continue;
+        if (v.nivel > 100 || (v.especial && !this.tieneTraje(k))) continue;
         const hab = this.tieneTraje(k);
         b.className = 'sombrero' + (p.sombrero === k ? ' activo' : '');
         b.disabled = !hab;
-        b.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c }))}</span>${v.nombre}<small>${hab ? '' : 'NV ' + v.nivel}</small>`;
+        b.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno }))}</span>${v.nombre}<small>${hab ? '' : 'NV ' + v.nivel}</small>`;
         b.addEventListener('click', () => { p.sombrero = k; Estado.guardar(); for (const m of ['titulo', 'menu', 'juego']) this.magos[m].setPaleta(k); Audio.click(); this.verAjustes(); });
         cont.appendChild(b);
       }
@@ -2336,7 +2371,7 @@
       m.classList.remove('oculto');
       const hs = caja.querySelector('.modal-silabo');
       if (hs) {
-        const p = Estado.perfil, mg = new Magos.Mago(hs, { paleta: p ? p.sombrero : 'turquesa', etapa: p ? Magos.etapaPorNivel(p.nivel) : 0 });
+        const p = Estado.perfil, mg = new Magos.Mago(hs, { paleta: hs.dataset.paleta || (p ? p.sombrero : 'turquesa'), etapa: p ? Magos.etapaPorNivel(p.nivel) : 0 });
         if (hs.dataset.pose === 'happy') mg.chispas(16, .5, .3);
         hs.classList.add(hs.dataset.pose);
       }

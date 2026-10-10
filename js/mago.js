@@ -17,6 +17,18 @@
     rubi:      { nombre: 'Real', nivel: 8, c: { hat: '#3a3f8f', hatSh: '#2b2f70', robe: '#8f2f4a', robeSh: '#70233a', shoe: '#1f2347', band: '#f5d06b', hem: '#f5d06b', starRobe: '#f5d06b' } },
     dorado:    { nombre: 'Dorado', nivel: 12, c: { hat: '#d9a441', hatSh: '#b4842c', robe: '#2c4d58', robeSh: '#223d46', shoe: '#1c2f38', band: '#fff1bf', hem: '#fff1bf', starRobe: '#fff1bf' } },
     arcoiris:  { nombre: 'Bruma', nivel: 16, c: { hat: '#dfebd6', hatSh: '#bbd0b9', robe: '#67948f', robeSh: '#557d79', shoe: '#2c4d58', band: '#e8907a', hem: '#e8907a', starRobe: '#f3f6ee' } },
+    // de nivel alto: gratis al llegar, o se adelantan con monedas (nivel × 80)
+    aurora:     { nombre: 'Aurora', nivel: 20, c: { hat: '#4fa38f', hatSh: '#3b8474', robe: '#2b3f7a', robeSh: '#22325f', band: '#c9b6ff', hem: '#c9b6ff', starRobe: '#e2d6ff', shoe: '#1f2a52' } },
+    hongo:      { nombre: 'Hongo del claro', nivel: 25, c: { hat: '#d9574a', hatSh: '#b4443a', robe: '#efe3c8', robeSh: '#d6c7a5', band: '#f3f6ee', hem: '#d9574a', starRobe: '#d9574a', shoe: '#7a5a3c' } },
+    brasa:      { nombre: 'Brasa', nivel: 30, c: { hat: '#c46a4a', hatSh: '#a2553a', robe: '#3a3138', robeSh: '#2b242a', band: '#f2c66d', hem: '#f2a14a', starRobe: '#f2a14a', shoe: '#1f1a1e' } },
+    medianoche: { nombre: 'Medianoche', nivel: 35, c: { hat: '#1f2a52', hatSh: '#151d3b', robe: '#2c3566', robeSh: '#212850', band: '#dfe4ef', hem: '#dfe4ef', starRobe: '#f3f6ff', shoe: '#11162c', star: '#f3f6ff' } },
+    archimago:  { nombre: 'Archimago Blanco', nivel: 40, c: { hat: '#efe9dc', hatSh: '#d8cfba', robe: '#e2e4e6', robeSh: '#c4c8cc', band: '#f2c66d', hem: '#f2c66d', starRobe: '#d9a441', shoe: '#8a7a5a' } },
+    // especiales: solo se ven distinto, no dan ventaja. Se compran (Play) o vienen con el Pase en su temporada
+    ceibo:       { adorno: 'flor', nombre: 'Ceibo', especial: { sku: 'traje_ceibo', precio: 'USD 1,99', temporada: 'Primavera' }, c: { hat: '#c9485b', hatSh: '#a33849', robe: '#4f7a3a', robeSh: '#3b5d2b', band: '#f2c66d', hem: '#f2c66d', starRobe: '#f2c66d', shoe: '#5c4330' } },
+    albiceleste: { adorno: 'sol', nombre: 'Albiceleste', especial: { sku: 'traje_albiceleste', precio: 'USD 1,99', temporada: 'Fechas patrias' }, c: { hat: '#75aadb', hatSh: '#5b8fc0', robe: '#f3f6ee', robeSh: '#d7dfd6', band: '#f2c66d', hem: '#75aadb', starRobe: '#f2c66d', shoe: '#3f5f80' } },
+    navidad:     { adorno: 'pompon', nombre: 'Navidad', especial: { sku: 'traje_navidad', precio: 'USD 1,99', temporada: 'Diciembre' }, c: { hat: '#b23a3a', hatSh: '#8e2d2d', robe: '#2f6b4a', robeSh: '#24543a', band: '#f3f6ee', hem: '#f3f6ee', starRobe: '#f2c66d', shoe: '#3a2a1e' } },
+    calabaza:    { adorno: 'calabaza', nombre: 'Calabaza', especial: { sku: 'traje_calabaza', precio: 'USD 1,99', temporada: 'Fin de octubre' }, c: { hat: '#d9822b', hatSh: '#b46a1f', robe: '#4b2d5c', robeSh: '#3a2248', band: '#2a2a2a', hem: '#d9822b', starRobe: '#f2c66d', shoe: '#2a1a30' } },
+    matecito:    { adorno: 'mate', nombre: 'Matecito', especial: { sku: 'traje_matecito', precio: 'USD 2,99', apoyo: true }, c: { hat: '#6b7f3a', hatSh: '#55662e', robe: '#7a5a3c', robeSh: '#61472f', band: '#f2c66d', hem: '#c9a77a', starRobe: '#f2c66d', shoe: '#3a2a1e' } },
     // reservada para los jefes de la Torre
     sombra:    { nombre: 'Sombra', nivel: 999, c: { hat: '#2a2f45', hatSh: '#1b1f30', robe: '#3a2346', robeSh: '#2a1834', shoe: '#14111f', band: '#ff5c7a', hem: '#ff5c7a', starRobe: '#ff8fa3', nose: '#b8a4c9', noseHi: '#d8cbe3', beard: '#cfd2e0', beardSh: '#a3a8bd', star: '#ff8fa3' } },
   };
@@ -52,6 +64,7 @@
       const o = Object.assign({}, D.OFICIAL, {
         etapa: e.etapa, varita: e.varita * estirar, anguloVarita: e.angulo || D.OFICIAL.anguloVarita,
         colores: (PALETAS[this.paleta] || PALETAS.turquesa).c,
+        adorno: (PALETAS[this.paleta] || {}).adorno,
       });
       this.dibujo.innerHTML = D.mago(o);
       this.nariz = this.dibujo.querySelector('.nariz');

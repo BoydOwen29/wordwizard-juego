@@ -24,6 +24,37 @@
   const somb = (hex, k) => mezclar(hex, '#16262c', k == null ? .22 : k);
   let idClip = 0;
   let P = false; // pulido activo durante el render
+  let ADORNO = null; // accesorio de los trajes especiales (flor, sol, pompon, calabaza, mate)
+
+  /** Accesorios que van sobre el sombrero (en sus coordenadas: giran con él). */
+  function adornoSombrero() {
+    if (ADORNO === 'flor') {   // flor de ceibo en la banda: estandarte hacia atrás y quilla hacia adelante
+      return `<g transform="translate(70 110) rotate(-14) scale(.78)">${S('M2 -6 C14 -14 26 -30 26 -48 C18 -42 10 -30 -1 -18Z', '#9e3346', 3.4)}${S('M-2 -8 C-16 -16 -26 -32 -20 -46 C-12 -44 -4 -34 -1 -22 C0 -16 0 -12 -2 -8Z', '#c9485b', 3.4)}<path d="M-16 -40 C-14 -30 -8 -22 -3 -15" stroke="#e57a89" stroke-width="2.6" fill="none" stroke-linecap="round"/>${S('M-4 0 C-6 -6 -4 -11 0 -12 C5 -11 6 -6 3 0Z', '#4f7a3a', 2.6)}</g>`;
+    }
+    if (ADORNO === 'sol') {   // sol de mayo dorado, tapa la hebilla de la banda
+      let rayos = '';
+      for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, r1 = 8.5, r2 = i % 2 ? 12 : 14; rayos += `M${(99 + Math.cos(a) * r1).toFixed(1)} ${(107 + Math.sin(a) * r1).toFixed(1)} L${(99 + Math.cos(a) * r2).toFixed(1)} ${(107 + Math.sin(a) * r2).toFixed(1)} `; }
+      return `<g transform="translate(99 107) scale(1.3) translate(-99 -107)"><path d="${rayos}" stroke="${L}" stroke-width="5" stroke-linecap="round"/><path d="${rayos}" stroke="#f2c66d" stroke-width="2.4" stroke-linecap="round"/><circle cx="99" cy="107" r="8" fill="#f2c66d" stroke="${L}" stroke-width="3"/><circle cx="97" cy="105" r="2.6" fill="#ffe6a8"/></g>`;
+    }
+    if (ADORNO === 'pompon') {   // pompón de algodón en la punta (Navidad)
+      return `<circle cx="101" cy="9" r="9" fill="#f3f6ee" stroke="${L}" stroke-width="3.6"/><circle cx="98" cy="6" r="3" fill="#ffffff"/><path d="M106 12 C104 15 100 16 97 15" stroke="#d7dfd6" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    }
+    if (ADORNO === 'calabaza') {   // calabacita en la banda
+      return `<g transform="translate(68 106) scale(1.35)">${S('M-9 2 C-12 -6 -6 -10 0 -9 C6 -10 12 -6 9 2 C7 7 -7 7 -9 2Z', '#e8902f', 3)}<path d="M-3 -8 C-5 -2 -4 4 -2 6 M3 -8 C5 -2 4 4 2 6" stroke="#b46a1f" stroke-width="1.8" fill="none"/>${S('M0 -9 C0 -13 2 -15 4 -16', 'none', 2.6)}</g>`;
+    }
+    return '';
+  }
+  /** El mate en la mano libre (Matecito): calabacita con bombilla plateada. */
+  function adornoCuerpo() {
+    if (ADORNO !== 'mate') return '';
+    return `<g transform="translate(56 196)">
+      <path d="M8 -26 L2 -6" stroke="${L}" stroke-width="6" stroke-linecap="round"/><path d="M8 -26 L2 -6" stroke="#cfd6dc" stroke-width="2.8" stroke-linecap="round"/>
+      ${S('M-12 -6 C-14 6 -8 16 0 16 C8 16 14 6 12 -6 C8 -10 -8 -10 -12 -6Z', '#8a6440', 3.4)}
+      ${S('M-12 -6 C-8 -11 8 -11 12 -6 C8 -3 -8 -3 -12 -6Z', '#4f7a3a', 2.6)}
+      <path d="M-7 2 C-7 8 -4 12 0 13" stroke="#a5835a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <path d="M-14 4 C-20 4 -22 12 -16 14" stroke="${L}" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M-14 4 C-20 4 -22 12 -16 14" stroke="${C.skin}" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+    </g>`;
+  }
   const S = (d, fill, w) => `<path d="${d}" fill="${fill}" stroke="${L}" stroke-width="${w || 5.5}" stroke-linejoin="round" stroke-linecap="round"/>`;
   const F = (d, fill, op) => `<path d="${d}" fill="${fill}" ${op ? `opacity="${op}"` : ''}/>`;
   const est = (x, y, r, fill) => `<path d="${estrella(x, y, r)}" fill="${fill || C.starRobe}" stroke="${L}" stroke-width="2.2" stroke-linejoin="round"/>`;
@@ -153,7 +184,7 @@
     return `<g class="sombrero"><g transform="rotate(${rot} 100 118)">${S(fm.cono, C.hat)}${F(fm.sombra, C.hatSh)}${extra}
       ${fm.pompon ? `<circle cx="${fm.pompon[0]}" cy="${fm.pompon[1]}" r="7" fill="${C.band}" stroke="${L}" stroke-width="4"/>` : ''}
       ${est(fm.estrella[0], fm.estrella[1], 6.5, '#fff1bf')}
-      ${S('M52 102 C78 96 120 96 146 102 L150 114 L48 114 Z', C.band, 4.5)}${bandaLuz}
+      ${S('M52 102 C78 96 120 96 146 102 L150 114 L48 114 Z', C.band, 4.5)}${bandaLuz}${adornoSombrero()}
       ${S(`M${100 - w} 120 C${100 - w + 18} 108 ${100 + w - 18} 108 ${100 + w} 120 C${100 + w - 18} 132 ${100 - w + 18} 132 ${100 - w} 120 Z`, C.hat)}
       ${alaLuz}</g></g>`;
   }
@@ -166,17 +197,18 @@
   const BASE = Object.assign({}, C);
   function mago(o) {
     Object.assign(C, BASE, o.colores || {});
+    ADORNO = o.adorno || null;
     const yHem = 230, yTop = 150;
     P = !!o.pulido;
     const k = o.cabeza || 1;
     const cuerpo = `${piecitos(yHem, o.pies, o.tamPies)}${tunica(o.tunica || 56, yTop - (o.alturaTunica || 0), yHem)}
       <g transform="translate(100 ${yTop + 20}) scale(${k}) translate(-100 ${-(yTop + 20)})"><g class="cabeza"><path d="M136 172 C142 172 145 176 145 180" stroke="${L}" stroke-width="13" stroke-linecap="round" fill="none"/><path d="M136 172 C142 172 145 176 145 180" stroke="${C.robe}" stroke-width="6" stroke-linecap="round" fill="none"/>
       ${barba(o.barbaFin || 198, o.barbaAncho, o.redonda)}${manoVarita(145, 183, o.etapa || 0, o.anguloVarita, o.varita)}
-      ${cara(o.narizY || 138, o.nariz || 20)}${P ? '<path d="M58 124 C80 129 120 129 142 124 C120 132 80 132 58 124 Z" fill="#16262c" opacity=".18"/>' : ''}${sombrero(o.rotSombrero == null ? -10 : o.rotSombrero, o.forma || o.sombreroSuave, o.ala)}</g></g>`;
+      ${cara(o.narizY || 138, o.nariz || 20)}${P ? '<path d="M58 124 C80 129 120 129 142 124 C120 132 80 132 58 124 Z" fill="#16262c" opacity=".18"/>' : ''}${sombrero(o.rotSombrero == null ? -10 : o.rotSombrero, o.forma || o.sombreroSuave, o.ala)}</g></g>${adornoCuerpo()}`;
     const esc = o.aplastar ? `<g transform="translate(100 240) scale(${o.aplastar[0]} ${o.aplastar[1]}) translate(-100 -240)">${cuerpo}</g>` : cuerpo;
     const out = wrap(`${piso(64)}<g class="cuerpo">${esc}</g>`);
     Object.assign(C, BASE);
-    P = false;
+    P = false; ADORNO = null;
     return out;
   }
 
