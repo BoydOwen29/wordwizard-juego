@@ -798,14 +798,10 @@ body.jugando #luces { opacity: 0; }
 .modal-caja.con-carrusel > .fila:last-child:empty { display: none; }
 .carrusel { overflow: hidden; touch-action: none; user-select: none; cursor: grab; }   /* el gesto es todo del carrusel: con pan-y el celular a veces se quedaba con el arrastre */
 .carrusel:active { cursor: grabbing; }
-.carrusel-pista { display: flex; transition: transform .38s cubic-bezier(.2,.8,.3,1); will-change: transform; }
+.carrusel-pista { display: flex; transition: transform .32s cubic-bezier(.22,.9,.3,1); will-change: transform; transform: translate3d(0,0,0); }
 .carrusel-paso { flex: 0 0 100%; min-width: 0; padding: 0 20px; box-sizing: border-box; min-height: 300px; }
 .carrusel-paso h3 { margin-top: 18px; }
-.carrusel-paso .tutorial-paso > * { opacity: 0; transform: translateY(10px); transition: opacity .35s ease, transform .35s var(--spring); }
-.carrusel-paso.activo .tutorial-paso > * { opacity: 1; transform: none; }
-.carrusel-paso.activo .tutorial-paso > *:nth-child(2) { transition-delay: .08s; }
-.carrusel-paso.activo .tutorial-paso > *:nth-child(3) { transition-delay: .16s; }
-.carrusel-paso.activo .tutorial-paso > *:nth-child(4) { transition-delay: .24s; }
+/* el contenido de todos los pasos está siempre visible: al arrastrar se ve venir el siguiente (antes llegaba vacío) */
 .tut-botones { padding: 0 18px; margin-top: 10px; }
 .tut-saluda svg { animation: flota 2.6s ease-in-out infinite; }
 .tutorial-paso .ej span { background: var(--perg); border: 2.5px solid var(--borde-m); box-shadow: inset 0 -3px 0 var(--perg-sh); color: #1c2f38; }

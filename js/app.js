@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.15.0',
+    version: '2.15.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -1685,10 +1685,12 @@
       const caja = $('modal-caja'), car = $('carrusel'), pista = $('carrusel-pista');
       caja.classList.add('con-carrusel');
       let i = 0;
-      const ir = (k, animar) => {
+      const ancho = () => car.clientWidth || 1;
+      const poner = (px) => { pista.style.transform = `translate3d(${px}px,0,0)`; };
+      const ir = (k, animar, ms) => {
         i = Math.max(0, Math.min(n - 1, k));
-        pista.style.transition = animar === false ? 'none' : '';
-        pista.style.transform = `translateX(${-i * 100}%)`;
+        pista.style.transition = animar === false ? 'none' : ms ? `transform ${ms}ms cubic-bezier(.22,.9,.3,1)` : '';
+        poner(-i * ancho());
         $('tut-puntos').querySelectorAll('i').forEach((d, j) => d.classList.toggle('on', j === i));
         $('tut-sig').textContent = i === n - 1 ? '¡A jugar!' : 'Siguiente';
         $('tut-saltar').style.visibility = i === n - 1 ? 'hidden' : '';
@@ -1697,7 +1699,7 @@
       const cerrar = (jugar) => {
         $('modal').classList.add('oculto'); caja.classList.remove('con-carrusel');
         document.removeEventListener('keydown', teclas);
-        removeEventListener('pointerup', soltar); removeEventListener('pointercancel', soltar);
+        removeEventListener('pointerup', soltar); removeEventListener('pointercancel', soltar); removeEventListener('resize', reubicar);
         if (jugar && alTerminar) alTerminar();
       };
       const teclas = (e) => { if (e.key === 'ArrowRight') ir(i + 1); else if (e.key === 'ArrowLeft') ir(i - 1); };
@@ -1705,32 +1707,59 @@
       $('tut-sig').addEventListener('click', () => { Audio.click(); if (i === n - 1) cerrar(true); else ir(i + 1); });
       $('tut-saltar').addEventListener('click', () => { Audio.click(); cerrar(true); });
       $('tut-reglas').addEventListener('click', () => { Audio.click(); cerrar(false); if (!alTerminar) this.mostrar('p-ayuda'); else alTerminar(); });
-      // arrastre con el dedo: la pista sigue al dedo y al soltar va al paso más cercano
-      let x0 = 0, y0 = 0, dx = 0, arrastrando = false, horizontal = null, t0 = 0;
-      car.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; x0 = e.clientX; y0 = e.clientY; dx = 0; arrastrando = true; horizontal = null; t0 = performance.now(); });
+      // arrastre con el dedo: la pista sigue al dedo (un cuadro por refresco de pantalla) y al soltar sigue la inercia
+      let x0 = 0, y0 = 0, dx = 0, arrastrando = false, horizontal = null, cuadro = 0, muestras = [];
+      const pintar = () => {
+        cuadro = 0;
+        // en los extremos ofrece resistencia, como una goma
+        const fuera = (i === 0 && dx > 0) || (i === n - 1 && dx < 0);
+        const d = fuera ? Math.sign(dx) * ancho() * .3 * (1 - Math.exp(-Math.abs(dx) / (ancho() * .5))) : dx;
+        poner(-i * ancho() + d);
+      };
+      car.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('button')) return;
+        x0 = e.clientX; y0 = e.clientY; dx = 0; arrastrando = true; horizontal = null;
+        muestras = [{ x: e.clientX, t: e.timeStamp }];
+      });
       car.addEventListener('pointermove', (e) => {
         if (!arrastrando) return;
         dx = e.clientX - x0;
         // generoso con el pulgar: alcanza con que vaya más o menos de costado
-        if (horizontal === null && (Math.abs(dx) > 6 || Math.abs(e.clientY - y0) > 10)) { horizontal = Math.abs(dx) >= Math.abs(e.clientY - y0) * .6; if (horizontal) { try { car.setPointerCapture(e.pointerId); } catch (err) { /* ya soltó */ } } }
+        if (horizontal === null && (Math.abs(dx) > 6 || Math.abs(e.clientY - y0) > 10)) {
+          horizontal = Math.abs(dx) >= Math.abs(e.clientY - y0) * .6;
+          if (horizontal) { x0 = e.clientX - Math.sign(dx) * 2; dx = e.clientX - x0; pista.style.transition = 'none'; try { car.setPointerCapture(e.pointerId); } catch (err) { /* ya soltó */ } }
+        }
         if (!horizontal) return;
-        const borde = (i === 0 && dx > 0) || (i === n - 1 && dx < 0) ? .35 : 1;
-        pista.style.transition = 'none';
-        pista.style.transform = `translateX(calc(${-i * 100}% + ${dx * borde}px))`;
+        muestras.push({ x: e.clientX, t: e.timeStamp });
+        if (muestras.length > 12) muestras.shift();
+        if (!cuadro) cuadro = requestAnimationFrame(pintar);
       });
       const soltar = () => {
         if (!arrastrando) return; arrastrando = false;
+        if (cuadro) { cancelAnimationFrame(cuadro); cuadro = 0; }
         if (!horizontal) return;
-        const rapido = Math.abs(dx) / Math.max(1, performance.now() - t0) > .45;
-        if (dx < -car.clientWidth * .22 || (rapido && dx < -20)) ir(i + 1);
-        else if (dx > car.clientWidth * .22 || (rapido && dx > 20)) ir(i - 1);
-        else ir(i);
-        if (Math.abs(dx) > 20) Audio.click();
+        // velocidad de los últimos 100 ms (px/ms): un golpe corto y rápido también pasa de página
+        const b = muestras[muestras.length - 1];
+        const recientes = muestras.filter((m) => b.t - m.t <= 100);
+        const a = recientes.length >= 2 ? recientes[0] : muestras[Math.max(0, muestras.length - 2)];
+        const v = b.t > a.t ? (b.x - a.x) / (b.t - a.t) : 0;
+        let k = i;
+        if (dx < -ancho() * .2 || v < -.35) k = i + 1;
+        else if (dx > ancho() * .2 || v > .35) k = i - 1;
+        k = Math.max(0, Math.min(n - 1, k));
+        // lo que falta recorrer define la duración: con un golpe rápido, llega rápido
+        const resta = Math.abs(-k * ancho() - (-i * ancho() + dx));
+        const ms = Math.round(Math.max(160, Math.min(380, resta / Math.max(.8, Math.abs(v)) * 1.6)));
+        if (k !== i || Math.abs(dx) > 20) Audio.click();
+        ir(k, true, ms);
       };
       // se escucha en la ventana: el dedo puede soltarse fuera del carrusel
       addEventListener('pointerup', soltar);
       addEventListener('pointercancel', soltar);
       car.addEventListener('lostpointercapture', soltar);
+      // si gira el celular, el paso queda en su lugar
+      const reubicar = () => ir(i, false);
+      addEventListener('resize', reubicar);
       ir(0, false);
     },
 
