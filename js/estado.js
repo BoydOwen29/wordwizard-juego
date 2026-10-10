@@ -15,7 +15,8 @@
       diarios: {},          // fecha -> {numero, palabra, puntos, pct, rango, encontradas, total, totalPuntos, combo}
       enCurso: null,        // desafío diario empezado y no terminado (para reanudar o cerrar)
       misiones: null,       // {fecha, lista:[...], bonus}
-      arcade: { mejorPuntaje: 0, mejorPiso: 0, partidas: 0, jefes: 0, historial: [] },
+      arcade: { mejorPuntaje: 0, mejorPiso: 0, partidas: 0, jefes: 0, historial: [], checkpoint: 0 },
+      subida: null,         // subida a la Torre guardada para seguirla otro día (piso, vidas, puntaje…)
       practica: { partidas: 0 },
       logros: {},
       stats: { palabras: 0, partidas: 0, completas: 0, mejorLargo: 0, mejorCombo: 0, monedasTotales: 20, porLargo: {}, mejorPalabra: '', puntos: 0, misiones: 0, segundos: 0, mejoresPalabras: [] },

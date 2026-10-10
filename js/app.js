@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.18.0',
+    version: '2.19.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -88,7 +88,7 @@
       this.magos.jefe = new Magos.Mago($('mago-jefe'), { paleta: 'sombra' });
       this.magos.menu.visible = this.magos.juego.visible = this.magos.jefe.visible = false;
       if (window.WWEscena) { WWEscena.montar($('esc-atras'), $('esc-frente'), 'bosque'); WWEscena.intro(() => setTimeout(() => this.magos.titulo.animar('happy', 900), 2300)); }
-      if (window.WWVida) WWVida.montar($('vida'), $('fondo'));
+      if (window.WWVida) { WWVida.montar($('vida'), $('fondo')); this.pintarVida(); }   // la primera pantalla no pasa por mostrar(): sin esto la araña y la luna arrancaban dormidas
       const logo = document.querySelector('#p-titulo .logo-titulo');
       if (logo) $('inicio-logo').appendChild(logo.cloneNode(true));
       this.vidaTitulo();
@@ -354,7 +354,7 @@
       });
 
       $('btn-diario').addEventListener('click', () => { Audio.click(); this.jugarDiario(); });
-      $('btn-arcade').addEventListener('click', () => { Audio.click(); this.verTorre(); });
+      $('btn-arcade').addEventListener('click', () => { Audio.click(); this.entrarTorre(); });
       $('mapa-jugar').addEventListener('click', () => {
         const t = this._torre; if (!t || $('mapa-jugar').disabled) return;
         Audio.click();
@@ -370,12 +370,16 @@
         Audio.click();
         const t = this._torre;
         if (!t || !t.pa || t.pa.arcade.cerrada) return this.irMenu();
-        this.modal('<h3>¿BAJAR DE LA TORRE?</h3><p>Se termina la subida y se guarda tu puntaje.</p>', [
+        this.modal(`<h3>¿BAJAR DE LA TORRE?</h3><p>Tu subida queda guardada en el piso ${t.pa.arcade.piso}: la seguís cuando quieras.</p>`, [
+          { texto: 'Guardar y salir', clase: 'btn-primario', accion: () => { this.guardarSubida(t.pa.arcade); this.irMenu(); } },
           { texto: 'Seguir subiendo', clase: 'btn-secundario' },
-          { texto: 'Terminar', clase: 'btn-peligro', accion: () => this.cerrarArcade(t.pa) },
+          { texto: 'Terminar la subida', clase: 'btn-peligro', accion: () => this.cerrarArcade(t.pa) },
         ]);
       });
       $('btn-practica').addEventListener('click', () => { Audio.click(); this.mostrar('p-practica'); });
+      // el reloj de Práctica se recuerda (apagado = sin fin)
+      try { $('practica-reloj').checked = localStorage.getItem('ww.practica.reloj') === '1'; } catch (e) { /* sin almacenamiento */ }
+      $('practica-reloj').addEventListener('change', (e) => { Audio.click(); try { localStorage.setItem('ww.practica.reloj', e.target.checked ? '1' : '0'); } catch (er) { /* sin almacenamiento */ } });
       $('btn-rankings').addEventListener('click', () => { Audio.click(); this.verRankings(Ranking.activo() ? 'mundo' : 'diario'); });
       $('btn-stats').addEventListener('click', () => { Audio.click(); this.verEstadisticas(); });
       $('btn-logros').addEventListener('click', () => { Audio.click(); this.verLogros(); });
@@ -670,7 +674,7 @@
         objetivo, jefe, nombreJefe: jefe ? WW.nombreJefe(piso) : '',
       };
       const pa = this.partida;
-      if (pa.arcade) { pa.arcade.piso = piso; pa.arcade.usadas.push(base); }
+      if (pa.arcade) { pa.arcade.piso = piso; pa.arcade.usadas.push(base); this.guardarSubida(pa.arcade, piso); }
       const lugar = modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' || modo === 'archivo' ? { id: FONDOS['p-practica'] } : null;
       const lugarNuevo = lugar && (piso === 1 || WW_LUGARES.dePiso(piso - 1).id !== lugar.id) && !opts.reintento;
       this.ponerLugar(lugar);
@@ -1120,10 +1124,10 @@
       }
       if (pa.congelado) return;
       if (pa.superado) return this.pisoSuperado('subir');
-      const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'archivo' ? 'Si salís, este desafío del archivo no se guarda.' : pa.modo === 'arcade' ? 'Se termina la subida: se guarda el puntaje que llevás.' : 'La práctica no se guarda.';
+      const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'archivo' ? 'Si salís, este desafío del archivo no se guarda.' : pa.modo === 'arcade' ? 'Tu subida queda guardada, pero este piso cuenta como intento: perdés una vida (si es la última, te la guardo).' : 'La práctica no se guarda.';
       this.modal(`<h3>¿SALIR?</h3><p>${aviso}</p>`, [
         { texto: 'Seguir jugando', clase: 'btn-secundario' },
-        { texto: 'Salir', clase: 'btn-peligro', accion: () => { if (pa.modo === 'practica' || pa.modo === 'archivo') this.abandonarPractica(); else if (pa.modo === 'diario') this.salirDiario(); else this.terminar('abandono'); } },
+        { texto: 'Salir', clase: 'btn-peligro', accion: () => { if (pa.modo === 'practica' || pa.modo === 'archivo') this.abandonarPractica(); else if (pa.modo === 'diario') this.salirDiario(); else this.dejarPiso(pa); } },
       ]);
     },
 
@@ -1251,7 +1255,7 @@
       let bonusMonedas = 2 + Math.floor(rest / 15) + Math.floor(extra / 12);
       const bonusPiso = pa.arcade.piso * 10, bonusTiempo = Math.floor(rest / 3);
       let bonusPts = bonusPiso + bonusTiempo;
-      if (pa.jefe) { bonusMonedas += 10; bonusPts += 40; pa.arcade.jefes += 1; p.arcade.jefes = (p.arcade.jefes || 0) + 1; }
+      if (pa.jefe) { bonusMonedas += 10; bonusPts += 40; pa.arcade.jefes += 1; p.arcade.jefes = (p.arcade.jefes || 0) + 1; p.arcade.checkpoint = Math.max(p.arcade.checkpoint || 0, pa.arcade.piso); }
       // tope diario de monedas de la Torre
       const hoyTorre = this.torreHoy();
       const ganadas = bonusMonedas;
@@ -1263,7 +1267,7 @@
       pa.arcade.palabrasTotal += pa.encontradas.length;
       p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, pa.arcade.piso);
       this.anotarTiempo(pa);
-      Estado.guardar();
+      this.guardarSubida(pa.arcade);
       this.limpiarEfectos();
       if (motivo === 'tiempo') { Audio.campana(); this.globo('¡Tiempo! Piso cerrado', 'wow'); }
       else if (motivo === 'completa') { Audio.victoria(); this.confeti(60); }
@@ -1398,7 +1402,7 @@
         pa.arcade.vidas -= 1;
         pa.arcade.puntajeTotal += pa.puntos;
         pa.arcade.palabrasTotal += pa.encontradas.length;
-        Estado.guardar();
+        this.guardarSubida(pa.arcade);
         if (pa.arcade.vidas > 0) {
           Audio.vida(); this.vineta('flash-rojo');
           this.magos.juego.animar('sad', 1500);
@@ -1459,6 +1463,7 @@
       const a = pa.arcade;
       if (a.cerrada) return;
       a.cerrada = true; clearTimeout(this._tModalPiso);
+      p.subida = null;
       // 0,45 (era 0,8): desde la v2.16 se sube más alto en la Torre; así el nivel no se acelera (docs/ECONOMIA.md)
       const xp = Math.round(a.puntajeTotal * 0.45 + a.piso * 8);
       const esRecord = a.puntajeTotal > p.arcade.mejorPuntaje;
@@ -2271,6 +2276,65 @@
      * Con { pa, bonusPts, bonusMonedas, rest }: después de ganar un piso, camina al siguiente,
      * con cartel si entra a una zona nueva, aparición si lo espera un jefe y cierre al terminar el capítulo.
      */
+    /** Foto de la subida en el perfil, para seguirla otro día. enPiso: el piso que se está jugando ahora. */
+    guardarSubida(a, enPiso) {
+      const p = Estado.perfil;
+      p.subida = { piso: a.piso, vidas: a.vidas, puntajeTotal: a.puntajeTotal, palabrasTotal: a.palabrasTotal, usadas: a.usadas.slice(-60), monedas: a.monedas, jefes: a.jefes, desde: a.desde || 1, enPiso: enPiso || null, fecha: this.hoy };
+      Estado.guardar();
+    },
+
+    /** Partida "de mentira" para volver al mapa con una subida guardada (o desde un checkpoint). */
+    partidaTorre(arcade, retomada) {
+      const base = arcade.usadas[arcade.usadas.length - 1] || '';
+      const nucleo = base ? this.dic.nucleo(this.dic.derivables(base), base) : new Set();
+      this.nivelSesion = Estado.perfil.nivel;
+      this.partida = { modo: 'arcade', opts: {}, base, nucleo, total: nucleo.size, totalPuntos: base ? WW.totalPosible(nucleo, base) : 0, encontradas: [], encontradasSet: new Set(), nEnc: 0, extras: 0, puntos: 0, terminada: true, jefe: false, nombreJefe: '', arcade, retomada };
+      return this.partida;
+    },
+
+    /** Botón de la Torre: retoma la subida guardada, ofrece el último checkpoint o arranca de cero. */
+    entrarTorre() {
+      const p = Estado.perfil, s = p.subida;
+      if (s && s.vidas > 0) {
+        const arcade = { piso: s.piso, vidas: s.vidas, puntajeTotal: s.puntajeTotal, palabrasTotal: s.palabrasTotal, usadas: s.usadas || [], monedas: s.monedas || 0, jefes: s.jefes || 0, desde: s.desde || 1 };
+        let aviso = '';
+        // se cerró la app a mitad de un piso: ese intento cuenta, pero nunca se lleva la última vida
+        if (s.enPiso) {
+          if (arcade.vidas > 1) { arcade.vidas -= 1; aviso = `El piso ${s.enPiso} que dejaste a medias contó como intento.`; }
+          arcade.piso = s.enPiso - 1;
+        }
+        const pa = this.partidaTorre(arcade, 'guardada');
+        pa.avisoVida = aviso;
+        this.guardarSubida(arcade);
+        return this.verTorre({ pa });
+      }
+      // quien venció jefes antes de la v2.19 no tiene checkpoint anotado: sale de su mejor piso
+      const cp = p.arcade.checkpoint || (p.arcade.mejorPiso > 5 ? Math.floor((p.arcade.mejorPiso - 1) / 5) * 5 : 0);
+      if (!cp) return this.verTorre();
+      this.modal(`<h3>LA TORRE ARCANA</h3><div class="modal-silabo" data-pose="happy"></div><p>¿Desde dónde subís?</p><p>Último jefe vencido: <b>${esc(WW.nombreJefe(cp))}</b></p><p class="modal-nota">El puntaje de la subida cuenta desde donde arranques.</p>`, [
+        { texto: `Desde el piso ${cp + 1}`, clase: 'btn-primario', accion: () => {
+          const pa = this.partidaTorre({ piso: cp, vidas: CONFIG.arcade.vidas, puntajeTotal: 0, palabrasTotal: 0, usadas: [], monedas: 0, jefes: 0, desde: cp + 1 }, 'checkpoint');
+          this.verTorre({ pa });
+        } },
+        { texto: 'Desde el piso 1', clase: 'btn-secundario', accion: () => this.verTorre() },
+      ]);
+    },
+
+    /** Salir a mitad de un piso: cuenta como intento (sin sacar la última vida) y la subida queda guardada. */
+    dejarPiso(pa) {
+      if (pa.terminada) return;
+      pa.terminada = true; clearInterval(pa.timer);
+      this.limpiarSeleccion(); this.limpiarEfectos();
+      this.anotarTiempo(pa);
+      const a = pa.arcade;
+      if (a.vidas > 1) a.vidas -= 1;
+      a.puntajeTotal += pa.puntos;
+      a.palabrasTotal += pa.encontradas.length;
+      a.piso -= 1;   // el piso que se dejó se vuelve a jugar
+      this.guardarSubida(a);
+      this.irMenu();
+    },
+
     verTorre(info) {
       const p = Estado.perfil, pa = info && info.pa;
       const hecho = pa ? pa.arcade.piso : 0, sig = hecho + 1;
@@ -2281,7 +2345,9 @@
       const vidas = pa ? pa.arcade.vidas : CONFIG.arcade.vidas;
       $('mapa-vidas').innerHTML = WWIconos.html('corazon').repeat(vidas) + WWIconos.html('corazonVacio').repeat(CONFIG.arcade.vidas - vidas);
       const jefeSig = WW.esPisoJefe(sig) ? `<p class="mapa-aviso">${WWIconos.html('calavera')} En el piso ${sig} te espera <b>${esc(WW.nombreJefe(sig))}</b></p>` : '';
-      $('mapa-info').innerHTML = pa
+      $('mapa-info').innerHTML = pa && pa.retomada
+        ? `<b>${pa.retomada === 'checkpoint' ? `Arrancás después de ${esc(WW.nombreJefe(hecho))}` : 'Seguís tu subida'}</b><small>${pa.retomada === 'checkpoint' ? 'Vidas llenas y puntaje desde cero.' : `Llevás ${pa.arcade.puntajeTotal} pts en esta subida`}</small>${pa.avisoVida ? `<small>${pa.avisoVida}</small>` : ''}${jefeSig}`
+        : pa
         ? `<b>${pa.jefe ? `¡${esc(pa.nombreJefe)} vencido!` : `¡Piso ${hecho} superado!`}</b><small>Llevás ${pa.arcade.puntajeTotal} pts en esta subida</small>${jefeSig}`
         : `<b>Subí lo más alto que puedas</b><small>Cada piso es una palabra con un objetivo de puntos. Tenés 3 vidas y cada 5 pisos hay un jefe.${p.arcade.mejorPiso ? ` Tu mejor marca: piso ${p.arcade.mejorPiso}.` : ''}</small>`;
       const hoyT = this.torreHoy();
@@ -2318,7 +2384,7 @@
         return;
       }
       // fin del capítulo: cartel y sigue la subida, más allá de la torre
-      if (hecho === CAP) {
+      if (hecho === CAP && !pa.retomada) {
         this.confeti(120); Audio.victoria();
         const cartel = this.cartelCapitulo('¡CAPÍTULO 1 COMPLETO!', 'Liberaste las palabras', 'Pero Nocturnia no estaba sola: el Archimago Gris espera más arriba. La subida sigue…', 'capitulo', 4200);
         cartel.alCerrar = () => caminar();
