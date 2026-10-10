@@ -56,7 +56,7 @@ WWI18n.registrar('pt', {
   'Cada piso es una palabra con un objetivo de puntos. Tenés 3 vidas y cada 5 pisos hay un jefe. Tu mejor marca: piso {n}.': 'Cada andar é uma palavra com uma meta de pontos. Você tem 3 vidas e a cada 5 andares tem um chefão. Seu recorde: andar {n}.',
   'En el piso {n} te espera': 'No andar {n} te espera',
   '¡{n} vencido!': '{n} derrotado!', '¡Piso {n} superado!': 'Andar {n} concluído!',
-  '+{a} pts de bonus ({b} s sobrantes) · +{c}': '+{a} pts de bônus ({b} s de sobra) · +{c}', '· total': '· total', 'pts': 'pts',
+  'pts': 'pts',
   '¿BAJAR DE LA TORRE?': 'DESCER DA TORRE?', 'Se termina la subida y se guarda tu puntaje.': 'A subida termina e sua pontuação é salva.',
   'Seguir subiendo': 'Continuar subindo', 'Terminar': 'Terminar',
   'Nocturnia encerró las palabras del bosque en lo alto de la torre. Silabo va a subir piso por piso para liberarlas.': 'Nocturnia prendeu as palavras da floresta no alto da torre. Silabo vai subir andar por andar para libertá-las.',
@@ -222,4 +222,10 @@ WWI18n.registrar('pt', {
   'Rangos alcanzados': 'Níveis alcançados', '🧙 En total': '🧙 No total', 'Palabras por largo': 'Palavras por tamanho',
   '🕯️ Aprendiz': '🕯️ Aprendiz', '📜 Iniciado': '📜 Iniciado', '✨ Conjurador': '✨ Conjurador', '🔮 Hechicero': '🔮 Feiticeiro',
   '🧙 Mago': '🧙 Mago', '⚡ Archimago': '⚡ Arquimago', '🌟 Leyenda': '🌟 Lenda', '👑 Omnisciente': '👑 Onisciente',
+  // v2.15: Torre con tiempo extra y tarjeta para compartir
+  'El piso es tuyo': 'O andar é seu', '¡OBJETIVO!': 'OBJETIVO!', 'Subir ▲': 'Subir ▲', 'Puntos extra': 'Pontos extras', '¡Piso ganado! Lo que sumes ahora es extra': 'Andar vencido! O que somar agora é extra', 'Objetivo': 'Objetivo', '{n} pts ✓': '{n} pts ✓', 'Palabras': 'Palavras', 'Bonus del piso': 'Bônus do andar', 'Tiempo sobrante': 'Tempo restante', 'Total de la subida': 'Total da subida', 'Seguir al piso {n}': 'Seguir para o andar {n}', 'Daño al jefe': 'Dano no chefão', 'Llevás {n} pts en esta subida': '{n} pts nesta subida até agora', '¡Tiempo! Piso cerrado': 'Tempo! Andar fechado', 'Guardá la imagen y mandala por donde quieras.': 'Salve a imagem e mande por onde quiser.', 'Guardar imagen': 'Salvar imagem', 'Desafío': 'Desafio', 'jefes': 'chefões', 'Llegué hasta el': 'Cheguei até o',
+  // v2.15: tu ritmo
+  '⏱️ Tu ritmo': '⏱️ Seu ritmo', 'días desde que empezaste': 'dias desde que começou', 'días jugados': 'dias jogados', '{n} min': '{n} min', 'por día jugado': 'por dia jogado', 'Minutos de cada día y el nivel con que lo terminaste.': 'Minutos de cada dia e o nível com que terminou.',
+  // v2.15: trajes en la tienda
+  'Trajes de Silabo': 'Roupas do Silabo', 'Lo tenés puesto': 'Está usando', 'Ya es tuyo': 'Já é seu', 'Gratis en el nivel {n}': 'Grátis no nível {n}', 'Usar': 'Usar', 'Muy pronto: trajes especiales y el Pase de Mago, para apoyar a Silabo.': 'Em breve: roupas especiais e o Passe de Mago, para apoiar o Silabo.',
 });

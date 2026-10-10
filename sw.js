@@ -1,15 +1,18 @@
 /* Word Wizard — service worker (solo cuando se sirve por http/https).
    Estrategia: red primero y, si no hay conexión, caché. Así una versión nueva
    se ve al instante y el juego sigue abriendo sin internet. */
-const VERSION = 'ww-v2.14.2';
+const VERSION = 'ww-v2.15.0';
 const ARCHIVOS = [
   './', './index.html', './manifest.json',
-  './css/estilo.css?v=2.14.2',
-  './js/i18n.js?v=2.14.2', './js/i18n-en.js?v=2.14.2', './js/i18n-pt.js?v=2.14.2', './js/motor.js?v=2.14.2', './js/silabo.js?v=2.14.2', './js/iconos.js?v=2.14.2', './js/mago.js?v=2.14.2', './js/mapa.js?v=2.14.2', './js/escena.js?v=2.14.2', './js/vida.js?v=2.14.2', './js/audio.js?v=2.14.2', './js/logros.js?v=2.14.2', './js/estado.js?v=2.14.2', './js/ranking.js?v=2.14.2', './js/app.js?v=2.14.2',
-  './data/diccionario.js?v=2.14.2', './data/desafios.js?v=2.14.2', './data/totales.js?v=2.14.2',
-  './assets/fonts/fredoka-latin.woff2', './assets/fonts/nunito-latin.woff2',
+  './css/estilo.css?v=2.15.0',
+  './js/i18n.js?v=2.15.0', './js/i18n-en.js?v=2.15.0', './js/i18n-pt.js?v=2.15.0', './js/motor.js?v=2.15.0', './js/silabo.js?v=2.15.0', './js/iconos.js?v=2.15.0', './js/mago.js?v=2.15.0', './js/mapa.js?v=2.15.0', './js/escena.js?v=2.15.0', './js/vida.js?v=2.15.0', './js/audio.js?v=2.15.0', './js/logros.js?v=2.15.0', './js/estado.js?v=2.15.0', './js/ranking.js?v=2.15.0', './js/tarjeta.js?v=2.15.0', './js/app.js?v=2.15.0',
+  ...['400', '600', '700'].map((w) => './assets/fonts/fredoka-' + w + '.woff2'), ...['400', '700', '800'].map((w) => './assets/fonts/nunito-' + w + '.woff2'),
   './assets/img/icon-192x192.png', './assets/img/icon-512x512.png', './assets/img/wordwizard.ico',
 ];
+// los datos (diccionario de unos 3 MB) solo del idioma de este jugador: la app registra sw.js?datos=data/en/
+const PEDIDO = new URL(location).searchParams.get('datos') || '';
+const DATOS = /^data\/([a-z]{2}\/)?$/.test(PEDIDO) ? PEDIDO : 'data/';
+ARCHIVOS.push(...['diccionario', 'desafios', 'totales'].map((n) => './' + DATOS + n + '.js?v=2.15.0'));
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));

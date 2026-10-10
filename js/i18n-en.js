@@ -56,7 +56,7 @@ WWI18n.registrar('en', {
   'Cada piso es una palabra con un objetivo de puntos. Tenés 3 vidas y cada 5 pisos hay un jefe. Tu mejor marca: piso {n}.': 'Each floor is a word with a points goal. You have 3 lives, and every 5 floors there is a boss. Your best: floor {n}.',
   'En el piso {n} te espera': 'On floor {n} awaits',
   '¡{n} vencido!': '{n} defeated!', '¡Piso {n} superado!': 'Floor {n} cleared!',
-  '+{a} pts de bonus ({b} s sobrantes) · +{c}': '+{a} bonus pts ({b} s left) · +{c}', '· total': '· total', 'pts': 'pts',
+  'pts': 'pts',
   '¿BAJAR DE LA TORRE?': 'LEAVE THE TOWER?', 'Se termina la subida y se guarda tu puntaje.': 'The climb ends and your score is saved.',
   'Seguir subiendo': 'Keep climbing', 'Terminar': 'Finish',
   'Nocturnia encerró las palabras del bosque en lo alto de la torre. Silabo va a subir piso por piso para liberarlas.': 'Nocturnia locked the forest’s words at the top of the tower. Silabo will climb floor by floor to set them free.',
@@ -222,4 +222,10 @@ WWI18n.registrar('en', {
   'Rangos alcanzados': 'Ranks reached', '🧙 En total': '🧙 Overall', 'Palabras por largo': 'Words by length',
   '🕯️ Aprendiz': '🕯️ Apprentice', '📜 Iniciado': '📜 Initiate', '✨ Conjurador': '✨ Conjurer', '🔮 Hechicero': '🔮 Sorcerer',
   '🧙 Mago': '🧙 Wizard', '⚡ Archimago': '⚡ Archmage', '🌟 Leyenda': '🌟 Legend', '👑 Omnisciente': '👑 Omniscient',
+  // v2.15: Torre con tiempo extra y tarjeta para compartir
+  'El piso es tuyo': 'The floor is yours', '¡OBJETIVO!': 'TARGET!', 'Subir ▲': 'Climb ▲', 'Puntos extra': 'Bonus points', '¡Piso ganado! Lo que sumes ahora es extra': 'Floor cleared! Anything you add now is extra', 'Objetivo': 'Target', '{n} pts ✓': '{n} pts ✓', 'Palabras': 'Words', 'Bonus del piso': 'Floor bonus', 'Tiempo sobrante': 'Time left', 'Total de la subida': 'Climb total', 'Seguir al piso {n}': 'On to floor {n}', 'Daño al jefe': 'Damage to boss', 'Llevás {n} pts en esta subida': '{n} pts so far on this climb', '¡Tiempo! Piso cerrado': 'Time! Floor closed', 'Guardá la imagen y mandala por donde quieras.': 'Save the image and send it anywhere.', 'Guardar imagen': 'Save image', 'Desafío': 'Challenge', 'jefes': 'bosses', 'Llegué hasta el': 'I made it to',
+  // v2.15: tu ritmo
+  '⏱️ Tu ritmo': '⏱️ Your pace', 'días desde que empezaste': 'days since you started', 'días jugados': 'days played', '{n} min': '{n} min', 'por día jugado': 'per day played', 'Minutos de cada día y el nivel con que lo terminaste.': 'Minutes per day and the level you ended it at.',
+  // v2.15: trajes en la tienda
+  'Trajes de Silabo': 'Silabo outfits', 'Lo tenés puesto': 'Wearing it', 'Ya es tuyo': 'Yours', 'Gratis en el nivel {n}': 'Free at level {n}', 'Usar': 'Wear', 'Muy pronto: trajes especiales y el Pase de Mago, para apoyar a Silabo.': 'Coming soon: special outfits and the Wizard Pass, to support Silabo.',
 });

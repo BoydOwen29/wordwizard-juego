@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.14.2',
+    version: '2.15.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
     practica: { tiempo: 180 },
@@ -33,6 +33,8 @@
     velasMax: 2,
     comboVentana: 6000,
   };
+  /** Precio en monedas para adelantar un traje (las monedas sobraban: ver docs/PROGRESO.md). */
+  const PRECIO_TRAJE = (nivel) => nivel * 60;
 
   const MENSAJES = {
     corta: ['Muy corta: mínimo 3 letras', 'Más letras, aprendiz', 'Con 3 letras arrancamos'],
@@ -121,7 +123,7 @@
         this.toast('📲 ¡Word Wizard instalado!');
       });
       if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
-        navigator.serviceWorker.register('sw.js').then((reg) => {
+        navigator.serviceWorker.register('sw.js?datos=' + encodeURIComponent(WWI18n.datos)).then((reg) => {
           reg.addEventListener('updatefound', () => {
             const nuevo = reg.installing;
             if (!nuevo) return;
@@ -306,8 +308,10 @@
 
     // ============================================================ eventos
     eventos() {
-      document.addEventListener('pointerdown', () => Audio.despertar(), { once: true });
-      document.addEventListener('keydown', () => Audio.despertar(), { once: true });
+      // iOS solo deja arrancar el audio en touchend/click (no en pointerdown) y lo vuelve a frenar tras una llamada o
+      // el bloqueo: se escucha en cada toque hasta que el contexto corre, y otra vez si se interrumpe
+      const destrabar = () => { if (!Audio.ctx || Audio.ctx.state !== 'running') Audio.despertar(); };
+      for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, destrabar, { passive: true, capture: true });
 
       $('form-nombre').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -677,7 +681,8 @@
       this.renderPoderes();
       $('hud-puntos').textContent = pa.arcade ? pa.arcade.puntajeTotal + pa.puntos : pa.puntos;
       $('combo').textContent = ''; $('combo').classList.remove('fuego');
-      $('btn-terminar').classList.toggle('oculto', pa.modo === 'arcade');
+      const bt = $('btn-terminar'); bt.textContent = 'Terminar'; bt.classList.remove('btn-subir'); bt.classList.toggle('oculto', pa.modo === 'arcade');
+      $('mago-jefe').classList.remove('vencido');
       const marcas = $('barra-marcas');
       marcas.innerHTML = '';
       if (pa.modo !== 'arcade') for (const r of WW.RANGOS) { if (r.pct > 0 && r.pct < 100) { const i = document.createElement('i'); i.style.left = r.pct + '%'; marcas.appendChild(i); } }
@@ -744,6 +749,15 @@
     renderProgreso() {
       const pa = this.partida;
       if (pa.modo === 'arcade') {
+        $('barra-rango').classList.toggle('extra', !!pa.superado);
+        if (pa.superado) {
+          $('barra-rango').classList.remove('hp');
+          $('barra-rango-fill').style.width = '100%';
+          $('rango-icono').textContent = '⭐';
+          $('rango-nombre').textContent = 'PUNTOS EXTRA';
+          $('progreso-txt').textContent = '+' + (pa.puntosPiso - pa.objetivo);
+          return;
+        }
         if (pa.jefe) {
           const hp = Math.max(0, pa.objetivo - pa.puntosPiso);
           $('barra-rango-fill').style.width = (hp / pa.objetivo * 100) + '%';
@@ -800,14 +814,16 @@
         if (seg <= 10 && seg > 0) Audio.tick();
       }
       $('hud-tiempo').textContent = `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`;
-      $('hud-tiempo').classList.toggle('urgente', seg <= 10);
-      Audio.setTempo(seg <= 10 && seg > 0); this.magos.juego.nervioso(seg <= 10 && seg > 0);
-      const roja = seg <= 10 && seg > 0;
+      // con el objetivo de la Torre cumplido, los últimos segundos son de festejo, no de apuro
+      const apuro = seg <= 10 && seg > 0 && !pa.superado;
+      $('hud-tiempo').classList.toggle('urgente', apuro);
+      Audio.setTempo(apuro); this.magos.juego.nervioso(apuro);
+      const roja = apuro;
       if (roja !== !!pa.vinetaRoja) { pa.vinetaRoja = roja; this.vineta(roja ? 'roja' : ''); }
       const fill = $('barra-tiempo-fill');
       fill.style.width = (rest / pa.tiempoTotal * 100) + '%';
-      fill.classList.toggle('urgente', seg <= 10);
-      if (rest <= 0) this.terminar('tiempo');
+      fill.classList.toggle('urgente', apuro);
+      if (rest <= 0) { if (pa.superado) this.pisoSuperado('tiempo'); else this.terminar('tiempo'); }
     },
 
     // ------------------------------------------------------------ interacción
@@ -912,7 +928,7 @@
       pa.bloqueo = true; setTimeout(() => { pa.bloqueo = false; if (this.partida === pa && !pa.terminada) this.limpiarSeleccion(); }, 320);
       if (!revelada) this._ultimaNueva = w;
       const colorRayo = w === pa.base ? '#f2c66d' : w.length >= 6 ? '#c9b6ff' : '#dfebd6';
-      if (pa.jefe) {
+      if (pa.jefe && !pa.superado) {
         this.magos.juego.animar('cast', 700);
         this.rayo(this.magos.juego.puntaVarita(), this.centro($('mago-jefe')), colorRayo, () => {
           Audio.golpe(); this.sacudir(w.length >= 6); this.vineta('flash-rojo'); this.magos.jefe.animar('sad', 700);
@@ -929,7 +945,7 @@
       }
       this.flotante(`+${pts}`);
       if (pa.modo === 'arcade' && !revelada) this.flotante(WWIconos.html('moneda'), 1);
-      if (!pa.jefe) setTimeout(() => this.rayo(this.magos.juego.puntaVarita(), this.centro($('hud-puntos')), colorRayo, () => this.particulas($('hud-puntos'), colorRayo, 6)), 90);
+      if (!pa.jefe || pa.superado) setTimeout(() => this.rayo(this.magos.juego.puntaVarita(), this.centro($('hud-puntos')), colorRayo, () => this.particulas($('hud-puntos'), colorRayo, 6)), 90);
 
       const rangoAntes = pa.rangoIdx;
       this.renderEncontradas(); this.renderProgreso(); this.renderPoderes();
@@ -958,8 +974,9 @@
 
       if (pa.modo === 'diario') this.guardarEnCurso();
 
-      if (pa.modo === 'arcade' && pa.puntosPiso >= pa.objetivo) { this.congelarReloj(pa); setTimeout(() => this.pisoSuperado(), 500); }
-      else if (pa.nEnc >= pa.total) { this.congelarReloj(pa); setTimeout(() => this.terminar('completo'), 600); }
+      // Torre: al llegar al objetivo no se corta; el reloj sigue y lo que venga suma como extra
+      if (pa.modo === 'arcade' && !pa.superado && pa.puntosPiso >= pa.objetivo) this.objetivoLogrado();
+      if (pa.nEnc >= pa.total) { this.congelarReloj(pa); setTimeout(() => (pa.modo === 'arcade' ? this.pisoSuperado('completa') : this.terminar('completo')), 900); }
     },
 
     fallo(codigo) {
@@ -1062,6 +1079,7 @@
         return this.irMenu();
       }
       if (pa.congelado) return;
+      if (pa.superado) return this.pisoSuperado('subir');
       const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'arcade' ? 'Se termina la subida: se guarda el puntaje que llevás.' : 'La práctica no se guarda.';
       this.modal(`<h3>¿SALIR?</h3><p>${aviso}</p>`, [
         { texto: 'Seguir jugando', clase: 'btn-secundario' },
@@ -1080,6 +1098,7 @@
     pedirTerminar() {
       const pa = this.partida;
       if (!pa || pa.terminada) return;
+      if (pa.superado) return this.pisoSuperado('subir');
       if (pa.modo === 'practica') return this.terminar('manual');
       this.modal(`<h3>¿TERMINAR AHORA?</h3><p>Se cierra con ${pa.puntos} puntos y ${pa.encontradas.length} palabras.</p>`, [
         { texto: 'Seguir', clase: 'btn-secundario' },
@@ -1095,29 +1114,95 @@
       this.irMenu();
     },
 
-    pisoSuperado() {
+    /**
+     * Medición del ritmo de progreso: por día, minutos jugados, partidas, nivel, monedas y piso máximo.
+     * Queda en el perfil (últimos 120 días) y se ve en Estadísticas → "Tu ritmo"; los testers lo pueden mandar en una captura.
+     */
+    anotarTiempo(pa) {
+      const p = Estado.perfil, seg = Math.round((Date.now() - pa.inicio) / 1000);
+      p.stats.segundos = (p.stats.segundos || 0) + seg;
+      const reg = p.registro || (p.registro = {});
+      const d = reg[this.hoy] || (reg[this.hoy] = { seg: 0, partidas: 0, piso: 0 });
+      d.seg += seg; d.partidas += 1; d.nivel = p.nivel; d.monedas = p.monedas;
+      if (pa.arcade) d.piso = Math.max(d.piso, pa.arcade.piso);
+      const ks = Object.keys(reg).sort();
+      while (ks.length > 120) delete reg[ks.shift()];
+    },
+
+    /** Torre: se llegó al objetivo del piso. El piso ya está ganado, pero el reloj sigue: cada palabra más suma. */
+    objetivoLogrado() {
+      const pa = this.partida;
+      pa.superado = true;
+      this.limpiarEfectos();
+      if (pa.jefe) {
+        Audio.victoria(); this.sacudir(true); this.vineta('flash-oro');
+        this.banner('⚔️', pa.nombreJefe.toUpperCase(), 'Jefe vencido', 'oro');
+        this.magos.jefe.animar('sad', 2500);
+        setTimeout(() => $('mago-jefe').classList.add('vencido'), 1200);
+        this.confeti(80);
+      } else {
+        Audio.nivel(); this.vineta('flash-oro');
+        this.banner('🎯', '¡OBJETIVO!', 'El piso es tuyo', 'oro');
+        this.confeti(35);
+      }
+      this.magos.juego.animar('happy', 1400);
+      setTimeout(() => { if (this.partida === pa && !pa.terminada) this.globo('¡Piso ganado! Lo que sumes ahora es extra', 'wow'); }, 1300);
+      const b = $('btn-terminar');
+      b.textContent = 'Subir ▲';
+      b.classList.remove('oculto'); b.classList.add('btn-subir');
+      this.renderProgreso(); this.renderPoderes();
+    },
+
+    /** Cierre del piso: por tiempo (con el objetivo cumplido), porque tocó "Subir" o porque encontró todas. */
+    pisoSuperado(motivo) {
       const pa = this.partida, p = Estado.perfil;
       if (pa.terminada) return;
       pa.terminada = true; clearInterval(pa.timer);
-      const rest = pa.deadline ? Math.max(0, Math.round((pa.deadline - Date.now()) / 1000)) : 0;
-      let bonusMonedas = 4 + Math.floor(rest / 8);
-      let bonusPts = pa.arcade.piso * 10 + Math.floor(rest / 3);
+      this.limpiarSeleccion();
+      const rest = motivo === 'tiempo' || !pa.deadline ? 0 : Math.max(0, Math.round((pa.deadline - Date.now()) / 1000));
+      const extra = Math.max(0, pa.puntosPiso - pa.objetivo);
+      let bonusMonedas = 4 + Math.floor(rest / 8) + Math.floor(extra / 10);
+      const bonusPiso = pa.arcade.piso * 10, bonusTiempo = Math.floor(rest / 3);
+      let bonusPts = bonusPiso + bonusTiempo;
       if (pa.jefe) { bonusMonedas += 20; bonusPts += 40; pa.arcade.jefes += 1; p.arcade.jefes = (p.arcade.jefes || 0) + 1; }
       Estado.sumarMonedas(bonusMonedas); pa.arcade.monedas += bonusMonedas; pa.monedasGanadas += bonusMonedas;
       pa.arcade.puntajeTotal += pa.puntos + bonusPts;
       pa.arcade.palabrasTotal += pa.encontradas.length;
       p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, pa.arcade.piso);
-      p.stats.segundos = (p.stats.segundos || 0) + Math.round((Date.now() - pa.inicio) / 1000);
+      this.anotarTiempo(pa);
       Estado.guardar();
       this.limpiarEfectos();
-      if (pa.jefe) { Audio.victoria(); this.sacudir(true); this.vineta('flash-oro'); this.banner('⚔️', pa.nombreJefe.toUpperCase(), 'Jefe vencido', 'oro'); this.magos.jefe.animar('sad', 2500); }
-      else { Audio.nivel(); this.vineta('flash'); this.banner('🗼', 'PISO ' + pa.arcade.piso, 'Superado'); }
+      if (motivo === 'tiempo') { Audio.campana(); this.globo('¡Tiempo! Piso cerrado', 'wow'); }
+      else if (motivo === 'completa') { Audio.victoria(); this.confeti(60); }
       this.magos.juego.animar('happy', 1500);
-      this.confeti(pa.jefe ? 90 : 40);
       const sig = pa.arcade.piso + 1;
       this.mision('piso', sig);
       this.anunciarLogros(Logros.evaluar(p, { tipo: 'piso' }));
-      this._tModalPiso = setTimeout(() => this.verTorre({ pa, bonusPts, bonusMonedas, rest }), 1400);
+      const info = { pa, bonusPts, bonusMonedas, rest, extra, bonusPiso, bonusTiempo };
+      this._tModalPiso = setTimeout(() => this.resumenPiso(info), motivo === 'subir' ? 350 : 1100);
+    },
+
+    /** Resumen del piso ganado: las cuentas aparecen de a una y el jugador decide cuándo seguir. */
+    resumenPiso(info) {
+      const { pa } = info;
+      if (this.partida !== pa || pa.arcade.cerrada) return;
+      const fila = (txt, val, clase) => `<li class="${clase || ''}"><span>${txt}</span><b>${val}</b></li>`;
+      const filas = [
+        fila(pa.jefe ? 'Daño al jefe' : 'Objetivo', `${pa.objetivo} pts ✓`),
+        info.extra ? fila('Puntos extra', '+' + info.extra, 'extra') : '',
+        fila('Palabras', pa.encontradas.length),
+        fila('Bonus del piso', '+' + (info.bonusPiso + (pa.jefe ? 40 : 0))),
+        info.bonusTiempo ? fila('Tiempo sobrante', `+${info.bonusTiempo} (${info.rest} s)`) : '',
+        fila('Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`),
+        fila('Total de la subida', pa.arcade.puntajeTotal + ' pts', 'total'),
+      ].filter(Boolean).join('');
+      const titulo = pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`;
+      this.modal(`<h3>${titulo}</h3><div class="modal-silabo" data-pose="happy"></div><ul class="resumen-piso">${filas}</ul>`, [
+        { texto: `Seguir al piso ${pa.arcade.piso + 1}`, clase: 'btn-primario', accion: () => this.verTorre(info) },
+      ]);
+      const lis = document.querySelectorAll('.resumen-piso li');
+      lis.forEach((li, i) => { li.style.animationDelay = (250 + i * 260) + 'ms'; });
+      lis.forEach((li, i) => setTimeout(() => Audio.tecla(), 250 + i * 260));
     },
 
     renderTienda() {
@@ -1147,6 +1232,40 @@
         });
         cont.appendChild(d);
       }
+      // trajes de Silabo: llegan solos con el nivel, o se adelantan con monedas (solo se ven distinto, no dan ventaja)
+      const cab = document.createElement('h4'); cab.className = 'tienda-cab'; cab.textContent = 'Trajes de Silabo'; cont.appendChild(cab);
+      for (const [k, v] of Object.entries(Magos.PALETAS)) {
+        if (v.nivel <= 1 || v.nivel > 100) continue;
+        const tiene = this.tieneTraje(k), precio = PRECIO_TRAJE(v.nivel);
+        const d = document.createElement('div');
+        d.className = 'tienda-item traje' + (tiene ? ' tiene' : '');
+        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : `Gratis en el nivel ${v.nivel}`}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : `${WWIconos.html('moneda')}${precio}`}</button>`;
+        const b = d.querySelector('button');
+        if (!tiene) b.disabled = p.monedas < precio;
+        if (tiene && p.sombrero === k) b.disabled = true;
+        b.addEventListener('click', () => {
+          if (!tiene) {
+            if (p.monedas < precio) return;
+            Estado.sumarMonedas(-precio);
+            p.trajes = Object.assign({}, p.trajes, { [k]: true });
+            Audio.logro(); this.confeti(30);
+          } else Audio.click();
+          p.sombrero = k; Estado.guardar();
+          for (const m of ['titulo', 'menu', 'juego', 'mapa']) this.magos[m].setPaleta(k);
+          const saldo = document.querySelector('.tienda-saldo'); if (saldo) saldo.innerHTML = `TENÉS ${p.monedas} ${WWIconos.html('moneda')}`;
+          this.renderTienda();
+        });
+        cont.appendChild(d);
+      }
+      const pronto = document.createElement('p'); pronto.className = 'tienda-pronto';
+      pronto.textContent = 'Muy pronto: trajes especiales y el Pase de Mago, para apoyar a Silabo.';
+      cont.appendChild(pronto);
+    },
+
+    /** Un traje es del jugador si llegó al nivel o si lo compró con monedas. */
+    tieneTraje(k) {
+      const p = Estado.perfil, v = Magos.PALETAS[k];
+      return !!v && v.nivel < 100 && (p.nivel >= v.nivel || !!(p.trajes && p.trajes[k]));
     },
 
     terminar(motivo) {
@@ -1156,7 +1275,7 @@
       this.limpiarSeleccion();
       this.limpiarEfectos();
       if (motivo === 'tiempo') { Audio.tiempoAgotado(); this.sacudir(true); }
-      p.stats.segundos = (p.stats.segundos || 0) + Math.round((Date.now() - pa.inicio) / 1000);
+      this.anotarTiempo(pa);
 
       // --- arcade: ¿queda vida?
       if (pa.modo === 'arcade' && motivo !== 'abandono') {
@@ -1217,7 +1336,8 @@
       const a = pa.arcade;
       if (a.cerrada) return;
       a.cerrada = true; clearTimeout(this._tModalPiso);
-      const xp = Math.round(a.puntajeTotal * 0.8 + a.piso * 8);
+      // 0,55 (antes 0,8): desde la v2.15 cada piso sigue hasta el final del reloj y suma más; así el nivel sube al mismo ritmo
+      const xp = Math.round(a.puntajeTotal * 0.55 + a.piso * 8);
       const esRecord = a.puntajeTotal > p.arcade.mejorPuntaje;
       p.arcade.mejorPuntaje = Math.max(p.arcade.mejorPuntaje, a.puntajeTotal);
       p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, a.piso);
@@ -1237,6 +1357,7 @@
 
     mostrarResultado(r) {
       const p = Estado.perfil;
+      this.prepararTarjeta(r);
       const esArcade = r.modo === 'arcade';
       $('res-titulo').textContent = esArcade ? (r.esRecord ? '¡NUEVO RÉCORD!' : 'FIN DE LA SUBIDA') : r.motivo === 'completo' ? '¡TODAS!' : r.modo === 'diario' ? `DESAFÍO #${r.numero}` : 'PRÁCTICA';
       if (esArcade) $('res-rango-icono').innerHTML = WWIconos.html('torre'); else $('res-rango-icono').textContent = r.rango.icono;
@@ -1324,8 +1445,47 @@
         texto = `🧙 Word Wizard #${r.numero} · ${r.rango.icono} ${T(r.rango.nombre)}\n⭐ ${r.puntos} pts · ${r.nEnc}/${r.total} ${T('palabras')}\n${barra}${racha > 1 ? ` ${LOCAL.racha} ${racha}🔥` : ''}${url}`;
       }
       Audio.click();
+      const img = this._tarjeta && this._tarjeta.r === r ? this._tarjeta.blob : null;
+      if (img) {
+        const archivo = new File([img], 'word-wizard.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [archivo] }) && !window.WW_ARTIFACT) {
+          navigator.share({ files: [archivo], text: texto }).catch((e) => { if (e && e.name !== 'AbortError') this.verTarjeta(img, texto); });
+          return;
+        }
+        return this.verTarjeta(img, texto);
+      }
       if (navigator.share && !window.WW_ARTIFACT) navigator.share({ text: texto }).catch(() => this.copiar(texto));
       else this.copiar(texto);
+    },
+
+    /** Datos de la tarjeta para compartir (sin las palabras: no hay spoilers del desafío). */
+    datosTarjeta(r) {
+      const Lc = LOCAL || {};
+      return {
+        modo: r.modo, numero: r.numero, puntos: r.puntos, piso: r.piso, jefes: r.jefes, palabrasTotal: r.palabrasTotal,
+        rango: r.rango ? { icono: r.rango.icono, nombre: T(r.rango.nombre) } : null, rangoIdx: r.rango ? WW.RANGOS.indexOf(r.rango) : 0,
+        nEnc: r.nEnc, total: r.total, combo: r.combo, racha: Estado.rachaVigente(this.hoy),
+        textos: { torre: Lc.torre, piso: Lc.piso, palabras: Lc.palabras, reto: Lc.reto, racha: Lc.racha,
+          desafio: T('Desafío'), puntos: T('puntos'), pts: 'pts', combo: T('mejor combo'), jefes: T('jefes'), llegue: T('Llegué hasta el') },
+      };
+    },
+
+    /** Se arma apenas aparece el resultado: al tocar Compartir la imagen ya está (iOS exige compartir enseguida del toque). */
+    prepararTarjeta(r) {
+      this._tarjeta = null;
+      if (!window.WWTarjeta || r.modo === 'practica') return;
+      const pedido = { r, blob: null };
+      this._tarjeta = pedido;
+      WWTarjeta.crear(this.datosTarjeta(r)).then((b) => { pedido.blob = b; }).catch(() => {});
+    },
+
+    /** Sin compartir nativo (compu): la imagen para guardar y el texto para copiar. */
+    verTarjeta(blob, texto) {
+      const url = URL.createObjectURL(blob);
+      this.modal(`<h3>TU RESULTADO</h3><img class="tarjeta-vista" src="${url}" alt=""><p class="tarjeta-ayuda">Guardá la imagen y mandala por donde quieras.</p>`, [
+        { texto: 'Copiar texto', clase: 'btn-secundario', accion: () => this.copiar(texto) },
+        { texto: 'Guardar imagen', clase: 'btn-primario', accion: () => { const a = document.createElement('a'); a.href = url; a.download = 'word-wizard.png'; document.body.appendChild(a); a.click(); a.remove(); } },
+      ]);
     },
 
     copiar(texto) {
@@ -1420,7 +1580,7 @@
         </div>
         <div class="stats-panel"><h3>🗼 Torre Arcana</h3>
           <div class="stats-grilla">${num(p.arcade.mejorPiso, 'mejor piso')}${num(p.arcade.mejorPuntaje, 'mejor puntaje')}${num(p.arcade.partidas, 'subidas')}${num(p.arcade.jefes || 0, 'jefes vencidos')}</div>
-        </div>`;
+        </div>${this.panelRitmo(num)}`;
       if (diarios.length) {
         html += `<div class="stats-panel"><h3>📜 Últimos desafíos</h3><div class="hist">${diarios.slice(-14).reverse().map((d) => `<div class="hist-fila"><span class="hist-fecha">${(d.fecha || '').slice(5).replace('-', '/')}</span><span class="hist-palabra">${d.palabra.toUpperCase()}</span><span class="hist-rango">${(WW.RANGOS.find((r) => r.nombre === d.rango) || {}).icono || ''} ${d.rango}</span><span class="hist-pts">${d.puntos} pts</span></div>`).join('')}</div></div>`;
       }
@@ -1453,7 +1613,7 @@
       for (const [k, v] of Object.entries(Magos.PALETAS)) {
         const b = document.createElement('button');
         if (v.nivel > 100) continue;
-        const hab = p.nivel >= v.nivel;
+        const hab = this.tieneTraje(k);
         b.className = 'sombrero' + (p.sombrero === k ? ' activo' : '');
         b.disabled = !hab;
         b.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c }))}</span>${v.nombre}<small>${hab ? '' : 'NV ' + v.nivel}</small>`;
@@ -1488,6 +1648,21 @@
         document.body.appendChild(a); a.click(); a.remove();
         this.toast('💾 Progreso exportado');
       } catch (e) { this.copiar(json); }
+    },
+
+    /** "Tu ritmo": días desde que empezó, días jugados, minutos por día y la curva de nivel (para medir el progreso). */
+    panelRitmo(num) {
+      const p = Estado.perfil, reg = p.registro || {}, dias = Object.keys(reg).sort();
+      if (!dias.length) return '';
+      const desde = Math.max(1, Math.round((new Date(this.hoy) - new Date(p.creado.slice(0, 10))) / 86400000) + 1);
+      const min = Math.round(dias.reduce((a, k) => a + reg[k].seg, 0) / dias.length / 60);
+      const ult = dias.slice(-10);
+      const maxSeg = Math.max(...ult.map((k) => reg[k].seg), 60);
+      const barras = ult.map((k) => `<div class="ritmo-dia" title="${k}"><i style="height:${Math.max(6, reg[k].seg / maxSeg * 100)}%"></i><b>${reg[k].nivel || ''}</b><small>${k.slice(8)}</small></div>`).join('');
+      return `<div class="stats-panel"><h3>⏱️ Tu ritmo</h3>
+          <div class="stats-grilla">${num(desde, 'días desde que empezaste')}${num(dias.length, 'días jugados')}${num(min + ' min', 'por día jugado')}</div>
+          <div class="ritmo">${barras}</div><small class="ritmo-nota">Minutos de cada día y el nivel con que lo terminaste.</small>
+        </div>`;
     },
 
     // ============================================================ tutorial
@@ -1720,7 +1895,9 @@
       if (!cont) { cont = document.createElement('div'); cont.id = 'confeti'; document.body.appendChild(cont); }
       const colores = ['#f2c66d', '#dfebd6', '#bbd0b9', '#e8907a', '#ffffff', '#92afa1'];
       const W = window.innerWidth;
-      for (let i = 0; i < (n || 60); i++) {
+      // en celulares, menos papelitos: cada uno es una animación aparte
+      const tope = matchMedia('(pointer: coarse)').matches ? 40 : 120;
+      for (let i = 0; i < Math.min(n || 60, tope); i++) {
         const p = document.createElement('span');
         p.className = 'papelito';
         p.style.left = Math.random() * W + 'px';
@@ -1851,6 +2028,7 @@
       }, { passive: true });
       document.addEventListener('keydown', () => { this.ultimaAccion = Date.now(); this._consejoDado = false; const m = activo(); if (m && m.estado === 'dormido') m.despertar(); });
       for (const k of ['titulo', 'menu', 'juego']) {
+        this.magos[k].cont.addEventListener('contextmenu', (e) => e.preventDefault());   // iOS/Android: sin menú al dejarlo apretado
         this.magos[k].cont.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
           Audio.despertar();
@@ -1928,7 +2106,7 @@
       $('mapa-vidas').innerHTML = WWIconos.html('corazon').repeat(vidas) + WWIconos.html('corazonVacio').repeat(CONFIG.arcade.vidas - vidas);
       const jefeSig = WW.esPisoJefe(sig) ? `<p class="mapa-aviso">${WWIconos.html('calavera')} En el piso ${sig} te espera <b>${esc(WW.nombreJefe(sig))}</b></p>` : '';
       $('mapa-info').innerHTML = pa
-        ? `<b>${pa.jefe ? `¡${esc(pa.nombreJefe)} vencido!` : `¡Piso ${hecho} superado!`}</b><small>+${info.bonusPts} pts de bonus (${info.rest} s sobrantes) · +${info.bonusMonedas} ${WWIconos.html('moneda')} · total <b>${pa.arcade.puntajeTotal}</b> pts</small>${jefeSig}`
+        ? `<b>${pa.jefe ? `¡${esc(pa.nombreJefe)} vencido!` : `¡Piso ${hecho} superado!`}</b><small>Llevás ${pa.arcade.puntajeTotal} pts en esta subida</small>${jefeSig}`
         : `<b>Subí lo más alto que puedas</b><small>Cada piso es una palabra con un objetivo de puntos. Tenés 3 vidas y cada 5 pisos hay un jefe.${p.arcade.mejorPiso ? ` Tu mejor marca: piso ${p.arcade.mejorPiso}.` : ''}</small>`;
       const btn = $('mapa-jugar');
       btn.textContent = pa ? `Subir al piso ${sig}` : 'Empezar la subida';

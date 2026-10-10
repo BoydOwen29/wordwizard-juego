@@ -35,7 +35,11 @@
     /** Debe llamarse desde un gesto del usuario (click/tecla). */
     despertar() {
       this.init();
-      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      // iOS: el contexto puede estar 'suspended' o 'interrupted' (llamada, Siri, bloqueo); un buffer mudo lo destraba
+      if (this.ctx && this.ctx.state !== 'running') {
+        try { const b = this.ctx.createBufferSource(); b.buffer = this.ctx.createBuffer(1, 1, 22050); b.connect(this.ctx.destination); b.start(0); } catch (e) { /* nada */ }
+        const r = this.ctx.resume(); if (r && r.catch) r.catch(() => {});
+      }
       if (this.musica && !this._musicaOn) this.iniciarMusica();
     },
 
@@ -140,17 +144,11 @@
     },
     /** Mariposas del conjuro de Silabo. */
     conjuro() { this._secuencia([784, 1047, 1319, 1568, 2093], 'triangle', 0.08, 0.06); },
-    hojas() {
-      if (!this.sonido || !this.ctx || !this._ruido) return;
-      const t = this.ctx.currentTime, s = this.ctx.createBufferSource(); s.buffer = this._ruido;
-      const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2500; f.Q.value = .8;
-      const g = this.ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
-      s.connect(f); f.connect(g); g.connect(this._ganMaster); s.start(t, Math.random() * .4); s.stop(t + 0.5);
-    },
     click() { if (this.sonido && this.ctx) this._nota(660, this.ctx.currentTime, 0.04, 'triangle', 0.1); },
     golpe() { if (this.sonido && this.ctx) { const t = this.ctx.currentTime; this._nota(160, t, 0.12, 'square', 0.18, null, 60); this._nota(90, t, 0.2, 'sawtooth', 0.14, null, 40); } },
     jefe() { this._secuencia([110, 0, 110, 0, 131, 0, 98, 0, 110, 110, 0, 0], 'sawtooth', 0.22, 0.12); },
     victoria() { this._secuencia([523, 659, 784, 1047, 0, 784, 1047, 1319, 0, 1047, 1319, 1568, 2093], 'square', 0.2, 0.09); },
+    campana() { if (this.sonido && this.ctx) { const t = this.ctx.currentTime; this._nota(1568, t, 0.9, 'sine', 0.12); this._nota(2093, t + 0.02, 0.7, 'sine', 0.06); this._nota(1047, t + 0.25, 1.1, 'sine', 0.08); } },
     mision() { this._secuencia([784, 988, 1175, 988, 1568], 'triangle', 0.18, 0.07); },
 
     // ------------------------------------------------------------ música
@@ -430,7 +428,7 @@
     vigilarVisibilidad() {
       document.addEventListener('visibilitychange', () => {
         if (!this.ctx) return;
-        if (document.hidden) this.ctx.suspend(); else this.ctx.resume();
+        if (document.hidden) this.ctx.suspend(); else { const r = this.ctx.resume(); if (r && r.catch) r.catch(() => {}); }
       });
       window.addEventListener('pagehide', () => { if (this.ctx) this.ctx.suspend(); });
     },
