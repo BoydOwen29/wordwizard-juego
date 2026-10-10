@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.19.0',
+    version: '2.19.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -137,11 +137,13 @@
             const nuevo = reg.installing;
             if (!nuevo) return;
             nuevo.addEventListener('statechange', () => {
-              if (nuevo.state === 'installed' && navigator.serviceWorker.controller) {
-                this.toast('✨ Hay una versión nueva. Tocá acá para actualizar.', 'accion', () => location.reload());
-              }
+              if (nuevo.state === 'installed' && navigator.serviceWorker.controller) this.versionNueva();
             });
           });
+          // el iPhone casi nunca relanza la app instalada (la "despierta"): se busca versión nueva al volver y cada 30 minutos
+          const buscar = () => { reg.update().catch(() => {}); };
+          document.addEventListener('visibilitychange', () => { if (!document.hidden) buscar(); });
+          setInterval(buscar, 30 * 60 * 1000);
         }).catch(() => {});
       }
     },
@@ -246,7 +248,21 @@
     },
 
     // ============================================================ navegación
+    /** Hay una versión nueva instalada: se aplica sola en cuanto no haya una partida en juego. */
+    versionNueva() {
+      this._versionNueva = true;
+      if (!this.aplicarVersion()) this.toast('✨ Hay una versión nueva. Tocá acá para actualizar.', 'accion', () => location.reload());
+    },
+    aplicarVersion() {
+      if (!this._versionNueva || this.pantalla === 'p-juego' || document.querySelector('#modal:not(.oculto)')) return false;
+      this._versionNueva = false;
+      this.toast('✨ Actualizando a la versión nueva…');
+      setTimeout(() => location.reload(), 900);
+      return true;
+    },
+
     mostrar(id) {
+      if (this._versionNueva && id !== 'p-juego') setTimeout(() => this.aplicarVersion(), 400);
       document.querySelectorAll('.pantalla').forEach((s) => s.classList.toggle('activa', s.id === id));
       this.pantalla = id;
       if (id === 'p-practica') this.pintarArchivo();
