@@ -245,4 +245,6 @@ WWI18n.registrar('pt', {
   // v2.20: instalar en iPhone
   "INSTALAR WORD WIZARD": "INSTALAR WORD WIZARD", "Queda como una app, con su ícono, en pantalla completa y anda sin internet.": "Fica como um app, com ícone, em tela cheia e funciona sem internet.", "Tocá": "Toque em", "Elegí": "Escolha", "Agregar a inicio": "Adicionar à Tela de Início", "Agregar": "Adicionar", ", arriba a la derecha": ", no canto superior direito", "El botón Compartir está abajo de todo en el iPhone y arriba en el iPad.": "O botão Compartilhar fica embaixo no iPhone e em cima no iPad.", "¡Listo!": "Pronto!", "¿LO INSTALÁS?": "VAI INSTALAR?", "Word Wizard se puede tener como app en el iPhone: con su ícono, en pantalla completa y sin internet.": "Dá para ter o Word Wizard como app no iPhone: com ícone, em tela cheia e sem internet.", "Ahora no": "Agora não", "Cómo se hace": "Como fazer",
   "Compartir está abajo en el iPhone y arriba en el iPad. Si no lo ves, tocá los tres puntitos (•••).": "Compartilhar fica embaixo no iPhone e em cima no iPad. Se não aparecer, toque nos três pontinhos (•••).",
+  // v2.22: reloj de Práctica (B)
+  "Sin fin": "Sem fim", "todo lo que quieras": "o quanto quiser", "3 minutos": "3 minutos", "contra el reloj": "contra o relógio",
 });

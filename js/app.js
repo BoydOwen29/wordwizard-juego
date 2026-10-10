@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.21.0',
+    version: '2.22.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -427,8 +427,15 @@
       });
       $('btn-practica').addEventListener('click', () => { Audio.click(); this.mostrar('p-practica'); });
       // el reloj de Práctica se recuerda (apagado = sin fin)
-      try { $('practica-reloj').checked = localStorage.getItem('ww.practica.reloj') === '1'; } catch (e) { /* sin almacenamiento */ }
-      $('practica-reloj').addEventListener('change', (e) => { Audio.click(); try { localStorage.setItem('ww.practica.reloj', e.target.checked ? '1' : '0'); } catch (er) { /* sin almacenamiento */ } });
+      const ponerReloj = (on) => {
+        $('practica-reloj').checked = on;
+        document.querySelectorAll('.modo-op').forEach((b) => { const sel = (b.dataset.reloj === '1') === on; b.classList.toggle('sel', sel); b.setAttribute('aria-checked', sel); });
+      };
+      try { ponerReloj(localStorage.getItem('ww.practica.reloj') === '1'); } catch (e) { /* sin almacenamiento */ }
+      document.querySelectorAll('.modo-op').forEach((b) => b.addEventListener('click', () => {
+        Audio.click(); const on = b.dataset.reloj === '1'; ponerReloj(on);
+        try { localStorage.setItem('ww.practica.reloj', on ? '1' : '0'); } catch (e) { /* sin almacenamiento */ }
+      }));
       $('btn-rankings').addEventListener('click', () => { Audio.click(); this.verRankings(Ranking.activo() ? 'mundo' : 'diario'); });
       $('btn-stats').addEventListener('click', () => { Audio.click(); this.verEstadisticas(); });
       $('btn-logros').addEventListener('click', () => { Audio.click(); this.verLogros(); });
