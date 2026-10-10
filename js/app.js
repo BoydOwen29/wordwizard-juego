@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.19.1',
+    version: '2.20.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -119,6 +119,11 @@
     },
 
     pwa() {
+      // iPhone/iPad: Safari no avisa que se puede instalar; mostramos el botón y explicamos los pasos
+      const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      this.instalada = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+      this.esIOS = esIOS;
+      if (esIOS && !this.instalada) { $('btn-instalar').classList.remove('oculto'); $('aj-instalar').classList.remove('oculto'); }
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         this.instalarEvento = e;
@@ -213,7 +218,35 @@
       if ($('aj-musica')) $('aj-musica').checked = on;
     },
 
+    /** Pasos para instalar en iPhone/iPad (Compartir → Agregar a inicio), con los dibujos de los botones de Safari. */
+    instalarIOS() {
+      const L = '#16262c';
+      const compartir = `<svg class="ios-ic" viewBox="0 0 24 24"><path d="M8 9 H6 V21 H18 V9 H16" fill="none" stroke="#5aa2ff" stroke-width="2" stroke-linejoin="round"/><path d="M12 3 V14 M8 7 L12 3 L16 7" fill="none" stroke="#5aa2ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      const agregar = `<svg class="ios-ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="${L}" stroke-width="2"/><path d="M12 8 V16 M8 12 H16" stroke="${L}" stroke-width="2" stroke-linecap="round"/></svg>`;
+      this.modal(`<h3>INSTALAR WORD WIZARD</h3><div class="modal-silabo" data-pose="happy"></div><p>Queda como una app, con su ícono, en pantalla completa y anda sin internet.</p>
+        <ol class="ios-pasos"><li><span>Tocá <b>Compartir</b></span>${compartir}</li><li><span>Elegí <b>Agregar a inicio</b></span>${agregar}</li><li><span>Tocá <b>Agregar</b>, arriba a la derecha</span></li></ol>
+        <p class="modal-nota">Compartir está abajo en el iPhone y arriba en el iPad. Si no lo ves, tocá los tres puntitos (•••).</p>`, [{ texto: '¡Listo!', clase: 'btn-primario' }]);
+    },
+
+    /** En iPhone, después de una partida, ofrece instalar: como mucho 3 veces y con 3 días entre una y otra. */
+    ofrecerInstalar() {
+      if (!this.esIOS || this.instalada) return;
+      let o = { veces: 0, ultima: 0 };
+      try { o = JSON.parse(localStorage.getItem('ww.ios.instalar') || 'null') || o; } catch (e) { /* sin almacenamiento */ }
+      if (o.veces >= 3 || Date.now() - o.ultima < 3 * 864e5) return;
+      o.veces += 1; o.ultima = Date.now();
+      try { localStorage.setItem('ww.ios.instalar', JSON.stringify(o)); } catch (e) { /* sin almacenamiento */ }
+      setTimeout(() => {
+        if (this.pantalla !== 'p-resultado' || document.querySelector('#modal:not(.oculto)')) return;
+        this.modal('<h3>¿LO INSTALÁS?</h3><div class="modal-silabo" data-pose="happy"></div><p>Word Wizard se puede tener como app en el iPhone: con su ícono, en pantalla completa y sin internet.</p>', [
+          { texto: 'Ahora no', clase: 'btn-secundario' },
+          { texto: 'Cómo se hace', clase: 'btn-primario', accion: () => setTimeout(() => this.instalarIOS(), 50) },
+        ]);
+      }, 2600);
+    },
+
     instalar() {
+      if (this.esIOS && !this.instalada) { Audio.click(); return this.instalarIOS(); }
       if (!this.instalarEvento) return;
       Audio.click();
       this.instalarEvento.prompt();
@@ -1529,6 +1562,7 @@
       this.renderResPalabras(r);
       $('res-palabras').classList.add('oculto');
       this.mostrar('p-resultado');
+      this.ofrecerInstalar();
       if (r.modo === 'diario' || r.motivo === 'completo') Audio.rango();
       if (r.esRecord || r.motivo === 'completo' || (r.rango && WW.RANGOS.indexOf(r.rango) >= 4)) setTimeout(() => this.confeti(80), 300);
       if (r.nivel && r.nivel.subio) setTimeout(() => { if (this.pantalla === 'p-resultado') this.anunciarNivel(r.nivel.despues); else this.nivelPendiente = r.nivel.despues; }, 900);

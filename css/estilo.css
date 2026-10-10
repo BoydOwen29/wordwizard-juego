@@ -1138,3 +1138,10 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .modo-reloj input:checked + .interruptor::after { transform: translateX(22px); background: #fff; }
 .modo-reloj input:focus-visible + .interruptor { outline: 3px solid var(--oro); outline-offset: 2px; }
 .modo-reloj:has(input:checked) { box-shadow: inset 0 0 0 2px var(--oro), inset 0 -5px 0 var(--piedra-sh), 0 4px 0 var(--borde-p); }
+
+/* v2.20 instalar en iPhone: pasos con los botones de Safari */
+.ios-pasos { margin: 8px 0 4px; padding: 0; list-style: none; counter-reset: paso; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.ios-pasos li { counter-increment: paso; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,.18); font-weight: 700; font-size: 14px; }
+.ios-pasos li::before { content: counter(paso); flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--oro); color: #2a2412; font: 700 14px var(--display); }
+.ios-pasos li span { flex: 1; }
+.ios-ic { flex: none; width: 30px; height: 30px; padding: 3px; border-radius: 8px; background: #f3f6ee; }
