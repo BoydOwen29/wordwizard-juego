@@ -25,13 +25,15 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.16.0',
+    version: '2.17.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
     precios: { pista: 10, tiempo: 15, ojo: 25, escudo: 12, vela: 60 },
     // cuántas veces se puede usar cada poder en un mismo piso de la Torre: ayudan a destrabar, no reemplazan jugar
     limites: { pista: 2, tiempo: 1, ojo: 1, escudo: 1 },
+    // archivo de desafíos: los últimos días gratis; el resto, con el Pase de Mago (docs/HOJA-DE-RUTA.md)
+    archivoGratis: 3, archivoDias: 30,
     // monedas que la Torre puede dar por día; las fuertes vienen de volver cada día (diario y misiones)
     topeTorre: 150,
     velasMax: 2,
@@ -245,6 +247,7 @@
     mostrar(id) {
       document.querySelectorAll('.pantalla').forEach((s) => s.classList.toggle('activa', s.id === id));
       this.pantalla = id;
+      if (id === 'p-practica') this.pintarArchivo();
       this.magos.titulo.visible = id === 'p-titulo';
       this.magos.menu.visible = id === 'p-menu';
       this.magos.juego.visible = id === 'p-juego';
@@ -420,6 +423,7 @@
         if (!r) return this.irMenu();
         if (r.modo === 'arcade') this.nuevaPartida('arcade');
         else if (r.modo === 'practica') this.nuevaPartida('practica', r.opts);
+        else if (r.modo === 'archivo') { this.ponerLugar({ id: FONDOS['p-practica'] }); this.mostrar('p-practica'); }
         else this.irMenu();
       });
       $('btn-res-menu').addEventListener('click', () => { Audio.click(); this.irMenu(); });
@@ -589,6 +593,10 @@
         const { numero, desafio } = WW.palabraDelDia(this.pool);
         return { base: desafio.p, numero };
       }
+      if (modo === 'archivo') {
+        const { numero, desafio } = WW.palabraDelDia(this.pool, opts.fecha);
+        return { base: desafio.p, numero };
+      }
       const deHoy = WW.palabraDelDia(this.pool).desafio.p;
       if (modo === 'practica') {
         const cands = this.pool.filter((c) => c.l === (opts.largo || 7) && c.p !== deHoy);
@@ -634,7 +642,7 @@
       const totalPuntos = WW.totalPosible(nucleo, base);
       const fichas = base.split('').map((l) => ({ l, usada: false }));
       let tiempo = null;
-      if (modo === 'diario') tiempo = CONFIG.diario.tiempo;
+      if (modo === 'diario' || modo === 'archivo') tiempo = CONFIG.diario.tiempo;
       else if (modo === 'arcade') tiempo = jefe ? CONFIG.arcade.tiempoJefe : CONFIG.arcade.tiempo;
       else if (opts.reloj) tiempo = CONFIG.practica.tiempo;
 
@@ -661,10 +669,10 @@
       };
       const pa = this.partida;
       if (pa.arcade) { pa.arcade.piso = piso; pa.arcade.usadas.push(base); }
-      const lugar = modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' ? { id: FONDOS['p-practica'] } : null;
+      const lugar = modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' || modo === 'archivo' ? { id: FONDOS['p-practica'] } : null;
       const lugarNuevo = lugar && (piso === 1 || WW_LUGARES.dePiso(piso - 1).id !== lugar.id) && !opts.reintento;
       this.ponerLugar(lugar);
-      if (lugarNuevo && !jefe) setTimeout(() => this.banner(lugar.icono, lugar.nombre, 'Pisos ' + lugar.rango), 250);
+      if (lugarNuevo && !jefe && modo === 'arcade') setTimeout(() => this.banner(lugar.icono, lugar.nombre, 'Pisos ' + lugar.rango), 250);
       this.magos.jefe.setEtapa(2);
       if (opts.reanudar) {
         const r = opts.reanudar;
@@ -683,7 +691,7 @@
         this.magos.jefe.animar('cast', 1200);
       } else {
         Audio.setTempo(false);
-        this.globo(modo === 'arcade' ? `Piso ${piso}: llegá a ${objetivo} pts` : modo === 'diario' ? (opts.reanudar ? '¡Seguimos! Dale que queda poco' : `Desafío #${numero}. ¡Suerte!`) : 'Sin apuro. ¡A buscar!');
+        this.globo(modo === 'arcade' ? `Piso ${piso}: llegá a ${objetivo} pts` : modo === 'diario' ? (opts.reanudar ? '¡Seguimos! Dale que queda poco' : `Desafío #${numero}. ¡Suerte!`) : modo === 'archivo' ? `Desafío #${numero} del archivo. ¡Suerte!` : 'Sin apuro. ¡A buscar!');
         this.magos.juego.animar('happy', 600);
       }
       if (modo === 'arcade' && piso === 1) this.mision('piso', 1);
@@ -694,7 +702,7 @@
 
     renderJuego() {
       const pa = this.partida, p = Estado.perfil;
-      $('hud-modo').textContent = pa.modo === 'diario' ? `DESAFÍO #${pa.numero}` : pa.modo === 'arcade' ? (pa.jefe ? `JEFE · PISO ${pa.arcade.piso}` : `TORRE · PISO ${pa.arcade.piso}`) : 'PRÁCTICA';
+      $('hud-modo').textContent = pa.modo === 'diario' ? `DESAFÍO #${pa.numero}` : pa.modo === 'archivo' ? `ARCHIVO #${pa.numero}` : pa.modo === 'arcade' ? (pa.jefe ? `JEFE · PISO ${pa.arcade.piso}` : `TORRE · PISO ${pa.arcade.piso}`) : 'PRÁCTICA';
       $('hud-modo').classList.toggle('jefe', !!pa.jefe);
       $('hud-vidas').innerHTML = pa.arcade ? WWIconos.html('corazon').repeat(pa.arcade.vidas) + WWIconos.html('corazonVacio').repeat(CONFIG.arcade.vidas - pa.arcade.vidas) : '';
       $('hud-tiempo').classList.toggle('infinito', !pa.tiempoTotal);
@@ -814,7 +822,7 @@
         const k = b.dataset.poder;
         const n = $(`poder-${k}-n`);
         let hab = true, txt = '';
-        if (pa.modo === 'diario') { hab = false; txt = '—'; }
+        if (pa.modo === 'diario' || pa.modo === 'archivo') { hab = false; txt = '—'; }
         else if (pa.modo === 'practica') {
           if (k === 'pista' || k === 'ojo') txt = 'LIBRE';
           else { hab = false; txt = '—'; }
@@ -937,6 +945,7 @@
       if (revelada) pa.ojos.add(w);
       if (!pa.mejorPalabra || base > WW.puntosPalabra(pa.mejorPalabra, pa.base)) pa.mejorPalabra = w;
 
+      this._ayudaNovato = false;
       // stats de perfil (lo revelado con el ojo no cuenta)
       if (!revelada) {
         p.stats.palabras += 1;
@@ -1053,7 +1062,7 @@
     // ------------------------------------------------------------ poderes
     usarPoder(k) {
       const pa = this.partida, p = Estado.perfil;
-      if (!pa || pa.terminada || pa.modo === 'diario') return;
+      if (!pa || pa.terminada || pa.modo === 'diario' || pa.modo === 'archivo') return;
       if (pa.modo === 'arcade') {
         if (k === 'escudo' && pa.escudo) return;
         pa.usados = pa.usados || {};
@@ -1109,10 +1118,10 @@
       }
       if (pa.congelado) return;
       if (pa.superado) return this.pisoSuperado('subir');
-      const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'arcade' ? 'Se termina la subida: se guarda el puntaje que llevás.' : 'La práctica no se guarda.';
+      const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'archivo' ? 'Si salís, este desafío del archivo no se guarda.' : pa.modo === 'arcade' ? 'Se termina la subida: se guarda el puntaje que llevás.' : 'La práctica no se guarda.';
       this.modal(`<h3>¿SALIR?</h3><p>${aviso}</p>`, [
         { texto: 'Seguir jugando', clase: 'btn-secundario' },
-        { texto: 'Salir', clase: 'btn-peligro', accion: () => { if (pa.modo === 'practica') this.abandonarPractica(); else if (pa.modo === 'diario') this.salirDiario(); else this.terminar('abandono'); } },
+        { texto: 'Salir', clase: 'btn-peligro', accion: () => { if (pa.modo === 'practica' || pa.modo === 'archivo') this.abandonarPractica(); else if (pa.modo === 'diario') this.salirDiario(); else this.terminar('abandono'); } },
       ]);
     },
 
@@ -1156,6 +1165,36 @@
       if (pa.arcade) d.piso = Math.max(d.piso, pa.arcade.piso);
       const ks = Object.keys(reg).sort();
       while (ks.length > 120) delete reg[ks.shift()];
+    },
+
+    /**
+     * Archivo de desafíos (en Práctica): los días anteriores, del más nuevo al más viejo.
+     * Los últimos CONFIG.archivoGratis son gratis; los demás, con el Pase de Mago (por ahora, "pronto").
+     */
+    pintarArchivo() {
+      const cont = $('archivo'); if (!cont || !Estado.perfil) return;
+      const p = Estado.perfil, hoyN = WW.numeroDia();
+      const filas = [];
+      for (let n = hoyN - 1, i = 0; n >= 1 && i < CONFIG.archivoDias; n--, i++) {
+        const fecha = new Date(); fecha.setDate(fecha.getDate() - (hoyN - n));
+        const libre = i < CONFIG.archivoGratis || !!p.pase;
+        const jugado = (p.archivo && p.archivo[n]) || p.diarios[K(WW.claveDia(fecha))];
+        const r = jugado && WW.RANGOS.find((x) => x.nombre === jugado.rango);
+        const dia = `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+        filas.push(`<button class="archivo-fila${libre ? '' : ' bloqueado'}" data-n="${n}" data-dias="${hoyN - n}"><b>#${n}</b><span>${dia}</span><em>${jugado ? `${r ? r.icono : ''} ${jugado.puntos} pts` : libre ? 'Jugar' : '🔒'}</em></button>`);
+      }
+      cont.innerHTML = filas.join('') || '<p class="texto">Todavía no hay días anteriores: el archivo empieza mañana.</p>';
+      cont.onclick = (e) => {
+        const b = e.target.closest('.archivo-fila'); if (!b) return;
+        Audio.click();
+        if (b.classList.contains('bloqueado')) return this.avisoPase();
+        const fecha = new Date(); fecha.setDate(fecha.getDate() - Number(b.dataset.dias));
+        this.nuevaPartida('archivo', { fecha });
+      };
+    },
+
+    avisoPase() {
+      this.modal(`<h3>PASE DE MAGO</h3><div class="modal-silabo" data-pose="happy"></div><p>Muy pronto: <b>todo el archivo</b> de desafíos, el traje de cada temporada y tus estadísticas completas.</p><p>El desafío del día va a ser siempre gratis. Los últimos ${CONFIG.archivoGratis} días del archivo, también.</p>`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
     },
 
     /** Lo que la Torre ya dio hoy en monedas (el tope es CONFIG.topeTorre). */
@@ -1355,6 +1394,13 @@
         if (velasUsadas) setTimeout(() => this.toast(`${WWIconos.html('vela')}<div><b>La vela salvó tu racha</b><br><small>Se ${velasUsadas > 1 ? `consumieron ${velasUsadas} velas` : 'consumió una vela'}. Racha: ${p.racha} días</small></div>`, 'logro'), 1200);
         this.mision('diario', 1);
         if (Ranking.activo()) Ranking.enviarDiario({ clave: this.claveNube(), fecha: this.hoy, numero: pa.numero, nombre: p.nombre, puntos: pa.puntos, palabras: pa.encontradas.length, rango: rango.nombre });
+      } else if (pa.modo === 'archivo') {
+        xp = Math.round(pa.puntos * 0.75);
+        monedas = Math.floor(pa.encontradas.length / 3);
+        p.archivo = p.archivo || {};
+        const previo = p.archivo[pa.numero];
+        if (!previo || pa.puntos > previo.puntos) p.archivo[pa.numero] = { puntos: pa.puntos, pct: Math.round(pct * 10) / 10, rango: rango.nombre, fecha: this.hoy };
+        this.mision('practica', 1);
       } else {
         xp = Math.round(pa.puntos * 0.5);
         monedas = Math.floor(pa.encontradas.length / 3);
@@ -1401,7 +1447,7 @@
       const p = Estado.perfil;
       this.prepararTarjeta(r);
       const esArcade = r.modo === 'arcade';
-      $('res-titulo').textContent = esArcade ? (r.esRecord ? '¡NUEVO RÉCORD!' : 'FIN DE LA SUBIDA') : r.motivo === 'completo' ? '¡TODAS!' : r.modo === 'diario' ? `DESAFÍO #${r.numero}` : 'PRÁCTICA';
+      $('res-titulo').textContent = esArcade ? (r.esRecord ? '¡NUEVO RÉCORD!' : 'FIN DE LA SUBIDA') : r.motivo === 'completo' ? '¡TODAS!' : r.modo === 'diario' ? `DESAFÍO #${r.numero}` : r.modo === 'archivo' ? `ARCHIVO #${r.numero}` : 'PRÁCTICA';
       if (esArcade) $('res-rango-icono').innerHTML = WWIconos.html('torre'); else $('res-rango-icono').textContent = r.rango.icono;
       { const mr = this.magos.resultado, bien = r.motivo === 'completo' || r.esRecord || (esArcade ? r.piso >= 3 : (r.pct || 0) >= 35);
         mr.setPaleta(p.sombrero); mr.setNivel(p.nivel);
@@ -1421,8 +1467,8 @@
         const d = document.createElement('div'); d.className = 'res-logro';
         d.innerHTML = `<span>${l.icono}</span><div><b>${l.nombre}</b><small>${l.desc}</small></div>`; lg.appendChild(d);
       }
-      $('btn-compartir').classList.toggle('oculto', r.modo === 'practica');
-      $('btn-otra').innerHTML = esArcade ? WWIconos.html('repetir') + ' Otra subida' : r.modo === 'practica' ? WWIconos.html('repetir') + ' Otra palabra' : WWIconos.html('calendario') + ' Mañana hay más';
+      $('btn-compartir').classList.toggle('oculto', r.modo === 'practica' || r.modo === 'archivo');
+      $('btn-otra').innerHTML = esArcade ? WWIconos.html('repetir') + ' Otra subida' : r.modo === 'practica' ? WWIconos.html('repetir') + ' Otra palabra' : r.modo === 'archivo' ? WWIconos.html('calendario') + ' Otro del archivo' : WWIconos.html('calendario') + ' Mañana hay más';
       $('btn-otra').disabled = r.modo === 'diario';
       this.renderResPalabras(r);
       $('res-palabras').classList.add('oculto');
@@ -2133,6 +2179,13 @@
         if (!m) return;
         if ((this.pantalla === 'p-titulo' || this.pantalla === 'p-menu') && quieto > 30000 && m.estado === 'idle') { m.dormir(); Audio.ronquido(); }
         const pa = this.partida;
+        // primer minuto: a quien todavía no encontró 3 palabras, Silabo le sugiere una corta si se traba (gratis)
+        const novato = Estado.perfil && Estado.perfil.stats.palabras < 3;
+        if (this.pantalla === 'p-juego' && pa && !pa.terminada && !pa.jefe && novato && quieto > 10000 && !this._ayudaNovato) {
+          this._ayudaNovato = true; this._consejoDado = true;
+          this.ayudaNovato(pa); m.animar('saludo', 900);
+          return;
+        }
         if (this.pantalla === 'p-juego' && pa && !pa.terminada && !pa.jefe && quieto > 15000 && !this._consejoDado) {
           this._consejoDado = true;
           this.globo(azar(MENSAJES.consejo)); m.animar('saludo', 900);
@@ -2140,6 +2193,23 @@
           if (fs.length) { const r = fs[Math.floor(Math.random() * fs.length)].getBoundingClientRect(); m.mirar(r.left + r.width / 2, r.top); }
         }
       }, 2000);
+    },
+
+    /** Sugerencia para el que recién empieza: una palabra corta que falta, las dos primeras letras y sus fichas brillando. */
+    ayudaNovato(pa) {
+      const faltan = [...pa.nucleo].filter((w) => !pa.encontradasSet.has(w) && w !== pa.base).sort((x, y) => x.length - y.length);
+      const w = faltan.find((x) => x.length === 4) || faltan[0];
+      if (!w) return;
+      this.globo(T('Una ayudita: probá con {w}', { w: (w.slice(0, 2) + '_'.repeat(w.length - 2)).toUpperCase() }), 'ok');
+      // las fichas de esa palabra, en orden, brillan un rato
+      const usadas = new Set();
+      for (const l of w) {
+        const i = pa.fichas.findIndex((f, k) => f.l === l && !usadas.has(k));
+        if (i < 0) continue;
+        usadas.add(i);
+        const el = $('fichas').querySelector(`[data-idx="${i}"]`);
+        if (el) { el.classList.remove('sugerida'); void el.offsetWidth; el.classList.add('sugerida'); setTimeout(() => el.classList.remove('sugerida'), 2600); }
+      }
     },
 
     /** Ventana de la vela de racha (desde la racha del menú). */

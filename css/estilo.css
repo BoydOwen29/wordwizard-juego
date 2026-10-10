@@ -1091,3 +1091,18 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .fb-cara.on { background: var(--oro); border-color: var(--linea); transform: scale(1.12); }
 .fb-otra { margin: 8px 0 0; font-size: 13px; }
 .fb-otra a { color: var(--texto-suave); }
+
+/* v2.17 archivo de desafíos (en Práctica) */
+.archivo-titulo { margin: 18px 0 2px; font: 600 18px var(--display); color: var(--texto); }
+.archivo-texto { margin: 0 0 8px; font-size: 13px; }
+.archivo { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-bottom: 8px; }
+.archivo-fila { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 12px; background: var(--vidrio); border: 1px solid var(--vidrio-borde); color: var(--texto); font: 600 14px var(--display); text-align: left; }
+.archivo-fila b { color: var(--oro); font-variant-numeric: tabular-nums; }
+.archivo-fila span { color: var(--texto-suave); font-size: 12px; }
+.archivo-fila em { margin-left: auto; font-style: normal; font-size: 13px; }
+.archivo-fila.bloqueado { opacity: .62; }
+.archivo-fila:active { transform: translateY(1px); }
+
+/* v2.17 primer minuto: fichas sugeridas a quien recién empieza */
+.ficha.sugerida { animation: fichaSugerida .85s ease-in-out 3; }
+@keyframes fichaSugerida { 50% { transform: translateY(-5px) scale(1.08); box-shadow: 0 0 0 4px rgba(242,198,109,.75), 0 0 18px rgba(242,198,109,.7); } }
