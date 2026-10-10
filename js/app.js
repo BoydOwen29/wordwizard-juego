@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.23.0',
+    version: '2.24.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -119,23 +119,20 @@
     },
 
     pwa() {
-      // iPhone/iPad: Safari no avisa que se puede instalar; mostramos el botón y explicamos los pasos
-      const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      // Cada sistema se instala distinto: Chrome/Android/Edge avisan (beforeinstallprompt); iPhone no avisa (se explican
+      // los pasos); dentro de Instagram, Facebook, TikTok… no se puede (hay que abrirlo en el navegador).
+      const ua = navigator.userAgent;
+      this.esIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      this.esAndroid = /android/i.test(ua);
+      const app = ua.match(/Instagram|FBAN|FBAV|FB_IAB|TikTok|musical_ly|LinkedInApp|Snapchat|Line\/|Twitter|MicroMessenger/i);
+      this.enApp = app ? ({ fban: 'Facebook', fbav: 'Facebook', fb_iab: 'Facebook', musical_ly: 'TikTok', linkedinapp: 'LinkedIn', 'line/': 'LINE', micromessenger: 'WeChat' }[app[0].toLowerCase()] || app[0]) : null;
       this.instalada = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
-      this.esIOS = esIOS;
-      if (esIOS && !this.instalada) { $('btn-instalar').classList.remove('oculto'); $('aj-instalar').classList.remove('oculto'); }
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        this.instalarEvento = e;
-        $('btn-instalar').classList.remove('oculto');
-        $('aj-instalar').classList.remove('oculto');
-      });
+      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.instalarEvento = e; this.pintarInstalar(); });
       window.addEventListener('appinstalled', () => {
-        this.instalarEvento = null;
-        $('btn-instalar').classList.add('oculto');
-        $('aj-instalar').classList.add('oculto');
+        this.instalarEvento = null; this.instalada = true; this.pintarInstalar();
         this.toast('📲 ¡Word Wizard instalado!');
       });
+      this.pintarInstalar();
       if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
         navigator.serviceWorker.register('sw.js?datos=' + encodeURIComponent(WWI18n.datos)).then((reg) => {
           reg.addEventListener('updatefound', () => {
@@ -228,29 +225,84 @@
         <p class="modal-nota">Compartir está abajo en el iPhone y arriba en el iPad. Si no lo ves, tocá los tres puntitos (•••).</p>`, [{ texto: '¡Listo!', clase: 'btn-primario' }]);
     },
 
-    /** En iPhone, después de una partida, ofrece instalar: como mucho 3 veces y con 3 días entre una y otra. */
+    /** ¿Cómo se instala acá? 'aviso' (Chrome/Android/Edge), 'ios', 'app' (dentro de Instagram…), 'menu' (otro navegador del celular) o null. */
+    modoInstalar() {
+      if (this.instalada || window.WW_ARTIFACT) return null;
+      if (this.enApp) return 'app';
+      if (this.instalarEvento) return 'aviso';
+      if (this.esIOS) return 'ios';
+      if (this.esAndroid) return 'menu';
+      return null;   // compu sin aviso: no se ofrece
+    },
+    pintarInstalar() {
+      const si = !!this.modoInstalar();
+      $('btn-instalar').classList.toggle('oculto', !si);
+      $('aj-instalar').classList.toggle('oculto', !si);
+    },
+
+    /** Dentro de Instagram, Facebook, TikTok…: no se puede instalar; hay que abrirlo en el navegador. */
+    instalarEnApp() {
+      const url = location.origin + location.pathname;
+      const nav = this.esIOS ? 'Safari' : 'Chrome';
+      this.modal(`<h3>ABRILO EN ${nav.toUpperCase()}</h3><div class="modal-silabo" data-pose="happy"></div><p>Estás dentro de ${esc(this.enApp)}: desde acá no se puede instalar.</p>
+        <ol class="ios-pasos"><li><span>Tocá los tres puntitos (••• o ⋮), arriba</span></li><li><span>Elegí <b>Abrir en ${nav}</b></span></li><li><span>Ahí tocá <b>Instalar</b></span></li></ol>
+        <p class="modal-nota">${esc(url.replace(/^https?:\/\//, ''))}</p>`, [
+        { texto: 'Copiar el link', clase: 'btn-secundario', accion: () => this.copiar(url) },
+        { texto: '¡Listo!', clase: 'btn-primario' },
+      ]);
+    },
+    /** Otro navegador del celular (Firefox, Samsung sin aviso…): desde su menú. */
+    instalarMenu() {
+      this.modal(`<h3>INSTALAR WORD WIZARD</h3><div class="modal-silabo" data-pose="happy"></div><p>Queda como una app, con su ícono, en pantalla completa y anda sin internet.</p>
+        <ol class="ios-pasos"><li><span>Abrí el menú del navegador (⋮ o ☰)</span></li><li><span>Tocá <b>Instalar app</b> o <b>Agregar a pantalla principal</b></span></li></ol>`, [{ texto: '¡Listo!', clase: 'btn-primario' }]);
+    },
+
+    /** Después de una partida, ofrece instalar: desde la primera, como mucho 3 veces y con 2 días entre una y otra. */
     ofrecerInstalar() {
-      if (!this.esIOS || this.instalada) return;
+      if (!this.modoInstalar()) return;
       let o = { veces: 0, ultima: 0 };
-      try { o = JSON.parse(localStorage.getItem('ww.ios.instalar') || 'null') || o; } catch (e) { /* sin almacenamiento */ }
-      if (o.veces >= 3 || Date.now() - o.ultima < 3 * 864e5) return;
-      o.veces += 1; o.ultima = Date.now();
-      try { localStorage.setItem('ww.ios.instalar', JSON.stringify(o)); } catch (e) { /* sin almacenamiento */ }
+      try { o = JSON.parse(localStorage.getItem('ww.instalar') || localStorage.getItem('ww.ios.instalar') || 'null') || o; } catch (e) { /* sin almacenamiento */ }
+      if (o.veces >= 3 || Date.now() - o.ultima < 2 * 864e5) return;
       setTimeout(() => {
-        if (this.pantalla !== 'p-resultado' || document.querySelector('#modal:not(.oculto)')) return;
-        this.modal('<h3>¿LO INSTALÁS?</h3><div class="modal-silabo" data-pose="happy"></div><p>Word Wizard se puede tener como app en el iPhone: con su ícono, en pantalla completa y sin internet.</p>', [
+        const modo = this.modoInstalar();
+        if (!modo || this.pantalla !== 'p-resultado' || document.querySelector('#modal:not(.oculto)')) return;
+        o.veces += 1; o.ultima = Date.now();
+        try { localStorage.setItem('ww.instalar', JSON.stringify(o)); } catch (e) { /* sin almacenamiento */ }
+        const donde = this.esIOS ? 'en el iPhone' : this.esAndroid ? 'en el celular' : 'en la compu';
+        this.modal(`<h3>¿LO INSTALÁS?</h3><div class="modal-silabo" data-pose="happy"></div><p>Word Wizard se puede tener como app ${donde}: con su ícono, en pantalla completa y sin internet. Así no te perdés el desafío de mañana.</p>`, [
           { texto: 'Ahora no', clase: 'btn-secundario' },
-          { texto: 'Cómo se hace', clase: 'btn-primario', accion: () => setTimeout(() => this.instalarIOS(), 50) },
+          { texto: modo === 'aviso' ? 'Instalar' : 'Cómo se hace', clase: 'btn-primario', accion: () => this.instalar() },
         ]);
       }, 2600);
     },
 
     instalar() {
-      if (this.esIOS && !this.instalada) { Audio.click(); return this.instalarIOS(); }
-      if (!this.instalarEvento) return;
+      const modo = this.modoInstalar();
+      if (!modo) return;
       Audio.click();
+      if (modo === 'app') return this.instalarEnApp();
+      if (modo === 'ios') return this.instalarIOS();
+      if (modo === 'menu') return this.instalarMenu();
       this.instalarEvento.prompt();
-      this.instalarEvento.userChoice.finally(() => { this.instalarEvento = null; $('btn-instalar').classList.add('oculto'); $('aj-instalar').classList.add('oculto'); });
+      this.instalarEvento.userChoice.finally(() => { this.instalarEvento = null; this.pintarInstalar(); });
+    },
+
+    /** Para recomendarlo en persona: QR grande y el link para compartir. */
+    invitar() {
+      const url = 'https://wordwizard.capralabsgames.com/';
+      const pintarQR = () => {
+        const q = window.qrcode(0, 'M'); q.addData(url); q.make();
+        const n = q.getModuleCount(); let d = '';
+        for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) d += `M${x} ${y}h1v1h-1z`;
+        const caja = document.querySelector('.qr-caja');
+        if (caja) caja.innerHTML = `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" shape-rendering="crispEdges"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#f3f6ee"/><path d="${d}" fill="#16262c"/></svg>`;
+      };
+      this.modal('<h3>INVITAR A JUGAR</h3><p>Que lo escaneen con la cámara del celular.</p><div class="qr-caja"></div><p class="qr-link">wordwizard.capralabsgames.com</p>', [
+        { texto: 'Compartir', clase: 'btn-secundario', accion: () => { if (navigator.share) navigator.share({ title: 'Word Wizard', text: 'Probá Word Wizard, un juego de palabras:', url }).catch(() => {}); else this.copiar(url); } },
+        { texto: 'Listo', clase: 'btn-primario' },
+      ]);
+      if (window.qrcode) return pintarQR();
+      const sc = document.createElement('script'); sc.src = 'js/qr.js?v=' + CONFIG.version; sc.onload = pintarQR; document.head.appendChild(sc);
     },
 
     renderPerfiles() {
@@ -447,6 +499,7 @@
       $('chip-racha').addEventListener('click', () => { Audio.click(); this.verVela(); });
       if (typeof Audio.vigilarVisibilidad === "function") Audio.vigilarVisibilidad();
       $('aj-instalar').addEventListener('click', () => this.instalar());
+      $('aj-invitar').addEventListener('click', () => { Audio.click(); this.invitar(); });
       document.querySelectorAll('.btn-volver').forEach((b) => b.addEventListener('click', () => { Audio.click(); if (b.dataset.volver === 'p-mago') this.verMago(); else this.irMenu(); }));
       $('tab-inicio').addEventListener('click', () => { Audio.click(); this.irMenu(); });
       $('tab-mago').addEventListener('click', () => { Audio.click(); this.verMago(); });

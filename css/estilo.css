@@ -1158,3 +1158,8 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
   .acciones .btn { padding: 8px 4px; font-size: 14px; white-space: nowrap; }
   .acciones .btn .ic { width: 17px; height: 17px; }
 }
+
+/* v2.24 invitar a jugar: QR grande para mostrar en persona */
+.qr-caja { width: min(64vw, 240px); aspect-ratio: 1; margin: 6px auto 4px; border-radius: 14px; overflow: hidden; border: 3px solid var(--borde-p); background: #f3f6ee; }
+.qr-caja svg { width: 100%; height: 100%; display: block; }
+.qr-link { font: 600 15px var(--display); color: var(--oro); text-align: center; margin: 4px 0 0; }
