@@ -228,4 +228,8 @@ WWI18n.registrar('pt', {
   '⏱️ Tu ritmo': '⏱️ Seu ritmo', 'días desde que empezaste': 'dias desde que começou', 'días jugados': 'dias jogados', '{n} min': '{n} min', 'por día jugado': 'por dia jogado', 'Minutos de cada día y el nivel con que lo terminaste.': 'Minutos de cada dia e o nível com que terminou.',
   // v2.15: trajes en la tienda
   'Trajes de Silabo': 'Roupas do Silabo', 'Lo tenés puesto': 'Está usando', 'Ya es tuyo': 'Já é seu', 'Gratis en el nivel {n}': 'Grátis no nível {n}', 'Usar': 'Usar', 'Muy pronto: trajes especiales y el Pase de Mago, para apoyar a Silabo.': 'Em breve: roupas especiais e o Passe de Mago, para apoiar o Silabo.',
+  // v2.16: economía y límites de poderes
+  'Ya usaste las 2 pistas de este piso': 'Você já usou as 2 dicas deste andar', 'Ese poder ya lo usaste en este piso': 'Você já usou esse poder neste andar', 'USADO': 'USADO', 'Monedas (tope del día)': 'Moedas (limite do dia)', 'La Torre te dio {a} de {b} monedas hoy': 'A Torre te deu {a} de {b} moedas hoje', 'La Torre te dio {a} de {b} monedas hoy · mañana hay más': 'A Torre te deu {a} de {b} moedas hoje · amanhã tem mais',
+  // v2.16: comentarios a la base
+  'Contame lo que quieras: qué te gustó, qué no se entendió, si algo se rompió. Lo leo todo.': 'Me conta o que quiser: do que gostou, o que não entendeu, se algo quebrou. Eu leio tudo.', 'o mandalo por WhatsApp': 'ou mande pelo WhatsApp', 'Me encanta': 'Adorei', 'Me gusta': 'Gostei', 'Más o menos': 'Mais ou menos', 'No me gusta': 'Não gostei', 'Escribí algo o elegí una carita': 'Escreva algo ou escolha uma carinha', 'Enviando…': 'Enviando…', '¡Gracias! Ya me llegó 🙌': 'Obrigado! Já chegou 🙌', 'Quedó guardado: se manda cuando haya conexión 🙌': 'Guardado: será enviado quando houver conexão 🙌',
 });

@@ -25,16 +25,21 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.15.1',
+    version: '2.16.0',
     diario: { tiempo: 180 },
-    arcade: { tiempo: 75, tiempoJefe: 90, vidas: 3 },
+    arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
-    precios: { pista: 8, tiempo: 12, ojo: 15, escudo: 10, vela: 50 },
+    precios: { pista: 10, tiempo: 15, ojo: 25, escudo: 12, vela: 60 },
+    // cuántas veces se puede usar cada poder en un mismo piso de la Torre: ayudan a destrabar, no reemplazan jugar
+    limites: { pista: 2, tiempo: 1, ojo: 1, escudo: 1 },
+    // monedas que la Torre puede dar por día; las fuertes vienen de volver cada día (diario y misiones)
+    topeTorre: 150,
     velasMax: 2,
     comboVentana: 6000,
   };
+  window.WW_VERSION = CONFIG.version;   // para los reportes de errores (js/reportes.js)
   /** Precio en monedas para adelantar un traje (las monedas sobraban: ver docs/PROGRESO.md). */
-  const PRECIO_TRAJE = (nivel) => nivel * 60;
+  const PRECIO_TRAJE = (nivel) => nivel * 80;
 
   const MENSAJES = {
     corta: ['Muy corta: mínimo 3 letras', 'Más letras, aprendiz', 'Con 3 letras arrancamos'],
@@ -137,22 +142,43 @@
       }
     },
 
-    /** Versión de prueba: el tester escribe y lo manda por WhatsApp (o lo copia) con contexto. */
+    /**
+     * Comentarios: una carita, el texto y "Enviar" (llega a la base: node tools/reportes.js).
+     * WhatsApp queda como segunda opción, para quien prefiera hablar directo.
+     */
     comentario() {
-      this.modal(`<h3>¿QUÉ TE PARECIÓ?</h3><p>Contame lo que quieras: qué te gustó, qué no se entendió, si algo se rompió.</p>
+      const caras = [['😍', 'Me encanta'], ['🙂', 'Me gusta'], ['😐', 'Más o menos'], ['🙁', 'No me gusta']];
+      this.modal(`<h3>¿QUÉ TE PARECIÓ?</h3><p>Contame lo que quieras: qué te gustó, qué no se entendió, si algo se rompió. Lo leo todo.</p>
+        <div class="fb-caras" id="fb-caras">${caras.map(([c, t]) => `<button class="fb-cara" data-c="${c}" title="${t}" aria-label="${t}">${c}</button>`).join('')}</div>
         <textarea class="modal-input" id="fb-texto" rows="5" style="border-radius:14px;resize:vertical;min-height:110px" placeholder="Escribí acá..."></textarea>
-        <div class="fila" style="margin-top:12px"><a class="btn btn-primario" id="fb-wa" href="https://wa.me/" target="_blank" rel="noopener" style="text-decoration:none;text-align:center">Mandar por WhatsApp</a></div>`, [
+        <div class="fila" style="margin-top:12px"><button class="btn btn-primario" id="fb-enviar">Enviar</button></div>
+        <p class="fb-otra"><a id="fb-wa" href="https://wa.me/" target="_blank" rel="noopener">o mandalo por WhatsApp</a></p>`, [
         { texto: 'Cerrar', clase: 'btn-secundario' },
       ]);
-      const fila = document.querySelector('#modal-caja .fila:last-child');
-      const copiar = document.createElement('button');
-      copiar.className = 'btn btn-secundario'; copiar.textContent = 'Copiar texto';
-      copiar.addEventListener('click', () => { Audio.click(); const m = this.mensajeComentario(); if (m) this.copiar(m); else this.toast('Escribí algo primero'); });
-      fila.insertBefore(copiar, fila.firstChild);
+      let cara = '';
+      $('fb-caras').addEventListener('click', (e) => {
+        const b = e.target.closest('.fb-cara'); if (!b) return;
+        cara = cara === b.dataset.c ? '' : b.dataset.c; Audio.click();
+        $('fb-caras').querySelectorAll('.fb-cara').forEach((x) => x.classList.toggle('on', x.dataset.c === cara));
+      });
       const ta = $('fb-texto'), wa = $('fb-wa');
       const actualizar = () => { const m = this.mensajeComentario(); wa.href = 'https://wa.me/?text=' + encodeURIComponent(m || ''); };
       ta.addEventListener('input', actualizar); actualizar();
       wa.addEventListener('click', (e) => { if (!this.mensajeComentario()) { e.preventDefault(); this.toast('Escribí algo primero'); } else this.toast('¡Gracias! 🙌'); });
+      $('fb-enviar').addEventListener('click', async () => {
+        const t = (ta.value || '').trim();
+        if (!t && !cara) { this.toast('Escribí algo o elegí una carita'); return; }
+        const b = $('fb-enviar'); b.disabled = true; b.textContent = 'Enviando…';
+        const p = Estado.perfil, reg = (p && p.registro) || {}, dias = Object.keys(reg);
+        const ok = window.WWReportes ? await WWReportes.comentario((cara ? cara + ' ' : '') + (t || '(sin texto)'), {
+          cara, nivel: p && p.nivel, partidas: p && p.stats.partidas, mejorPiso: p && p.arcade.mejorPiso, racha: p && Estado.rachaVigente(this.hoy),
+          diasJugados: dias.length, minPorDia: dias.length ? Math.round(dias.reduce((s, k) => s + reg[k].seg, 0) / dias.length / 60) : 0,
+          desde: p && p.creado.slice(0, 10), pantalla: this.pantalla,
+        }) : false;
+        Audio.mision();
+        $('modal').classList.add('oculto');
+        this.toast(ok ? '¡Gracias! Ya me llegó 🙌' : 'Quedó guardado: se manda cuando haya conexión 🙌', 'logro');
+      });
       setTimeout(() => ta.focus(), 150);
     },
     mensajeComentario() {
@@ -616,8 +642,9 @@
       let objetivo = 0;
       if (modo === 'arcade') {
         // el objetivo sale del total típico del tramo, no del de la palabra que tocó
-        objetivo = Math.round((ref || totalPuntos) * (0.08 + 0.012 * piso));
-        if (jefe) objetivo += 10;
+        // crece más despacio y con techo: más arriba la dificultad la ponen las palabras (docs/ECONOMIA.md)
+        objetivo = Math.round((ref || totalPuntos) * Math.min(0.27, 0.085 + 0.0095 * piso));
+        if (jefe) objetivo += 8;
         objetivo = Math.max(12, Math.min(Math.round(totalPuntos * 0.5), objetivo));
       }
 
@@ -797,6 +824,7 @@
           txt = inv > 0 ? `x${inv}` : `${WWIconos.html('moneda')}${CONFIG.precios[k]}`;
           hab = inv > 0 || p.monedas >= CONFIG.precios[k];
           if (k === 'escudo' && pa.escudo) { txt = 'ON'; hab = false; }
+          else if (((pa.usados && pa.usados[k]) || 0) >= CONFIG.limites[k]) { txt = 'USADO'; hab = false; }
         }
         b.disabled = !hab || pa.terminada;
         n.innerHTML = txt;
@@ -908,7 +936,6 @@
       if (extra) pa.extras++; else pa.nEnc++;
       if (revelada) pa.ojos.add(w);
       if (!pa.mejorPalabra || base > WW.puntosPalabra(pa.mejorPalabra, pa.base)) pa.mejorPalabra = w;
-      if (pa.modo === 'arcade' && !revelada) { pa.arcade.monedas += 1; pa.monedasGanadas += 1; Estado.sumarMonedas(1); }
 
       // stats de perfil (lo revelado con el ojo no cuenta)
       if (!revelada) {
@@ -944,7 +971,6 @@
         c.classList.remove('pum'); void c.offsetWidth; c.classList.add('pum'); Audio.combo(pa.combo);
       }
       this.flotante(`+${pts}`);
-      if (pa.modo === 'arcade' && !revelada) this.flotante(WWIconos.html('moneda'), 1);
       if (!pa.jefe || pa.superado) setTimeout(() => this.rayo(this.magos.juego.puntaVarita(), this.centro($('hud-puntos')), colorRayo, () => this.particulas($('hud-puntos'), colorRayo, 6)), 90);
 
       const rangoAntes = pa.rangoIdx;
@@ -1030,10 +1056,13 @@
       if (!pa || pa.terminada || pa.modo === 'diario') return;
       if (pa.modo === 'arcade') {
         if (k === 'escudo' && pa.escudo) return;
+        pa.usados = pa.usados || {};
+        if ((pa.usados[k] || 0) >= CONFIG.limites[k]) { this.globo(k === 'pista' ? 'Ya usaste las 2 pistas de este piso' : 'Ese poder ya lo usaste en este piso', 'mal'); return; }
         if ((p.inventario[k] || 0) > 0) p.inventario[k] -= 1;
         else if (p.monedas >= CONFIG.precios[k]) { Estado.sumarMonedas(-CONFIG.precios[k]); Audio.moneda(); }
         else { this.globo('Te faltan monedas', 'mal'); return; }
       }
+      if (pa.modo === 'arcade') pa.usados[k] = (pa.usados[k] || 0) + 1;
       Audio.poder();
       if (k === 'pista') this.darPista();
       else if (k === 'tiempo') { if (pa.deadline) { pa.deadline += 20000; this.tic(); this.globo('+20 segundos', 'ok'); } }
@@ -1129,6 +1158,13 @@
       while (ks.length > 120) delete reg[ks.shift()];
     },
 
+    /** Lo que la Torre ya dio hoy en monedas (el tope es CONFIG.topeTorre). */
+    torreHoy() {
+      const p = Estado.perfil;
+      if (!p.torreHoy || p.torreHoy.fecha !== this.hoy) p.torreHoy = { fecha: this.hoy, monedas: 0 };
+      return p.torreHoy;
+    },
+
     /** Torre: se llegó al objetivo del piso. El piso ya está ganado, pero el reloj sigue: cada palabra más suma. */
     objetivoLogrado() {
       const pa = this.partida;
@@ -1161,10 +1197,16 @@
       this.limpiarSeleccion();
       const rest = motivo === 'tiempo' || !pa.deadline ? 0 : Math.max(0, Math.round((pa.deadline - Date.now()) / 1000));
       const extra = Math.max(0, pa.puntosPiso - pa.objetivo);
-      let bonusMonedas = 4 + Math.floor(rest / 8) + Math.floor(extra / 10);
+      let bonusMonedas = 2 + Math.floor(rest / 15) + Math.floor(extra / 12);
       const bonusPiso = pa.arcade.piso * 10, bonusTiempo = Math.floor(rest / 3);
       let bonusPts = bonusPiso + bonusTiempo;
-      if (pa.jefe) { bonusMonedas += 20; bonusPts += 40; pa.arcade.jefes += 1; p.arcade.jefes = (p.arcade.jefes || 0) + 1; }
+      if (pa.jefe) { bonusMonedas += 10; bonusPts += 40; pa.arcade.jefes += 1; p.arcade.jefes = (p.arcade.jefes || 0) + 1; }
+      // tope diario de monedas de la Torre
+      const hoyTorre = this.torreHoy();
+      const ganadas = bonusMonedas;
+      bonusMonedas = Math.max(0, Math.min(bonusMonedas, CONFIG.topeTorre - hoyTorre.monedas));
+      hoyTorre.monedas += bonusMonedas;
+      const topeAlcanzado = bonusMonedas < ganadas;
       Estado.sumarMonedas(bonusMonedas); pa.arcade.monedas += bonusMonedas; pa.monedasGanadas += bonusMonedas;
       pa.arcade.puntajeTotal += pa.puntos + bonusPts;
       pa.arcade.palabrasTotal += pa.encontradas.length;
@@ -1178,7 +1220,7 @@
       const sig = pa.arcade.piso + 1;
       this.mision('piso', sig);
       this.anunciarLogros(Logros.evaluar(p, { tipo: 'piso' }));
-      const info = { pa, bonusPts, bonusMonedas, rest, extra, bonusPiso, bonusTiempo };
+      const info = { pa, bonusPts, bonusMonedas, rest, extra, bonusPiso, bonusTiempo, topeAlcanzado };
       this._tModalPiso = setTimeout(() => this.resumenPiso(info), motivo === 'subir' ? 350 : 1100);
     },
 
@@ -1193,7 +1235,7 @@
         fila('Palabras', pa.encontradas.length),
         fila('Bonus del piso', '+' + (info.bonusPiso + (pa.jefe ? 40 : 0))),
         info.bonusTiempo ? fila('Tiempo sobrante', `+${info.bonusTiempo} (${info.rest} s)`) : '',
-        fila('Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`),
+        fila(info.topeAlcanzado ? 'Monedas (tope del día)' : 'Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`),
         fila('Total de la subida', pa.arcade.puntajeTotal + ' pts', 'total'),
       ].filter(Boolean).join('');
       const titulo = pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`;
@@ -1336,8 +1378,8 @@
       const a = pa.arcade;
       if (a.cerrada) return;
       a.cerrada = true; clearTimeout(this._tModalPiso);
-      // 0,55 (antes 0,8): desde la v2.15 cada piso sigue hasta el final del reloj y suma más; así el nivel sube al mismo ritmo
-      const xp = Math.round(a.puntajeTotal * 0.55 + a.piso * 8);
+      // 0,45 (era 0,8): desde la v2.16 se sube más alto en la Torre; así el nivel no se acelera (docs/ECONOMIA.md)
+      const xp = Math.round(a.puntajeTotal * 0.45 + a.piso * 8);
       const esRecord = a.puntajeTotal > p.arcade.mejorPuntaje;
       p.arcade.mejorPuntaje = Math.max(p.arcade.mejorPuntaje, a.puntajeTotal);
       p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, a.piso);
@@ -2137,6 +2179,8 @@
       $('mapa-info').innerHTML = pa
         ? `<b>${pa.jefe ? `¡${esc(pa.nombreJefe)} vencido!` : `¡Piso ${hecho} superado!`}</b><small>Llevás ${pa.arcade.puntajeTotal} pts en esta subida</small>${jefeSig}`
         : `<b>Subí lo más alto que puedas</b><small>Cada piso es una palabra con un objetivo de puntos. Tenés 3 vidas y cada 5 pisos hay un jefe.${p.arcade.mejorPiso ? ` Tu mejor marca: piso ${p.arcade.mejorPiso}.` : ''}</small>`;
+      const hoyT = this.torreHoy();
+      $('mapa-info').insertAdjacentHTML('beforeend', `<small class="mapa-tope">${WWIconos.html('moneda')} La Torre te dio ${hoyT.monedas} de ${CONFIG.topeTorre} monedas hoy${hoyT.monedas >= CONFIG.topeTorre ? ' · mañana hay más' : ''}</small>`);
       const btn = $('mapa-jugar');
       btn.textContent = pa ? `Subir al piso ${sig}` : 'Empezar la subida';
       btn.disabled = true; btn.classList.remove('pulso-listo');

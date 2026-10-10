@@ -228,4 +228,8 @@ WWI18n.registrar('en', {
   '⏱️ Tu ritmo': '⏱️ Your pace', 'días desde que empezaste': 'days since you started', 'días jugados': 'days played', '{n} min': '{n} min', 'por día jugado': 'per day played', 'Minutos de cada día y el nivel con que lo terminaste.': 'Minutes per day and the level you ended it at.',
   // v2.15: trajes en la tienda
   'Trajes de Silabo': 'Silabo outfits', 'Lo tenés puesto': 'Wearing it', 'Ya es tuyo': 'Yours', 'Gratis en el nivel {n}': 'Free at level {n}', 'Usar': 'Wear', 'Muy pronto: trajes especiales y el Pase de Mago, para apoyar a Silabo.': 'Coming soon: special outfits and the Wizard Pass, to support Silabo.',
+  // v2.16: economía y límites de poderes
+  'Ya usaste las 2 pistas de este piso': 'You used both hints on this floor', 'Ese poder ya lo usaste en este piso': 'You already used that power on this floor', 'USADO': 'USED', 'Monedas (tope del día)': 'Coins (daily cap)', 'La Torre te dio {a} de {b} monedas hoy': 'The Tower gave you {a} of {b} coins today', 'La Torre te dio {a} de {b} monedas hoy · mañana hay más': 'The Tower gave you {a} of {b} coins today · more tomorrow',
+  // v2.16: comentarios a la base
+  'Contame lo que quieras: qué te gustó, qué no se entendió, si algo se rompió. Lo leo todo.': 'Tell me anything: what you liked, what was confusing, if something broke. I read it all.', 'o mandalo por WhatsApp': 'or send it on WhatsApp', 'Me encanta': 'Love it', 'Me gusta': 'Like it', 'Más o menos': 'So-so', 'No me gusta': 'Don\'t like it', 'Escribí algo o elegí una carita': 'Write something or pick a face', 'Enviando…': 'Sending…', '¡Gracias! Ya me llegó 🙌': 'Thanks! Got it 🙌', 'Quedó guardado: se manda cuando haya conexión 🙌': 'Saved: it will be sent when you are online 🙌',
 });
