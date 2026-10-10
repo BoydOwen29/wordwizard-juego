@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.22.0',
+    version: '2.23.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -102,7 +102,7 @@
       // cargar diccionario sin congelar la pantalla de título
       setTimeout(() => {
         try {
-          this.dic = new WW.Diccionario(window.WW_DICT || '', { idioma: window.WWI18n.idiomaDatos, comunes: window.WW_COMUNES });
+          this.dic = new WW.Diccionario(window.WW_DICT || '', { idioma: window.WWI18n.idiomaDatos, comunes: window.WW_COMUNES, sinPlural: window.WW_SINPLURAL });
           this.pool = window.WW_DESAFIOS || [];
         } catch (e) { this.dic = new WW.Diccionario(''); this.pool = []; }
         if (!this.dic.tamano || !this.pool.length) {

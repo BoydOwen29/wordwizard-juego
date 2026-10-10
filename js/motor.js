@@ -163,13 +163,15 @@
       this.comunes = null;
       if (texto) this.cargar(texto);
       if (opts && opts.comunes) this.comunes = new Set(opts.comunes.split('\n').filter(Boolean));
+      // formas verbales que no tienen plural (caí, pude, nací): sin esto valían "cais", "pudes", "nacis"
+      this.sinPlural = new Set(opts && opts.sinPlural ? opts.sinPlural.split('\n').filter(Boolean) : []);
     }
-    plurales(w) { return this.idioma === 'es' ? plurales(w) : []; }
+    plurales(w) { return this.idioma === 'es' && !this.sinPlural.has(w) ? plurales(w) : []; }
 
     /** ¿Es una palabra conocida (cuenta para el total)? Los plurales de una conocida también lo son. */
     esComun(w) {
       if (!this.comunes || this.comunes.has(w)) return true;
-      if (this.idioma === 'es') for (const s of singulares(w)) if (this.comunes.has(s) && plurales(s).includes(w)) return true;
+      if (this.idioma === 'es') for (const s of singulares(w)) if (this.comunes.has(s) && this.plurales(s).includes(w)) return true;
       return false;
     }
 
@@ -194,7 +196,7 @@
     tiene(w) {
       if (this.set.has(w)) return true;
       if (this.idioma !== 'es') return false;
-      for (const s of singulares(w)) if (this.set.has(s) && plurales(s).includes(w)) return true;
+      for (const s of singulares(w)) if (this.set.has(s) && this.plurales(s).includes(w)) return true;
       return false;
     }
 
