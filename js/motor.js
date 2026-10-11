@@ -165,8 +165,37 @@
       if (opts && opts.comunes) this.comunes = new Set(opts.comunes.split('\n').filter(Boolean));
       // formas verbales que no tienen plural (caí, pude, nací): sin esto valían "cais", "pudes", "nacis"
       this.sinPlural = new Set(opts && opts.sinPlural ? opts.sinPlural.split('\n').filter(Boolean) : []);
+      // familias de verbos ("cantar:canta,cantaba,canto|…"): la segunda forma de un mismo verbo vale la mitad
+      this.lema = new Map();
+      if (opts && opts.lemas) for (const g of opts.lemas.split('|')) { const [l, fs] = g.split(':'); if (fs) for (const f of fs.split(',')) this.lema.set(f, l); }
     }
     plurales(w) { return this.idioma === 'es' && !this.sinPlural.has(w) ? plurales(w) : []; }
+
+    /** La familia de una palabra: su infinitivo si es un verbo, su singular si es un plural; si no, ella misma. */
+    familia(w) {
+      if (this.lema.has(w)) return this.lema.get(w);
+      if (this.idioma === 'es') for (const s of singulares(w)) if (this.set.has(s) && this.plurales(s).includes(w)) return this.lema.get(s) || s;
+      return w;
+    }
+    /**
+     * Puntos de una palabra según lo que ya se encontró: un plural o una conjugación de una palabra que ya tenés
+     * vale la mitad (gato y después gatos; canto y después cantaba). `familias` es un Set que se va llenando.
+     */
+    puntos(w, base, familias) {
+      const p = puntosPalabra(w, base);
+      const f = this.familia(w);
+      const repetida = familias && familias.has(f) && w !== base;
+      if (familias) familias.add(f);
+      return repetida ? Math.ceil(p / 2) : p;
+    }
+    /** Lo máximo que se puede sacar con estas palabras: en cada familia, la que más vale entera y el resto a la mitad. */
+    totalPosible(palabras, base) {
+      const grupos = new Map();
+      for (const w of palabras) { const f = this.familia(w); if (!grupos.has(f)) grupos.set(f, []); grupos.get(f).push(puntosPalabra(w, base)); }
+      let t = 0;
+      for (const ps of grupos.values()) { ps.sort((a, b) => b - a); t += ps[0] + ps.slice(1).reduce((s, p) => s + Math.ceil(p / 2), 0); }
+      return t;
+    }
 
     /** ¿Es una palabra conocida (cuenta para el total)? Los plurales de una conocida también lo son. */
     esComun(w) {

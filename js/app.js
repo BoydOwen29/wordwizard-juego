@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.24.0',
+    version: '2.25.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -102,7 +102,7 @@
       // cargar diccionario sin congelar la pantalla de título
       setTimeout(() => {
         try {
-          this.dic = new WW.Diccionario(window.WW_DICT || '', { idioma: window.WWI18n.idiomaDatos, comunes: window.WW_COMUNES, sinPlural: window.WW_SINPLURAL });
+          this.dic = new WW.Diccionario(window.WW_DICT || '', { idioma: window.WWI18n.idiomaDatos, comunes: window.WW_COMUNES, sinPlural: window.WW_SINPLURAL, lemas: window.WW_LEMAS });
           this.pool = window.WW_DESAFIOS || [];
         } catch (e) { this.dic = new WW.Diccionario(''); this.pool = []; }
         if (!this.dic.tamano || !this.pool.length) {
@@ -664,8 +664,9 @@
     cerrarDiarioGuardado(c) {
       const p = Estado.perfil;
       const nucleo = this.dic.nucleo(this.dic.derivables(c.base), c.base);
-      const totalPuntos = WW.totalPosible(nucleo, c.base);
-      const base = c.encontradas.reduce((t, w) => t + WW.puntosPalabra(w, c.base), 0);
+      const totalPuntos = this.dic.totalPosible(nucleo, c.base);
+      const fams = new Set();
+      const base = c.encontradas.reduce((t, w) => t + this.dic.puntos(w, c.base, fams), 0);
       const pct = totalPuntos ? (base / totalPuntos) * 100 : 0;
       const rango = WW.rangoPorPct(pct);
       p.diarios[K(c.fecha)] = { numero: c.numero, palabra: c.base, puntos: c.puntos, pct: Math.round(pct * 10) / 10, rango: rango.nombre, encontradas: c.encontradas.slice(), total: nucleo.size, totalPuntos, combo: c.combo || 0, fecha: c.fecha };
@@ -754,7 +755,7 @@
       else ({ base, numero, ref } = this.elegirBase(modo, Object.assign({}, opts, { piso, jefe })));
       const derivables = this.dic.derivables(base);
       const nucleo = this.dic.nucleo(derivables, base);   // las extra valen, pero no se exigen
-      const totalPuntos = WW.totalPosible(nucleo, base);
+      const totalPuntos = this.dic.totalPosible(nucleo, base);
       const fichas = base.split('').map((l) => ({ l, usada: false }));
       let tiempo = null;
       if (modo === 'diario' || modo === 'archivo') tiempo = CONFIG.diario.tiempo;
@@ -774,7 +775,7 @@
       this.partida = {
         modo, opts, base, numero, derivables, nucleo, total: nucleo.size, nEnc: 0, extras: 0, totalPuntos,
         fichas, orden: WW.mezclar(fichas.map((_, i) => i)), seleccion: [],
-        encontradas: [], encontradasSet: new Set(), puntos: 0, puntosBase: 0, puntosPiso: 0,
+        encontradas: [], encontradasSet: new Set(), familias: new Set(), puntos: 0, puntosBase: 0, puntosPiso: 0,
         combo: 0, mejorCombo: 0, ultimoAcierto: 0,
         tiempoTotal: tiempo, deadline: tiempo ? Date.now() + tiempo * 1000 : null, restante: tiempo, timer: null,
         inicio: Date.now(), terminada: false, pistas: [], ojos: new Set(), escudo: false,
@@ -792,7 +793,7 @@
       if (opts.reanudar) {
         const r = opts.reanudar;
         pa.deadline = r.deadline; pa.restante = Math.ceil((r.deadline - Date.now()) / 1000);
-        for (const w of r.encontradas) { pa.encontradas.push(w); pa.encontradasSet.add(w); pa.puntosBase += WW.puntosPalabra(w, base); if (nucleo.has(w)) pa.nEnc++; else pa.extras++; }
+        for (const w of r.encontradas) { pa.encontradas.push(w); pa.encontradasSet.add(w); pa.puntosBase += this.dic.puntos(w, base, pa.familias); if (nucleo.has(w)) pa.nEnc++; else pa.extras++; }
         pa.puntos = r.puntos != null ? r.puntos : pa.puntosBase;
         pa.mejorCombo = r.combo || 0;
         pa.rangoIdx = WW.RANGOS.indexOf(WW.rangoPorPct(totalPuntos ? (pa.puntosBase / totalPuntos) * 100 : 0));
@@ -1036,13 +1037,23 @@
       if (!w) return;
       const r = this.dic.validar(w, pa.base, pa.encontradasSet);
       if (r.ok) this.acierto(r.palabra, false);
-      else this.fallo(r.codigo);
+      else this.fallo(r.codigo, r.palabra);
+    },
+
+    /** La primera vez que un plural o una conjugación vale la mitad, Silabo lo explica (una sola vez por mago). */
+    avisoFamilia(w) {
+      const p = Estado.perfil;
+      if (!p || (p.vistos && p.vistos.familia)) return;
+      p.vistos = Object.assign({}, p.vistos, { familia: true }); Estado.guardar();
+      setTimeout(() => this.globo('Plurales y conjugaciones de una palabra que ya tenés valen la mitad', 'wow'), 700);
     },
 
     acierto(w, revelada) {
       const pa = this.partida, p = Estado.perfil;
       const ahora = Date.now();
-      const base = WW.puntosPalabra(w, pa.base);
+      const entera = WW.puntosPalabra(w, pa.base);
+      const base = this.dic.puntos(w, pa.base, pa.familias);
+      if (base < entera) this.avisoFamilia(w);
       let pts = revelada ? Math.max(1, Math.round(base / 2)) : base;
       let mult = 1;
       if (!revelada) {
@@ -1132,8 +1143,9 @@
       if (pa.nEnc >= pa.total) { this.congelarReloj(pa); setTimeout(() => (pa.modo === 'arcade' ? this.pisoSuperado('completa') : this.terminar('completo')), 900); }
     },
 
-    fallo(codigo) {
+    fallo(codigo, palabra) {
       const pa = this.partida, p = Estado.perfil;
+      if (codigo === 'desconocida' && palabra) this.ofrecerAvisoPalabra(palabra);
       $('palabra-actual').classList.add('mal');
       if (codigo === 'repetida') Audio.repetida(); else Audio.error();
       if (p.ajustes.vibracion && navigator.vibrate) { try { navigator.vibrate(60); } catch (e) { /* sin gesto previo */ } }
@@ -1143,6 +1155,22 @@
       if (pa.jefe) { this.magos.jefe.animar('cast', 600); this.rayo(this.magos.jefe.puntaVarita(), this.centro($('mago-juego')), '#ff5c7a', () => this.particulas($('mago-juego'), '#ff5c7a', 8)); }
       if (!pa.escudo) { pa.combo = 0; $('combo').textContent = ''; $('combo').classList.remove('fuego'); this.magos.juego.setCombo(0); }
       pa.bloqueo = true; setTimeout(() => { pa.bloqueo = false; if (this.partida === pa && !pa.terminada) this.limpiarSeleccion(); }, 260);
+    },
+
+    /**
+     * Una palabra que el juego no conoce: un aviso chiquito para mandarla a revisar (llega a la base como comentario).
+     * Solo de 4 letras o más, una vez por palabra y como mucho 3 avisos por partida, para no molestar.
+     */
+    ofrecerAvisoPalabra(w) {
+      const pa = this.partida;
+      if (!pa || w.length < 4 || !window.WWReportes) return;
+      pa.avisadas = pa.avisadas || new Set();
+      if (pa.avisadas.has(w) || pa.avisadas.size >= 3) return;
+      pa.avisadas.add(w);
+      this.toast(`¿${esc(w.toUpperCase())} existe? Tocá y la revisamos`, 'accion', () => {
+        WWReportes.comentario('Palabra que falta: ' + w, { palabra: w, base: pa.base, modo: pa.modo, idioma: (window.WWI18n && WWI18n.idioma) || 'es' });
+        this.toast('¡Gracias! La vamos a revisar 🙌');
+      });
     },
 
     globo(texto, clase) {
@@ -1164,7 +1192,7 @@
     toast(html, clase, accion) {
       const t = document.createElement('div');
       t.className = 'toast' + (clase ? ' ' + clase : ''); t.innerHTML = html;
-      if (accion) { t.addEventListener('click', accion); t.style.animationDuration = '12s'; }
+      if (accion) { t.addEventListener('click', () => { t.remove(); accion(); }); t.style.animationDuration = '12s'; }
       const cont = $('toasts');
       while (cont.children.length >= 3) cont.firstChild.remove();
       cont.appendChild(t);
@@ -2401,7 +2429,7 @@
       const base = arcade.usadas[arcade.usadas.length - 1] || '';
       const nucleo = base ? this.dic.nucleo(this.dic.derivables(base), base) : new Set();
       this.nivelSesion = Estado.perfil.nivel;
-      this.partida = { modo: 'arcade', opts: {}, base, nucleo, total: nucleo.size, totalPuntos: base ? WW.totalPosible(nucleo, base) : 0, encontradas: [], encontradasSet: new Set(), nEnc: 0, extras: 0, puntos: 0, terminada: true, jefe: false, nombreJefe: '', arcade, retomada };
+      this.partida = { modo: 'arcade', opts: {}, base, nucleo, total: nucleo.size, totalPuntos: base ? this.dic.totalPosible(nucleo, base) : 0, familias: new Set(), encontradas: [], encontradasSet: new Set(), nEnc: 0, extras: 0, puntos: 0, terminada: true, jefe: false, nombreJefe: '', arcade, retomada };
       return this.partida;
     },
 
