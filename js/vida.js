@@ -69,9 +69,9 @@
 
     dragon: () => `<svg class="v-dragon" viewBox="-66 -40 128 74" width="128" height="74" overflow="visible">
       <g class="v-ala-atras"><path d="M-6 -6 Q-8 -36 18 -40 Q12 -28 20 -24 Q8 -22 14 -14 Q2 -14 6 -6Z" fill="#8f2f4a" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/></g>
-      <path class="v-cola" d="M-14 2 Q-34 10 -48 0 Q-56 -6 -62 -2" fill="none" stroke="${L}" stroke-width="8.5" stroke-linecap="round"/>
-      <path class="v-cola" d="M-14 2 Q-34 10 -48 0 Q-56 -6 -62 -2" fill="none" stroke="#c4553f" stroke-width="4.5" stroke-linecap="round"/>
-      <path d="M-62 -2 l-5 -6 l2 8 l-6 3 l9 1z" fill="#f2c66d" stroke="${L}" stroke-width="2" stroke-linejoin="round"/>
+      <g class="v-cola"><path d="M-14 2 Q-34 10 -48 0 Q-56 -6 -62 -2" fill="none" stroke="${L}" stroke-width="8.5" stroke-linecap="round"/>
+      <path d="M-14 2 Q-34 10 -48 0 Q-56 -6 -62 -2" fill="none" stroke="#c4553f" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M-62 -2 l-5 -6 l2 8 l-6 3 l9 1z" fill="#f2c66d" stroke="${L}" stroke-width="2" stroke-linejoin="round"/></g>
       <path d="M-20 2 Q-18 -12 2 -12 Q18 -12 24 -18 Q28 -22 34 -20 L34 -12 Q26 2 6 8 Q-14 12 -20 2Z" fill="#c4553f" stroke="${L}" stroke-width="2.6" stroke-linejoin="round"/>
       <path d="M-14 4 Q2 8 20 -4" fill="none" stroke="#f2c66d" stroke-width="4" stroke-linecap="round"/>
       <path d="M-6 -12 l3 -5 l3 5 M4 -12 l3 -5 l3 5 M14 -14 l3 -5 l2 5" fill="#f2c66d" stroke="${L}" stroke-width="1.6" stroke-linejoin="round"/>
@@ -268,10 +268,18 @@
       const el = this.poner(DIBUJO.dragon(), 'v-dragon-caja' + (dir < 0 ? ' izq' : ''), 0, y);
       const bicho = { el, tipo: 'dragon' };
       this._dragon = bicho; this.bichos.add(bicho);
-      const x0 = dir > 0 ? -150 : this.W + 30, x1 = dir > 0 ? this.W + 30 : -150, dy = 14;
-      const pasos = 6, frames = [];
-      for (let i = 0; i <= pasos; i++) frames.push({ transform: `translate(${x0 + (x1 - x0) * i / pasos}px, ${Math.sin(i * 1.3) * dy}px)` });
-      bicho.anim = el.animate(frames, { duration: 12000, easing: 'linear', fill: 'forwards' });
+      const x0 = dir > 0 ? -150 : this.W + 30, x1 = dir > 0 ? this.W + 30 : -150;
+      // altura: dos ondas largas sobre un arco que sube al entrar y baja al salir
+      const fase = azar(0, Math.PI * 2), ondas = azar(1.6, 2.4), A = azar(8, 13), arco = azar(8, 16);
+      const alto = (t) => Math.sin(t * Math.PI * 2 * ondas + fase) * A - Math.sin(t * Math.PI) * arco;
+      const pasos = 48, frames = [];
+      for (let i = 0; i <= pasos; i++) {
+        const t = i / pasos, x = x0 + (x1 - x0) * t, y = alto(t);
+        const pend = (alto(t + 0.01) - alto(t - 0.01)) / (Math.abs(x1 - x0) * 0.02);   // dy/dx en px
+        const giro = Math.max(-9, Math.min(9, Math.atan(pend) * 180 / Math.PI * 0.6)) * dir;
+        frames.push({ transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${giro.toFixed(1)}deg)` });
+      }
+      bicho.anim = el.animate(frames, { duration: 11500, easing: 'linear', fill: 'forwards' });
       await bicho.anim.finished.catch(() => {});
       el.remove(); this.bichos.delete(bicho); this._dragon = null;
     },

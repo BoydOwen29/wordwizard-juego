@@ -15,7 +15,10 @@
   // cada idioma tiene su propio desafío y su propia Torre: los rankings van separados
   const idioma = () => (window.WWI18n && window.WWI18n.idiomaDatos) || 'es';
 
-  function activo() { return !!(CONFIG.url && CONFIG.key); }
+  // desde la compu de desarrollo o un navegador automatizado (las pruebas de Playwright) no se manda nada:
+  // antes de esto las pruebas llenaban el ranking de magos "Prueba". Para probarlo a propósito: localStorage 'ww.nube.local' = '1'.
+  const PRUEBA = (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || navigator.webdriver) && (() => { try { return localStorage.getItem('ww.nube.local') !== '1'; } catch (e) { return true; } })();
+  function activo() { return !!(CONFIG.url && CONFIG.key) && !PRUEBA; }
 
   function leer(k, def) { try { return JSON.parse(localStorage.getItem(k)) || def; } catch (e) { return def; } }
   function escribir(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } }

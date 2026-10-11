@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.25.0',
+    version: '2.26.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -34,6 +34,8 @@
     limites: { pista: 2, tiempo: 1, ojo: 1, escudo: 1 },
     // archivo de desafíos: los últimos días gratis; el resto, con el Pase de Mago (docs/HOJA-DE-RUTA.md)
     archivoGratis: 3, archivoDias: 30,
+    practicasGratis: 3,   // por día; con el Pase de Mago, sin límite (docs/MONETIZACION.md)
+    practicasTester: 10,  // los testers de la prueba cerrada (entran una vez con el link ?tester=bosque)
     // monedas que la Torre puede dar por día; las fuertes vienen de volver cada día (diario y misiones)
     topeTorre: 150,
     velasMax: 2,
@@ -77,6 +79,13 @@
 
     // ============================================================ arranque
     init() {
+      // testers de la prueba cerrada: el link ?tester=bosque deja marcado este dispositivo (más prácticas por día)
+      try {
+        if (new URLSearchParams(location.search).get('tester') === 'bosque') {
+          localStorage.setItem('ww.tester', '1'); history.replaceState(null, '', location.pathname);
+          setTimeout(() => this.toast(`🧪 Modo tester: ${CONFIG.practicasTester} prácticas por día. ¡Gracias por probar!`), 2500);
+        }
+      } catch (e) { /* sin almacenamiento */ }
       WWIconos.pintar();
       this.magos.titulo = new Magos.Mago($('mago-titulo'));
       this.magos.resultado = new Magos.Mago($('mago-resultado'));
@@ -350,7 +359,7 @@
       if (this._versionNueva && id !== 'p-juego') setTimeout(() => this.aplicarVersion(), 400);
       document.querySelectorAll('.pantalla').forEach((s) => s.classList.toggle('activa', s.id === id));
       this.pantalla = id;
-      if (id === 'p-practica') this.pintarArchivo();
+      if (id === 'p-practica') { this.pintarArchivo(); this.pintarPracticas(); }
       this.magos.titulo.visible = id === 'p-titulo';
       this.magos.menu.visible = id === 'p-menu';
       this.magos.juego.visible = id === 'p-juego';
@@ -747,6 +756,10 @@
       const p = Estado.perfil;
       if (!opts.continuar) this.nivelSesion = p.nivel;
       if (!p.tutorial) { return this.tutorial(() => { p.tutorial = true; Estado.guardar(); this.nuevaPartida(modo, opts); }); }
+      if (modo === 'practica' && !opts.tutorial) {
+        if (this.practicasQuedan() <= 0) { this.mostrar('p-practica'); return this.avisoPracticas(); }
+        this.practicasHoy().n += 1; Estado.guardar();
+      }
       if (this.partida && this.partida.timer) clearInterval(this.partida.timer);
       const piso = modo === 'arcade' ? (opts.piso || 1) : 0;
       const jefe = modo === 'arcade' && WW.esPisoJefe(piso);
@@ -1350,7 +1363,32 @@
     },
 
     avisoPase() {
-      this.modal(`<h3>PASE DE MAGO</h3><div class="modal-silabo" data-pose="happy"></div><p>Muy pronto: <b>todo el archivo</b> de desafíos, el traje de cada temporada y tus estadísticas completas.</p><p>El desafío del día va a ser siempre gratis. Los últimos ${CONFIG.archivoGratis} días del archivo, también.</p>`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+      this.modal(`<h3>PASE DE MAGO</h3><div class="modal-silabo" data-pose="happy"></div><p>Muy pronto: <b>práctica sin límite</b>, <b>todo el archivo</b> de desafíos, las <b>historias nuevas</b> que vengan después de la Torre, el traje de cada temporada y tus estadísticas completas.</p><p>El desafío del día y la Torre Arcana son gratis para siempre. También ${CONFIG.practicasGratis} prácticas por día y los últimos ${CONFIG.archivoGratis} días del archivo.</p>`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+    },
+
+    /** Prácticas jugadas hoy (las gratis son CONFIG.practicasGratis; con el Pase no hay límite). */
+    practicasHoy() {
+      const p = Estado.perfil;
+      if (!p.practicasHoy || p.practicasHoy.fecha !== this.hoy) p.practicasHoy = { fecha: this.hoy, n: 0 };
+      return p.practicasHoy;
+    },
+    esTester() { try { return localStorage.getItem('ww.tester') === '1'; } catch (e) { return false; } },
+    limitePracticas() { return this.esTester() ? CONFIG.practicasTester : CONFIG.practicasGratis; },
+    practicasQuedan() { return this.tienePase() ? Infinity : Math.max(0, this.limitePracticas() - this.practicasHoy().n); },
+    pintarPracticas() {
+      const q = this.practicasQuedan(), el = $('practica-quedan');
+      if (!el) return;
+      el.classList.toggle('agotadas', q === 0);
+      el.innerHTML = q === Infinity ? 'Práctica sin límite con tu Pase de Mago ✨'
+        : q === 0 ? 'Ya jugaste las prácticas de hoy. Mañana hay más.'
+        : q === 1 ? 'Te queda 1 práctica hoy' : `Te quedan ${q} prácticas hoy`;
+    },
+    /** Sin prácticas: el desafío del día, el archivo y la Torre siguen; el Pase da práctica sin límite. */
+    avisoPracticas() {
+      this.modal(`<h3>PRÁCTICAS DE HOY</h3><div class="modal-silabo" data-pose="sad"></div><p>Ya jugaste las ${this.limitePracticas()} prácticas gratis de hoy. Mañana hay más.</p><p>Mientras tanto tenés el desafío del día y la Torre Arcana. Con el <b>Pase de Mago</b>, la práctica no tiene límite.</p>`, [
+        { texto: 'Ver el Pase', clase: 'btn-secundario', accion: () => this.avisoPase() },
+        { texto: 'Dale', clase: 'btn-primario' },
+      ]);
     },
 
     /** Lo que la Torre ya dio hoy en monedas (el tope es CONFIG.topeTorre). */
