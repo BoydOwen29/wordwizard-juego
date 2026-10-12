@@ -55,6 +55,13 @@
     return !!d && (!d.vence || d.vence > Date.now());
   }
   function tienePase() { return PASE.some(tiene); }
+  /** Lo que dijo el servidor de una suscripción: hasta cuándo va y si el jugador la canceló (sigue hasta vencer). */
+  function anotar(d, r) { if (r.expira) d.expira = r.expira; d.cancelada = r.estado === 'SUBSCRIPTION_STATE_CANCELED'; }
+  /** {sku, expira, cancelada} del Pase activo, o null. */
+  function estadoPase() {
+    const d = leer(), k = PASE.find(tiene);
+    return k ? { sku: k, expira: d[k].expira || null, cancelada: !!d[k].cancelada } : null;
+  }
 
   async function validar(sku, token, usuario) {
     const R = window.WWRanking;
@@ -82,7 +89,10 @@
     escribir(d);
     for (const p of lista) {
       const r = await validar(p.itemId, p.purchaseToken, usuario);
-      if (r && r.valido === false) { const x = leer(); delete x[p.itemId]; escribir(x); }
+      const x = leer();
+      if (r && r.valido === false) delete x[p.itemId];
+      else if (r && x[p.itemId]) anotar(x[p.itemId], r);
+      escribir(x);
     }
     return JSON.stringify(Object.keys(antes).sort()) !== JSON.stringify(Object.keys(d).sort());
   }
@@ -99,10 +109,10 @@
     const r = token ? await validar(sku, token, usuario) : { valido: false };
     if (r && r.valido === false) { try { await resp.complete('fail'); } catch (e) { /* ya cerró */ } return 'error'; }
     // sin señal con el servidor: la compra es de Play igual; se valida (y reconoce) en la próxima apertura
-    const d = leer(); d[sku] = { token, vence: PASE.includes(sku) ? Date.now() + SIN_SENAL : 0 }; escribir(d);
+    const d = leer(); d[sku] = { token, vence: PASE.includes(sku) ? Date.now() + SIN_SENAL : 0 }; if (r) anotar(d[sku], r); escribir(d);
     try { await resp.complete('success'); } catch (e) { /* ya cerró */ }
     return 'ok';
   }
 
-  window.WWCompras = { PASE, iniciar, disponible, precios, formato, tiene, tienePase, restaurar, comprar };
+  window.WWCompras = { PASE, iniciar, disponible, precios, formato, tiene, tienePase, estadoPase, restaurar, comprar };
 })();

@@ -1283,3 +1283,28 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .vista-traje-sub { margin: 0 !important; color: var(--oro) !important; font-size: calc(13px * var(--letra, 1)); }
 .vista-traje .fila { margin-top: auto; padding-top: 12px; width: 100%; display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
 @media (max-height: 700px) { .vista-traje-escena { height: 230px; } .vista-traje-mago { width: 180px; height: 225px; } }
+
+/* Pase de Mago: sello, marco y brillo (variante J de lab/premium.html) */
+.sello-pase { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -.18em; margin: 0 .2em; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23f2c66d' stroke='%2316262c' stroke-width='1.6'/%3E%3Cpath d='M8 3.6 L9.2 6.4 L12.2 6.6 L9.9 8.5 L10.6 11.4 L8 9.8 L5.4 11.4 L6.1 8.5 L3.8 6.6 L6.8 6.4 Z' fill='%23fff6d8' stroke='%23a57a2a' stroke-width='.6'/%3E%3C/svg%3E") center/contain no-repeat; flex: none; }
+.hud-yo.con-pase { border-color: var(--oro); box-shadow: 0 0 0 2px rgba(242,198,109,.25), 0 0 14px rgba(242,198,109,.35); }
+.hud-yo.con-pase .hud-nivel { position: relative; }
+.hud-yo.con-pase .hud-nivel::after { content: ''; position: absolute; right: -6px; bottom: -5px; width: 16px; height: 16px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23f2c66d' stroke='%2316262c' stroke-width='1.6'/%3E%3Cpath d='M8 3.6 L9.2 6.4 L12.2 6.6 L9.9 8.5 L10.6 11.4 L8 9.8 L5.4 11.4 L6.1 8.5 L3.8 6.6 L6.8 6.4 Z' fill='%23fff6d8' stroke='%23a57a2a' stroke-width='.6'/%3E%3C/svg%3E") center/contain no-repeat; }
+.hud-yo.con-pase #hud-titulo { color: #f6e6c0; }
+.inicio-mago { position: relative; }
+.pase-brillo { display: none; position: absolute; left: 50%; bottom: 0; width: 260px; height: 260px; transform: translateX(-50%); pointer-events: none; border-radius: 50%; background: radial-gradient(circle, rgba(255,214,120,.45) 0%, rgba(242,198,109,.22) 38%, transparent 66%); }
+body.con-pase .pase-brillo { display: block; }
+.pase-brillo span { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #fff1c4; box-shadow: 0 0 10px 2px #ffd47a; animation: paseTitila 2.6s ease-in-out infinite; }
+.pase-brillo span:nth-child(1) { left: 18%; top: 36%; } .pase-brillo span:nth-child(2) { left: 78%; top: 24%; animation-delay: .5s; }
+.pase-brillo span:nth-child(3) { left: 12%; top: 66%; animation-delay: 1s; } .pase-brillo span:nth-child(4) { left: 86%; top: 60%; animation-delay: 1.5s; }
+.pase-brillo span:nth-child(5) { left: 50%; top: 10%; animation-delay: 2s; }
+@keyframes paseTitila { 50% { opacity: .2; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .pase-brillo span { animation: none; } }
+.chip-pase { display: inline-flex; align-items: center; gap: 2px; margin: 8px auto 0; padding: 5px 12px; border-radius: 999px; background: rgba(242,198,109,.16); border: 2px solid rgba(242,198,109,.6); color: #f6e6c0; font: 700 calc(12.5px * var(--letra, 1)) var(--texto-f); cursor: pointer; }
+.practica-quedan .chip-pase { display: flex; width: max-content; }
+.chip-pase.chico { display: flex; width: max-content; margin: 4px 0 0; padding: 2px 8px; font-size: calc(10.5px * var(--letra, 1)); cursor: default; }
+.archivo-fila span small { display: block; color: var(--oro); font-size: calc(11px * var(--letra, 1)); }
+.archivo-fila.bloqueado { opacity: .8; }
+.archivo-fila.bloqueado em .sello-pase { width: 20px; height: 20px; }
+.pase-bienv-grilla { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pase-bienv { border: 2px solid var(--borde-p); border-radius: 12px; padding: 8px 6px; background: rgba(20,33,40,.45); color: #f3f6ee; font: 700 calc(12.5px * var(--letra, 1)) var(--texto-f); }
+.pase-bienv em { display: block; font-style: normal; font: 600 calc(11.5px * var(--letra, 1)) var(--display); color: var(--oro); margin-top: 3px; }
