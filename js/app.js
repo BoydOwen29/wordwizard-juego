@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.36.0',
+    version: '2.36.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -526,7 +526,7 @@
       const p = Estado.perfil;
       $('hud-nombre').textContent = p.nombre;
       const pase = this.tienePase();
-      $('hud-titulo').textContent = pase ? 'Mago del Pase' : WW.tituloNivel(p.nivel);
+      $('hud-titulo').textContent = WW.tituloNivel(p.nivel);
       $('hud-nivel').textContent = p.nivel;
       $('hud-yo').classList.toggle('con-pase', pase);
       document.body.classList.toggle('con-pase', pase);
@@ -1482,7 +1482,7 @@
         const jugado = (p.archivo && p.archivo[n]) || p.diarios[K(WW.claveDia(fecha))];
         const r = jugado && WW.RANGOS.find((x) => x.nombre === jugado.rango);
         const dia = `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-        filas.push(`<button class="archivo-fila${libre ? '' : ' bloqueado'}" data-n="${n}" data-dias="${hoyN - n}"><b>#${n}</b><span>${dia}${libre ? '' : '<small>con el Pase de Mago</small>'}</span><em>${jugado ? `${r ? r.icono : ''} ${jugado.puntos} pts` : libre ? 'Jugar' : '<i class="sello-pase"></i>'}</em></button>`);
+        filas.push(`<button class="archivo-fila${libre ? '' : ' bloqueado'}" data-n="${n}" data-dias="${hoyN - n}"><b>#${n}</b><span>${dia}${libre ? '' : '<small>guardado para el Pase de Mago</small>'}</span><em>${jugado ? `${r ? r.icono : ''} ${jugado.puntos} pts` : libre ? 'Jugar' : '<i class="sello-pase"></i>'}</em></button>`);
       }
       cont.innerHTML = filas.join('') || '<p class="texto">Todavía no hay días anteriores: el archivo empieza mañana.</p>';
       cont.onclick = (e) => {
@@ -1552,7 +1552,7 @@
           const k = CONFIG.trajeTemporada, v = k && Magos.PALETAS[k];
           if (v && !ps.trajes[k]) {
             ps.trajes[k] = true; Estado.guardar();
-            this.modal(`<h3>TE LLEGÓ EL TRAJE ${esc(v.nombre.toUpperCase())}</h3><div class="modal-silabo" data-pose="happy" data-paleta="${k}"></div><p>Viene con tu Pase de Mago, por la temporada.</p>`, [
+            this.modal(`<h3>TE GUARDÉ EL TRAJE ${esc(v.nombre.toUpperCase())}</h3><div class="modal-silabo" data-pose="happy" data-paleta="${k}"></div><p>Viene con tu Pase, por la temporada.</p>`, [
               { texto: 'Después', clase: 'btn-secundario' },
               { texto: 'Ponérmelo', clase: 'btn-primario', accion: () => this.ponerTraje(k) },
             ]);
@@ -1561,7 +1561,7 @@
         }
         if (!ps.gusta && Estado.rachaVigente(this.hoy) >= 3 && this.puedeVender('gusta')) {
           ps.gusta = true; this.vendio('gusta');
-          this.modal(`<h3>¡${Estado.rachaVigente(this.hoy)} DÍAS SEGUIDOS!</h3><div class="modal-silabo" data-pose="happy" data-paleta="${CONFIG.trajeTemporada || 'turquesa'}"></div><p>Word Wizard lo hace una sola persona. Si te gusta, el <b>Pase de Mago</b> lo banca y te da práctica sin límite y el traje de cada temporada.</p>`, [
+          this.modal(`<h3>¡${Estado.rachaVigente(this.hoy)} DÍAS SEGUIDOS!</h3><div class="modal-silabo" data-pose="happy" data-paleta="${CONFIG.trajeTemporada || 'turquesa'}"></div><p>Word Wizard lo hace una sola persona. Si te gusta, con el <b>Pase de Mago</b> la ayudás a seguir y te llevás práctica sin límite.</p>`, [
             { texto: 'Ahora no', clase: 'btn-secundario', accion: () => this.ahoraNo('gusta') },
             { texto: 'Ver el Pase', clase: 'btn-primario', accion: () => this.avisoPase() },
           ]);
@@ -1578,14 +1578,14 @@
         if (e && e.cancelada && e.expira && ps.cancelAviso !== e.expira) {
           ps.cancelAviso = e.expira; Estado.guardar();
           const f = new Date(e.expira), dia = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}`;
-          this.toast(`Tu Pase sigue activo hasta el ${dia}. Lo podés retomar desde Google Play.`);
+          this.toast(`Tu Pase sigue hasta el ${dia}. Si querés retomarlo, está en Google Play.`);
         }
         return;
       }
       if (ps.visto && this.playBilling) {
         ps.visto = false; ps.cancelAviso = null; Estado.guardar();
         this.repintarPase();
-        this.modal(`<h3>TU PASE TERMINÓ</h3><div class="modal-silabo"></div><p>Gracias por estos meses. <b>Tus trajes y tu progreso siguen siendo tuyos.</b></p><p>Vuelven las ${CONFIG.practicasGratis} prácticas por día y los últimos ${CONFIG.archivoGratis} días del archivo.</p>`, [
+        this.modal(`<h3>TU PASE TERMINÓ</h3><div class="modal-silabo"></div><p>Gracias por estos meses: <b>tus trajes y tu progreso siguen siendo tuyos.</b></p><p>Vuelven las ${CONFIG.practicasGratis} prácticas por día y los últimos ${CONFIG.archivoGratis} días del archivo.</p>`, [
           { texto: 'Entendido', clase: 'btn-secundario' },
           { texto: 'Volver al Pase', clase: 'btn-primario', accion: () => this.avisoPase() },
         ]);
@@ -1598,7 +1598,7 @@
       ps.visto = true; if (k) ps.trajes[k] = true; Estado.guardar();
       Audio.logro(); this.confeti(80);
       const item = (t, b, acc) => `<button class="pase-bienv" data-acc="${acc}">${t}<em>${b}</em></button>`;
-      this.modal(`<h3>¡YA SOS MAGO DEL PASE!</h3><div class="modal-silabo" data-pose="happy" data-paleta="${k || 'turquesa'}"></div><p>Gracias por bancar a Silabo. Esto ya es tuyo:</p>
+      this.modal(`<h3>¡YA TENÉS EL PASE DE MAGO!</h3><div class="modal-silabo" data-pose="happy" data-paleta="${k || 'turquesa'}"></div><p>Gracias por darme una mano. Mirá lo que se abrió:</p>
         <div class="pase-bienv-grilla">${item('Práctica sin límite', 'Practicar ▸', 'practica')}${item('Todo el archivo', 'Ver días ▸', 'archivo')}${v ? item(`Traje ${esc(v.nombre)}`, 'Ponérmelo ✓', 'traje') : ''}${item('Tu sello del Pase', 'En tu mago ★', 'sello')}</div>`, [{ texto: '¡Vamos!', clase: 'btn-primario' }]);
       $('modal-caja').querySelectorAll('.pase-bienv').forEach((b) => b.addEventListener('click', () => {
         const a = b.dataset.acc;
@@ -1628,7 +1628,7 @@
       if (r === 'ok') {
         this.repintarPase();
         if (WWCompras.PASE.includes(sku)) return this.bienvenidaPase();
-        this.modal(`<h3>¡GRACIAS!</h3><div class="modal-silabo" data-pose="happy"></div><p>${esc(nombre)}: ya es tuyo. Silabo está chocho. 💚</p>`, [{ texto: '¡Vamos!', clase: 'btn-primario' }]);
+        this.modal(`<h3>¡GRACIAS!</h3><div class="modal-silabo" data-pose="happy"></div><p>${esc(nombre)} ya es tuyo. ¡Me encanta cómo te queda! 💚</p>`, [{ texto: '¡Vamos!', clase: 'btn-primario' }]);
       } else if (r === 'error') {
         this.toast('No se pudo completar la compra. No se te cobró nada.');
       }
@@ -1636,7 +1636,7 @@
 
     avisoCompra(v) {
       const k = Object.keys(Magos.PALETAS).find((x) => Magos.PALETAS[x] === v);
-      const texto = v.especial.apoyo ? 'Gracias por querer bancar a Silabo. 💚' : 'Un traje para lucirte: no da ninguna ventaja.';
+      const texto = v.especial.apoyo ? 'Gracias por querer darme una mano. 💚' : 'Un traje para lucirte: no da ninguna ventaja.';
       if (!this.playBilling) {
         return this.modal(`<h3>${esc(v.nombre.toUpperCase())}</h3><div class="modal-silabo" data-paleta="${k}"></div><p>${texto}</p><p>Muy pronto, desde la app de Android (Google Play).</p>`, [{ texto: 'Dale', clase: 'btn-primario' }]);
       }
@@ -1659,10 +1659,10 @@
       const gratis = `<p class="pase-nota">Gratis para siempre: el desafío del día, la Torre Arcana, ${CONFIG.practicasGratis} prácticas por día y los últimos ${CONFIG.archivoGratis} días del archivo.</p>`;
       const cabeza = `<h3>PASE DE MAGO</h3><div class="modal-silabo" data-pose="happy" data-paleta="${CONFIG.trajeTemporada}"></div>`;
       if (this.tienePase()) {
-        return this.modal(`${cabeza}<p>Tu Pase está activo. ¡Gracias por bancar a Silabo! 💚</p>${incluye}<p class="pase-nota">Lo manejás (o lo cancelás) desde Google Play → Pagos y suscripciones.</p>`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+        return this.modal(`${cabeza}<p>Tu Pase está activo. ¡Gracias por darme una mano! 💚</p>${incluye}<p class="pase-nota">Lo manejás (o lo cancelás) desde Google Play → Pagos y suscripciones.</p>`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
       }
       if (!this.playBilling) {
-        return this.modal(`${cabeza}${incluye}<p>Muy pronto, desde la app de Android (Google Play).</p>${gratis}`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+        return this.modal(`${cabeza}<p>Con el <b>Pase de Mago</b> practicás sin límite, abrís todo el archivo y te llevás el traje de cada temporada. Y me ayudás a seguir creciendo.</p>${incluye}<p>Muy pronto, desde la app de Android (Google Play).</p>${gratis}`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
       }
       WWCompras.precios(WWCompras.PASE).then((pr) => {
         const m = pr.pase_mensual, a = pr.pase_anual;
@@ -1674,7 +1674,7 @@
           <button class="pase-plan sel" data-sku="pase_anual">${regalo >= 2 ? `<em class="pase-cinta">${regalo} meses de regalo</em>` : ''}<small>Por año</small><b>${a ? a.precio : '—'}</b><span>${porMes ? `${porMes} por mes` : ''}</span></button>
         </div>`;
         let sku = 'pase_anual';
-        this.modal(`${cabeza}${incluye}${planes}${gratis}<p class="pase-nota">Se renueva solo; lo cancelás cuando quieras desde Google Play.</p>`, [
+        this.modal(`${cabeza}<p>Con el <b>Pase de Mago</b> practicás sin límite, abrís todo el archivo y te llevás el traje de cada temporada. Y me ayudás a seguir creciendo.</p>${incluye}${planes}${gratis}<p class="pase-nota">Se renueva solo; lo cancelás cuando quieras desde Google Play.</p>`, [
           { texto: 'Ahora no', clase: 'btn-secundario' },
           { texto: 'Sacar el Pase anual', clase: 'btn-primario', accion: () => this.comprar(sku, 'El Pase de Mago') },
         ]);
@@ -1738,7 +1738,7 @@
     },
     /** Sin prácticas: el desafío del día, el archivo y la Torre siguen; el Pase da práctica sin límite. */
     avisoPracticas() {
-      this.modal(`<h3>¡QUÉ RACHA!</h3><div class="modal-silabo" data-pose="sad"></div><p>Ya jugaste tus <b>${this.limitePracticas()} prácticas</b> de hoy. Mañana hay más.</p><p>Mientras tanto: el <b>desafío del día</b>, el archivo y la <b>Torre</b>. Con el <b>Pase de Mago</b>, practicás sin límite.</p>`, [
+      this.modal(`<h3>¡QUÉ RACHA!</h3><div class="modal-silabo" data-pose="sad"></div><p>Ya jugaste tus <b>${this.limitePracticas()} prácticas</b> de hoy. Mañana hay más.</p><p>Mientras tanto: el <b>desafío del día</b>, el archivo y la <b>Torre</b>. Con el <b>Pase de Mago</b> seguimos todo lo que quieras.</p>`, [
         { texto: 'Mañana sigo', clase: 'btn-secundario' },
         { texto: 'Ver el Pase', clase: 'btn-primario', accion: () => this.avisoPase() },
       ]);
