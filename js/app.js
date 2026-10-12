@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.30.0',
+    version: '2.30.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -398,9 +398,15 @@
      * la flecha de la pantalla; en el inicio, sale de verdad.
      */
     atras() {
-      try { history.pushState({ ww: 1 }, ''); } catch (e) { return; }
+      // Chrome saltea las entradas que se agregan sin que la persona toque nada (y el atrás salía de la app):
+      // la trampa se pone (o se repone) recién con un toque o una tecla, que sí cuentan como gesto.
+      const poner = () => {
+        if (history.state && history.state.ww) return;
+        try { history.pushState({ ww: 1 }, ''); } catch (e) { /* nada */ }
+      };
+      ['click', 'touchend', 'keydown'].forEach((ev) => addEventListener(ev, poner, true));
       addEventListener('popstate', () => {
-        if (this.volver()) { try { history.pushState({ ww: 1 }, ''); } catch (e) { /* nada */ } } else history.back();
+        if (!this.volver()) history.back();
       });
     },
     /** Hace lo que haría "volver" en la pantalla actual. false = ya estamos en el inicio (salir). */
@@ -408,8 +414,9 @@
       const m = $('modal');
       if (m && !m.classList.contains('oculto')) {
         // un aviso con un solo botón se cierra; si hay que elegir (reintentar o rendirse), atrás no decide por vos
-        const bs = $('modal-caja').querySelectorAll('.fila:last-child .btn');
-        if (bs.length === 1) bs[0].click();
+        const caja = $('modal-caja'), bs = caja.querySelectorAll('.fila:last-child .btn');
+        const salida = caja.querySelector('.modal-x') || caja.querySelector('.fila:last-child .btn[data-atras]');
+        if (bs.length === 1) bs[0].click(); else if (salida) salida.click();
         return true;
       }
       const id = this.pantalla;
@@ -2687,7 +2694,7 @@
           this.verTorre({ pa });
         } },
         { texto: 'Desde el piso 1', clase: 'btn-secundario', accion: () => this.verTorre() },
-      ]);
+      ], { cerrar: true });
     },
 
     /** Salir a mitad de un piso: cuenta como intento (sin sacar la última vida) y la subida queda guardada. */
@@ -2794,13 +2801,22 @@
     congelarReloj(pa) { pa.congelado = true; clearInterval(pa.timer); this.magos.juego.nervioso(false); },
 
     // ============================================================ modal
-    modal(html, botones) {
+    /** opc.cerrar: suma una X arriba (para avisos donde hay que elegir pero también se puede no elegir nada). */
+    modal(html, botones, opc) {
       const m = $('modal'), caja = $('modal-caja');
       caja.innerHTML = html + '<div class="fila"></div>';
       const fila = caja.querySelector('.fila:last-child');
+      if (opc && opc.cerrar) {
+        const x = document.createElement('button');
+        x.className = 'modal-x'; x.setAttribute('aria-label', 'Cerrar'); x.innerHTML = '&times;';
+        x.addEventListener('click', () => { Audio.click(); m.classList.add('oculto'); if (typeof opc.cerrar === 'function') opc.cerrar(); });
+        caja.appendChild(x);
+      }
       for (const b of botones || []) {
         const el = document.createElement('button');
         el.className = 'btn ' + (b.clase || 'btn-secundario'); el.textContent = b.texto;
+        // "Ahora no", "Cancelar"...: lo que hace el atrás de Android
+        if (b.atras || (!b.accion && (botones || []).length > 1)) el.dataset.atras = '1';
         el.addEventListener('click', () => { Audio.click(); m.classList.add('oculto'); if (b.accion) b.accion(); });
         fila.appendChild(el);
       }
