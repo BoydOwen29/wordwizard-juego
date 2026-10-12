@@ -24,6 +24,8 @@
     try {
       if (document.referrer.startsWith('android-app://')) sessionStorage.setItem('ww.twa', '1');
       twa = sessionStorage.getItem('ww.twa') === '1';
+      // el referrer no siempre llega: la app de Play es la única que trae el cobro de Google (Digital Goods)
+      if (!twa && typeof window.getDigitalGoodsService === 'function') twa = true;
     } catch (e) { /* nada */ }
     if (twa) return 'android-app';
     const instalada = navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
