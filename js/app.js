@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.33.0',
+    version: '2.34.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -168,6 +168,9 @@
       this.compras();
       this.atras();
       this.chipIdioma();
+      // uso anónimo (game/js/metricas.js): una apertura por día, también si vuelve del segundo plano otro día
+      const abrir = () => { const d = WW.claveDia(); if (d !== this._abierto && window.WWMetricas) { this._abierto = d; WWMetricas.marcar(d, CONFIG.version, null); } };
+      abrir(); document.addEventListener('visibilitychange', () => { if (!document.hidden) abrir(); });
       // cargar diccionario sin congelar la pantalla de título
       setTimeout(() => {
         try {
@@ -1421,6 +1424,7 @@
       const pa = this.partida;
       this.guardarEnCurso();
       pa.terminada = true; clearInterval(pa.timer);
+      if (window.WWMetricas) WWMetricas.marcar(WW.claveDia(), CONFIG.version, { arcade: 'torre' }[pa.modo] || pa.modo);
       this.limpiarEfectos();
       this.irMenu();
     },
