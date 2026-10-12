@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.26.0',
+    version: '2.27.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -34,6 +34,7 @@
     limites: { pista: 2, tiempo: 1, ojo: 1, escudo: 1 },
     // archivo de desafíos: los últimos días gratis; el resto, con el Pase de Mago (docs/HOJA-DE-RUTA.md)
     archivoGratis: 3, archivoDias: 30,
+    trajeTemporada: 'ceibo',   // el traje de la temporada que viene con el Pase (Silabo lo luce en la pantalla del Pase)
     practicasGratis: 3,   // por día; con el Pase de Mago, sin límite (docs/MONETIZACION.md)
     practicasTester: 10,  // los testers de la prueba cerrada (entran una vez con el link ?tester=bosque)
     // monedas que la Torre puede dar por día; las fuertes vienen de volver cada día (diario y misiones)
@@ -108,6 +109,7 @@
       this.eventos();
       this.pwa();
       this.juice();
+      this.compras();
       // cargar diccionario sin congelar la pantalla de título
       setTimeout(() => {
         try {
@@ -1352,18 +1354,98 @@
       };
     },
 
-    /** Pase de Mago activo (mensual o anual). Los derechos los anota el servidor al validar la compra en Play. */
+    /**
+     * Compras de Play (game/js/compras.js): son del celular (de la cuenta de Google), no de un mago.
+     * Al abrir y al volver a la app se le pregunta a Play qué tiene; si cambió, se repinta lo que depende del Pase.
+     */
+    compras() {
+      if (!window.WWCompras) return;
+      const mirar = () => WWCompras.restaurar(this.idNube()).then((cambio) => { if (cambio) this.repintarPase(); });
+      WWCompras.disponible().then((si) => {
+        this.playBilling = si;
+        if (!si) return;
+        mirar();
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) mirar(); });
+      });
+    },
+    idNube() { try { return Estado.perfil ? Ranking.miId(this.claveNube()) : null; } catch (e) { return null; } },
+    repintarPase() {
+      if (!Estado.perfil) return;
+      const pant = document.querySelector('.pantalla:not(.oculto)');
+      if (pant && pant.id === 'p-tienda') this.renderTienda();
+      if ($('archivo')) this.pintarArchivo();
+      this.pintarPracticas();
+    },
+
+    /** Pase de Mago activo (mensual o anual): lo dice Play (WWCompras); perfil.derechos queda por compatibilidad. */
     tienePase() {
+      if (window.WWCompras && WWCompras.tienePase()) return true;
       const d = Estado.perfil && Estado.perfil.derechos;
       return !!(d && (d.pase_mensual || d.pase_anual));
     },
 
-    avisoCompra(v) {
-      this.modal(`<h3>${esc(v.nombre.toUpperCase())}</h3><div class="modal-silabo" data-paleta="${Object.keys(Magos.PALETAS).find((k) => Magos.PALETAS[k] === v)}"></div><p>${v.especial.apoyo ? 'Gracias por querer bancar a Silabo. 💚' : 'Un traje para lucirte: no da ninguna ventaja.'} Se va a poder comprar <b>muy pronto</b>, desde la app.</p>`, [{ texto: '¡Dale!', clase: 'btn-primario' }]);
+    /** Cobro de Play; al volver, agradece y repinta. */
+    async comprar(sku, nombre) {
+      const r = await WWCompras.comprar(sku, this.idNube());
+      if (r === 'ok') {
+        this.repintarPase();
+        this.modal(`<h3>¡GRACIAS!</h3><div class="modal-silabo" data-pose="happy"></div><p>${esc(nombre)}: ya es tuyo. Silabo está chocho. 💚</p>`, [{ texto: '¡Vamos!', clase: 'btn-primario' }]);
+      } else if (r === 'error') {
+        this.toast('No se pudo completar la compra. No se te cobró nada.');
+      }
     },
 
+    avisoCompra(v) {
+      const k = Object.keys(Magos.PALETAS).find((x) => Magos.PALETAS[x] === v);
+      const texto = v.especial.apoyo ? 'Gracias por querer bancar a Silabo. 💚' : 'Un traje para lucirte: no da ninguna ventaja.';
+      if (!this.playBilling) {
+        return this.modal(`<h3>${esc(v.nombre.toUpperCase())}</h3><div class="modal-silabo" data-paleta="${k}"></div><p>${texto}</p><p>Muy pronto, desde la app de Android (Google Play).</p>`, [{ texto: 'Dale', clase: 'btn-primario' }]);
+      }
+      WWCompras.precios([v.especial.sku]).then((pr) => {
+        const precio = (pr[v.especial.sku] || {}).precio;
+        this.modal(`<h3>${esc(v.nombre.toUpperCase())}</h3><div class="modal-silabo" data-paleta="${k}"></div><p>${texto}</p>`, [
+          { texto: 'Ahora no', clase: 'btn-secundario' },
+          { texto: precio ? 'Comprar · ' + precio : 'Comprar', clase: 'btn-primario', accion: () => this.comprar(v.especial.sku, v.nombre) },
+        ]);
+      });
+    },
+
+    /**
+     * La pantalla del Pase (variante B de lab/pase.html, elegida por Owen el 12/10/2026): lo que incluye en cuatro
+     * fichas, Silabo con el traje de la temporada y dos tarjetas de precio (la anual marcada).
+     */
     avisoPase() {
-      this.modal(`<h3>PASE DE MAGO</h3><div class="modal-silabo" data-pose="happy"></div><p>Muy pronto: <b>práctica sin límite</b>, <b>todo el archivo</b> de desafíos, las <b>historias nuevas</b> que vengan después de la Torre, el traje de cada temporada y tus estadísticas completas.</p><p>El desafío del día y la Torre Arcana son gratis para siempre. También ${CONFIG.practicasGratis} prácticas por día y los últimos ${CONFIG.archivoGratis} días del archivo.</p>`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+      const ficha = (ic, t) => `<div><i class="ic" data-ic="${ic}"></i>${t}</div>`;
+      const incluye = `<div class="pase-inc">${ficha('vela', 'Práctica sin límite')}${ficha('calendario', 'Todo el archivo')}${ficha('torre', 'Historias nuevas')}${ficha('estrella', 'Traje de temporada')}</div>`;
+      const gratis = `<p class="pase-nota">Gratis para siempre: el desafío del día, la Torre Arcana, ${CONFIG.practicasGratis} prácticas por día y los últimos ${CONFIG.archivoGratis} días del archivo.</p>`;
+      const cabeza = `<h3>PASE DE MAGO</h3><div class="modal-silabo" data-pose="happy" data-paleta="${CONFIG.trajeTemporada}"></div>`;
+      if (this.tienePase()) {
+        return this.modal(`${cabeza}<p>Tu Pase está activo. ¡Gracias por bancar a Silabo! 💚</p>${incluye}<p class="pase-nota">Lo manejás (o lo cancelás) desde Google Play → Pagos y suscripciones.</p>`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+      }
+      if (!this.playBilling) {
+        return this.modal(`${cabeza}${incluye}<p>Muy pronto, desde la app de Android (Google Play).</p>${gratis}`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+      }
+      WWCompras.precios(WWCompras.PASE).then((pr) => {
+        const m = pr.pase_mensual, a = pr.pase_anual;
+        // "meses de regalo": lo que se ahorra con el anual contra 12 mensuales, con los precios de Play de ese país
+        const regalo = m && a && m.moneda === a.moneda ? Math.round(12 - a.valor / m.valor) : 0;
+        const porMes = a ? WWCompras.formato(Number.isInteger(a.valor) ? Math.round(a.valor / 12) : Math.round(a.valor / 12 * 100) / 100, a.moneda) : '';
+        const planes = `<div class="pase-planes">
+          <button class="pase-plan" data-sku="pase_mensual"><small>Por mes</small><b>${m ? m.precio : '—'}</b><span>cancelás cuando quieras</span></button>
+          <button class="pase-plan sel" data-sku="pase_anual">${regalo >= 2 ? `<em class="pase-cinta">${regalo} meses de regalo</em>` : ''}<small>Por año</small><b>${a ? a.precio : '—'}</b><span>${porMes ? `${porMes} por mes` : ''}</span></button>
+        </div>`;
+        let sku = 'pase_anual';
+        this.modal(`${cabeza}${incluye}${planes}${gratis}<p class="pase-nota">Se renueva solo; lo cancelás cuando quieras desde Google Play.</p>`, [
+          { texto: 'Ahora no', clase: 'btn-secundario' },
+          { texto: 'Sacar el Pase anual', clase: 'btn-primario', accion: () => this.comprar(sku, 'El Pase de Mago') },
+        ]);
+        const caja = $('modal-caja'), boton = caja.querySelector('.fila:last-child .btn-primario');
+        caja.querySelectorAll('.pase-plan').forEach((b) => b.addEventListener('click', () => {
+          Audio.click(); sku = b.dataset.sku;
+          caja.querySelectorAll('.pase-plan').forEach((x) => x.classList.toggle('sel', x === b));
+          boton.textContent = window.WWI18n.t(sku === 'pase_anual' ? 'Sacar el Pase anual' : 'Sacar el Pase mensual');
+        }));
+      });
     },
 
     /** Prácticas jugadas hoy (las gratis son CONFIG.practicasGratis; con el Pase no hay límite). */
@@ -1553,7 +1635,7 @@
         cont.appendChild(d);
       }
       const pase = document.createElement('button'); pase.className = 'tienda-pase';
-      pase.innerHTML = `<b>Pase de Mago</b><small>Todo el archivo de desafíos, el traje de cada temporada y tus estadísticas completas</small><em>pronto</em>`;
+      pase.innerHTML = `<b>Pase de Mago</b><small>Práctica sin límite, todo el archivo, historias nuevas y el traje de cada temporada</small><em>${this.tienePase() ? 'activo ✓' : 'ver'}</em>`;
       pase.addEventListener('click', () => { Audio.click(); this.avisoPase(); });
       cont.insertBefore(pase, cont.firstChild);
     },
@@ -1562,7 +1644,7 @@
     tieneTraje(k) {
       const p = Estado.perfil, v = Magos.PALETAS[k];
       if (!v) return false;
-      if (v.especial) return !!((p.trajes && p.trajes[k]) || (p.derechos && p.derechos[v.especial.sku]));
+      if (v.especial) return !!((p.trajes && p.trajes[k]) || (p.derechos && p.derechos[v.especial.sku]) || (window.WWCompras && WWCompras.tiene(v.especial.sku)));
       return v.nivel < 100 && (p.nivel >= v.nivel || !!(p.trajes && p.trajes[k]));
     },
 

@@ -1175,3 +1175,18 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 /* v2.26 prácticas por día */
 .practica-quedan { margin: -2px 0 10px; font: 600 14px var(--display); color: var(--oro); }
 .practica-quedan.agotadas { color: var(--coral); }
+
+/* v2.27 Pase de Mago (variante B de lab/pase.html): fichas de lo que incluye y tarjetas de precio */
+.pase-inc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 4px; }
+.pase-inc div { border-radius: 14px; padding: 8px 6px; background: rgba(255,255,255,.05); border: 2px solid rgba(242,198,109,.25); font-size: 12.5px; font-weight: 800; color: #e3ece0; line-height: 1.25; text-align: center; }
+.pase-inc .ic { display: block; width: 24px; height: 24px; margin: 0 auto 3px; }
+.pase-planes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0 6px; }
+.pase-plan { position: relative; border-radius: 18px; padding: 14px 6px 10px; cursor: pointer; border: 3px solid var(--linea); color: #f3f6ee; font-family: inherit;
+  background: #2c4d58; box-shadow: inset 0 -5px 0 rgba(0,0,0,.18), 0 4px 0 var(--linea); display: flex; flex-direction: column; align-items: center; gap: 2px; transition: transform .15s; }
+.pase-plan small { font-size: 11.5px; color: var(--texto-suave); font-weight: 800; text-transform: uppercase; letter-spacing: .8px; }
+.pase-plan b { font: 700 22px/1.1 var(--display); color: #fff; }
+.pase-plan span { font-size: 11px; color: var(--texto-suave); font-weight: 700; min-height: 1em; }
+.pase-plan.sel { background: #3f666c; box-shadow: inset 0 0 0 3px var(--oro), inset 0 -5px 0 #2c4d58, 0 4px 0 var(--linea); transform: translateY(-2px); }
+.pase-cinta { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #c9485b; color: #fff; border: 2px solid var(--linea);
+  border-radius: 999px; padding: 2px 9px; font: 600 11px var(--display); font-style: normal; }
+.modal-caja p.pase-nota { font-size: 12px; line-height: 1.4; color: var(--texto-suave); }
