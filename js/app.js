@@ -5,6 +5,36 @@
   'use strict';
   const T = (es, v) => window.WWI18n.t(es, v), EN = window.WWI18n.idioma === 'en';
   const IDIOMA_DATOS = window.WWI18n.idiomaDatos;
+  /**
+   * Tamaño de letra (Ajustes): se guarda por dispositivo. Si nunca se eligió y el celular tiene la letra agrandada
+   * (Dynamic Type en iPhone, letra base del navegador en Android), arranca en Grande o Muy grande.
+   */
+  const Letra = {
+    LS: 'ww.letra', PASOS: [1, 1.18, 1.36],
+    sistema() {
+      try {
+        const p = document.createElement('span');
+        p.style.cssText = 'position:absolute;visibility:hidden;font:-apple-system-body';
+        document.documentElement.appendChild(p);
+        const ios = p.style.font ? parseFloat(getComputedStyle(p).fontSize) / 17 : 1;   // en iPhone, 17 px es el tamaño normal
+        p.remove();
+        const raiz = parseFloat(getComputedStyle(document.documentElement).fontSize) / 16 || 1;
+        return Math.max(ios || 1, raiz);
+      } catch (e) { return 1; }
+    },
+    factor() {
+      let g = null;
+      try { g = localStorage.getItem(this.LS); } catch (e) { /* nada */ }
+      if (g && this.PASOS.includes(Number(g))) return Number(g);
+      const s = this.sistema();
+      return s >= 1.3 ? 1.36 : s >= 1.1 ? 1.18 : 1;
+    },
+    aplicar(k) { document.documentElement.style.setProperty('--letra', String(k || this.factor())); },
+    guardar(k) { try { localStorage.setItem(this.LS, String(k)); } catch (e) { /* nada */ } this.aplicar(k); },
+  };
+  Letra.aplicar();
+  window.WWLetra = Letra;
+
   /** Lo que cambia con el idioma y no es una traducción: ejemplos del tutorial, letras del fondo, texto para compartir. */
   const LOCAL = {
     es: { base: 'CAMINAR', arma: 'CAMA', ejemplos: ['cama', 'mina', 'rima'], y: 'y', letras: 'ABCDEFGHIJLMNÑOPRSTUV',
@@ -25,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.30.1',
+    version: '2.31.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -81,6 +111,28 @@
     instalarEvento: null,
 
     // ============================================================ arranque
+    /** Chip de idioma en el título: muestra la bandera del idioma actual y al tocarlo abre los disponibles. */
+    chipIdioma() {
+      const I = window.WWI18n, caja = $('idioma-chip-caja');
+      if (!caja || !I || I.disponibles.length < 2) return;
+      const AR = '<svg viewBox="0 0 30 21"><rect width="30" height="21" fill="#75aadb"/><rect y="7" width="30" height="7" fill="#fff"/><circle cx="15" cy="10.5" r="2.4" fill="#f2c66d" stroke="#c49a42" stroke-width=".6"/></svg>';
+      const US = '<svg viewBox="0 0 30 21"><rect width="30" height="21" fill="#fff"/>' + Array.from({ length: 7 }, (_, i) => `<rect y="${i * 3}" width="30" height="1.6" fill="#c9485b"/>`).join('') + '<rect width="13" height="11" fill="#34507a"/><g fill="#fff">' + Array.from({ length: 6 }, (_, i) => `<circle cx="${2.5 + (i % 3) * 4}" cy="${3 + Math.floor(i / 3) * 4.5}" r=".9"/>`).join('') + '</g></svg>';
+      const BR = '<svg viewBox="0 0 30 21"><rect width="30" height="21" fill="#3f8f4f"/><path d="M15 3 L27 10.5 L15 18 L3 10.5Z" fill="#f2c66d"/><circle cx="15" cy="10.5" r="4.2" fill="#34507a"/><path d="M11 10 Q15 8.6 19 10.6" stroke="#fff" stroke-width=".9" fill="none"/></svg>';
+      const IDI = { es: [AR, 'Español'], en: [US, 'English'], pt: [BR, 'Português'] };
+      const band = (k) => `<span class="bandera">${IDI[k][0]}</span>`;
+      const chip = $('idioma-chip'), menu = $('idioma-menu');
+      chip.innerHTML = `${band(I.idioma)} ${I.idioma.toUpperCase()} ▾`;
+      menu.innerHTML = I.disponibles.filter((k) => IDI[k]).map((k) => `<button data-k="${k}" class="${k === I.idioma ? 'on' : ''}">${band(k)} ${IDI[k][1]}</button>`).join('');
+      caja.classList.remove('oculto');
+      chip.addEventListener('click', (e) => { e.stopPropagation(); Audio.click(); menu.classList.toggle('oculto'); });
+      menu.addEventListener('click', (e) => {
+        const b = e.target.closest('button'); if (!b) return;
+        Audio.click(); menu.classList.add('oculto');
+        if (b.dataset.k !== I.idioma) { if (Estado.perfil) Estado.guardar(); I.cambiar(b.dataset.k); }
+      });
+      document.addEventListener('click', () => menu.classList.add('oculto'));
+    },
+
     init() {
       // testers de la prueba cerrada: el link ?tester=bosque deja marcado este dispositivo (más prácticas por día)
       try {
@@ -115,6 +167,7 @@
       this.juice();
       this.compras();
       this.atras();
+      this.chipIdioma();
       // cargar diccionario sin congelar la pantalla de título
       setTimeout(() => {
         try {
@@ -616,6 +669,7 @@
       $('aj-recordatorio').addEventListener('change', (e) => { Audio.click(); this.cambiarRecordatorio(e.target.value === '' ? null : Number(e.target.value)); });
       $('aj-sonido').addEventListener('change', (e) => { Estado.perfil.ajustes.sonido = e.target.checked; Audio.setSonido(e.target.checked); Estado.guardar(); Audio.click(); });
       $('aj-musica').addEventListener('change', (e) => { Estado.perfil.ajustes.musica = e.target.checked; Audio.setMusica(e.target.checked); Estado.guardar(); this.pintarMusica(); });
+      $('aj-letra').addEventListener('change', (e) => { Audio.click(); Letra.guardar(Number(e.target.value)); });
       $('aj-vibracion').addEventListener('change', (e) => { Estado.perfil.ajustes.vibracion = e.target.checked; Estado.guardar(); });
       $('aj-grilla').addEventListener('change', (e) => { Estado.perfil.ajustes.grilla = e.target.checked; Estado.guardar(); });
       $('aj-nombre').addEventListener('click', () => this.cambiarNombre());
@@ -2112,6 +2166,7 @@
       $('aj-sonido').checked = p.ajustes.sonido;
       $('aj-musica').checked = p.ajustes.musica;
       $('aj-vibracion').checked = p.ajustes.vibracion;
+      $('aj-letra').value = String(Letra.factor());
       $('aj-grilla').checked = p.ajustes.grilla !== false;
       const cont = $('aj-sombreros'); cont.innerHTML = '';
       for (const [k, v] of Object.entries(Magos.PALETAS)) {

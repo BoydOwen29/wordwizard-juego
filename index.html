@@ -23,7 +23,7 @@
 <link rel="apple-touch-icon" href="assets/img/icon-192x192.png">
 <link rel="preload" href="assets/fonts/fredoka-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/nunito-700.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/estilo.css?v=2.30.1">
+<link rel="stylesheet" href="css/estilo.css?v=2.31.0">
 </head>
 <body>
 
@@ -40,6 +40,7 @@
 
   <!-- ===================== TÍTULO ===================== -->
   <section id="p-titulo" class="pantalla activa con-intro">
+    <div class="idioma-chip-caja oculto" id="idioma-chip-caja" data-no-t><button class="idioma-chip" id="idioma-chip" aria-label="Idioma · Language"></button><div class="idioma-menu oculto" id="idioma-menu"></div></div>
     <svg class="logo-titulo" viewBox="0 0 340 196" role="img" aria-label="Word Wizard" xmlns="http://www.w3.org/2000/svg">
         <g class="logo-ficha" style="--i:0"><g transform="rotate(-6 85 52)">
         <rect x="58" y="22" width="54" height="62" rx="13" fill="#b9cbb5" stroke="#16262c" stroke-width="4.5"/>
@@ -375,6 +376,7 @@
       <label class="check"><input type="checkbox" id="aj-vibracion"> Vibración (celular)</label>
       <label class="check"><input type="checkbox" id="aj-grilla"> Grilla de pistas por largo</label>
       <label class="idioma-fila oculto" id="aj-recordatorio-fila"><span>Recordatorio del desafío</span><select id="aj-recordatorio"><option value="">Apagado</option><option value="9">9:00</option><option value="13">13:00</option><option value="19">19:00</option><option value="21">21:00</option></select></label>
+      <label class="idioma-fila"><span>Tamaño de letra</span><select id="aj-letra"><option value="1">Normal</option><option value="1.18">Grande</option><option value="1.36">Muy grande</option></select></label>
       <label class="idioma-fila"><span data-no-t>Idioma · Language</span><select id="aj-idioma" data-no-t><option value="es">Español</option><option value="en">English</option><option value="pt">Português</option></select></label>
       <h3>Colores de Silabo</h3>
       <div id="aj-sombreros" class="sombreros"></div>
@@ -410,29 +412,29 @@
 <div id="toasts" aria-live="polite"></div>
 <div id="modal" class="modal oculto"><div class="modal-caja" id="modal-caja" role="dialog" aria-modal="true"></div></div>
 
-<script src="js/reportes.js?v=2.30.1"></script>
-<script src="js/i18n.js?v=2.30.1"></script>
-<script src="js/i18n-en.js?v=2.30.1"></script>
-<script src="js/i18n-pt.js?v=2.30.1"></script>
+<script src="js/reportes.js?v=2.31.0"></script>
+<script src="js/i18n.js?v=2.31.0"></script>
+<script src="js/i18n-en.js?v=2.31.0"></script>
+<script src="js/i18n-pt.js?v=2.31.0"></script>
 <script>
   // diccionario, desafíos y totales del idioma elegido
-  for (const n of ['diccionario', 'desafios', 'totales']) document.write('<script src="' + WWI18n.datos + n + '.js?v=2.30.1"><\/script>');
+  for (const n of ['diccionario', 'desafios', 'totales']) document.write('<script src="' + WWI18n.datos + n + '.js?v=2.31.0"><\/script>');
 </script>
-<script src="js/motor.js?v=2.30.1"></script>
-<script src="js/silabo.js?v=2.30.1"></script>
-<script src="js/iconos.js?v=2.30.1"></script>
-  <script src="js/logros-iconos.js?v=2.30.1"></script>
-<script src="js/mago.js?v=2.30.1"></script>
-<script src="js/mapa.js?v=2.30.1"></script>
-<script src="js/escena.js?v=2.30.1"></script>
-<script src="js/vida.js?v=2.30.1"></script>
-<script src="js/audio.js?v=2.30.1"></script>
-<script src="js/logros.js?v=2.30.1"></script>
-<script src="js/estado.js?v=2.30.1"></script>
-<script src="js/ranking.js?v=2.30.1"></script>
-<script src="js/compras.js?v=2.30.1"></script>
-<script src="js/recordatorio.js?v=2.30.1"></script>
-<script src="js/tarjeta.js?v=2.30.1"></script>
-<script src="js/app.js?v=2.30.1"></script>
+<script src="js/motor.js?v=2.31.0"></script>
+<script src="js/silabo.js?v=2.31.0"></script>
+<script src="js/iconos.js?v=2.31.0"></script>
+  <script src="js/logros-iconos.js?v=2.31.0"></script>
+<script src="js/mago.js?v=2.31.0"></script>
+<script src="js/mapa.js?v=2.31.0"></script>
+<script src="js/escena.js?v=2.31.0"></script>
+<script src="js/vida.js?v=2.31.0"></script>
+<script src="js/audio.js?v=2.31.0"></script>
+<script src="js/logros.js?v=2.31.0"></script>
+<script src="js/estado.js?v=2.31.0"></script>
+<script src="js/ranking.js?v=2.31.0"></script>
+<script src="js/compras.js?v=2.31.0"></script>
+<script src="js/recordatorio.js?v=2.31.0"></script>
+<script src="js/tarjeta.js?v=2.31.0"></script>
+<script src="js/app.js?v=2.31.0"></script>
 </body>
 </html>
