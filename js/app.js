@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.28.1',
+    version: '2.29.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -1819,6 +1819,8 @@
       $('res-puntos').textContent = '0'; setTimeout(() => this.tween($('res-puntos'), r.puntos, 900), 200);
       $('res-palabras-n').textContent = esArcade ? r.palabrasTotal : `${r.nEnc}/${r.total}` + (r.extras ? ` +${r.extras}` : '');
       $('res-mejor').textContent = r.mejorPalabra ? r.mejorPalabra.toUpperCase() : '—';
+      // palabras largas: letra más chica para que no se corten en dos renglones dentro de la placa
+      $('res-mejor').dataset.largo = r.mejorPalabra && r.mejorPalabra.length > 10 ? '2' : r.mejorPalabra && r.mejorPalabra.length > 8 ? '1' : '';
       $('res-combo').textContent = `x${r.combo || 0}`;
       $('res-xp-mas').textContent = `+${r.xp} XP`;
       $('res-monedas').innerHTML = `${WWIconos.html('moneda')} +${r.monedas}` + (r.nuevos && r.nuevos.length ? ` (+${5 * r.nuevos.length} por logros)` : '');

@@ -1213,3 +1213,27 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .misiones-temporada small { display: block; margin-top: 4px; font-weight: 700; font-size: 12px; color: #7a5a55; }
 .misiones-temporada .mision-barra > div { background: #c9485b; }
 .flor-ceibo { width: 1.4em; height: 1.4em; }
+
+/* v2.29 Placa de resultado (variante A de lab/resultado.html): rango, números y premios en una sola tabla clavada.
+   Los números ya no tienen caja ni sombra propia (parecían botones): los separan vetas oscuras. */
+.res-placa { position: relative; width: 100%; border-radius: 22px; padding-top: 2px; color: #f3f6ee; animation: entra .5s var(--suave) backwards;
+  background: var(--madera) repeating-linear-gradient(180deg, transparent 0 10px, var(--veta) 10px 12px, transparent 12px 24px);
+  border: 3px solid var(--borde-m); box-shadow: inset 0 3px 0 var(--madera-hi), inset 0 -6px 0 var(--madera-sh), 0 6px 0 var(--borde-m); }
+.res-placa .clavo { position: absolute; top: 10px; width: 9px; height: 9px; border-radius: 50%; background: var(--bronce); border: 2px solid var(--borde-m); box-shadow: inset 2px 2px 0 var(--bronce-hi); }
+.res-placa .clavo.izq { left: 11px; } .res-placa .clavo.der { right: 11px; }
+.res-placa .res-rango, .res-placa .res-stat { background: none; border: 0; box-shadow: none; border-radius: 0; animation: none; }
+.res-placa .res-rango { justify-content: center; padding: 10px 16px 12px; }
+.res-placa .res-rango-icono { font-size: 38px; }
+.res-placa .res-rango small { color: #b9cbb5; }
+.res-placa .res-grilla { gap: 0; border-top: 2px solid rgba(29,38,32,.7); }
+.res-placa .res-stat { align-items: center; text-align: center; padding: 10px 6px 11px; min-width: 0; }
+.res-placa .res-stat:nth-child(odd) { border-right: 2px solid rgba(29,38,32,.7); }
+.res-placa .res-stat:nth-child(-n+2) { border-bottom: 2px solid rgba(29,38,32,.7); }
+.res-placa .res-stat b { max-width: 100%; white-space: nowrap; }
+.res-placa .res-stat b[data-largo="1"] { font-size: 20px; }
+.res-placa .res-stat b[data-largo="2"] { font-size: 16px; }
+.res-placa .res-stat small { color: #c9d6c4; }
+.res-placa .res-recompensas { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; margin: 0; padding: 10px 14px 13px; border-top: 2px solid rgba(29,38,32,.7); }
+.res-placa .res-xp { flex: 1 1 190px; }
+.res-placa .res-xp .pixel { color: #c9d6c4; }
+.res-placa .res-monedas { font-size: 16px; text-align: center; }
