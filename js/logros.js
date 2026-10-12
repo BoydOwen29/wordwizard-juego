@@ -42,6 +42,7 @@
     { id: 'enie', icono: '🇦🇷', nombre: 'Con eñe', desc: 'Encontrá una palabra con ñ.', cond: (p, c) => c.tipo === 'palabra' && c.palabra.includes('ñ') },
     { id: 'practicante', icono: '🧘', nombre: 'Practicante', desc: 'Jugá 10 partidas de práctica.', cond: (p) => p.practica.partidas >= 10 },
     { id: 'misiones5', icono: '📋', nombre: 'Recadero', desc: 'Completá 5 misiones diarias.', cond: (p) => (p.stats.misiones || 0) >= 5 },
+    { id: 'ceibo', icono: '🌺', nombre: 'Primavera del Ceibo', desc: 'Juntá 20 flores de ceibo en la temporada de primavera.', cond: (p) => ((p.temporadas && p.temporadas.ceibo && p.temporadas.ceibo.flores) || 0) >= 20 },
     { id: 'misiones25', icono: '🗂️', nombre: 'Cumplidor', desc: 'Completá 25 misiones diarias.', cond: (p) => (p.stats.misiones || 0) >= 25 },
     { id: 'perfecto', icono: '💯', nombre: 'Omnisciente', desc: 'Encontrá todas las palabras de una base.', cond: (p, c) => c.tipo === 'fin' && c.total > 0 && c.encontradas >= c.total },
   ];

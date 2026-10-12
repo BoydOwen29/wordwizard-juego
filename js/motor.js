@@ -278,7 +278,21 @@
   const RECOMPENSA_MISION = { monedas: 15, xp: 30 };
   const BONUS_TODAS_MISIONES = 25;
 
-  /** Tres misiones determinísticas por fecha (todos los jugadores reciben las mismas). */
+  // ------------------------------------------------------------ temporadas
+  // Cada temporada tiene fechas, cómo se ve el bosque (escena.js) y una misión diaria extra que da flores; con
+  // `flores` flores en la temporada se gana el logro y `premio` monedas. Nada da ventaja en el ranking.
+  const TEMPORADAS = [
+    { id: 'ceibo', nombre: 'Primavera del Ceibo', desde: '2026-10-12', hasta: '2026-11-30', escena: { medio: 3, suelo: 8 }, flores: 20, premio: 300 },
+  ];
+  function temporadaDe(fecha) {
+    const c = claveDia(fecha || new Date());
+    return TEMPORADAS.find((t) => c >= t.desde && c <= t.hasta) || null;
+  }
+
+  /**
+   * Tres misiones determinísticas por fecha (todos los jugadores reciben las mismas). En temporada se suma una
+   * cuarta, la "de temporada": una de las que no salieron, con la meta más alta, que da una flor en vez de monedas.
+   */
   function misionesDelDia(fecha) {
     const clave = claveDia(fecha);
     const semilla = Number(clave.replace(/-/g, '')) ^ 0x5eed;
@@ -286,10 +300,17 @@
     const orden = mezclar(PLANTILLAS_MISIONES, rng);
     const elegidas = [orden.find((p) => p.id === 'diario') || orden[0]];
     for (const p of orden) { if (elegidas.length >= 3) break; if (!elegidas.includes(p)) elegidas.push(p); }
-    return elegidas.map((p) => {
+    const lista = elegidas.map((p) => {
       const meta = p.metas[Math.floor(rng() * p.metas.length)];
       return { id: p.id, icono: p.icono, texto: p.texto(meta), meta, evento: p.evento, maximo: !!p.maximo, progreso: 0, hecha: false };
     });
+    const t = temporadaDe(fecha);
+    if (t) {
+      const p = orden.find((x) => !elegidas.includes(x) && x.id !== 'diario' && !(x.metas.length === 1 && x.id === 'practica')) || orden.find((x) => !elegidas.includes(x));
+      const meta = p.metas[p.metas.length - 1];
+      lista.push({ id: p.id, icono: p.icono, texto: p.texto(meta), meta, evento: p.evento, maximo: !!p.maximo, progreso: 0, hecha: false, temporada: t.id });
+    }
+    return lista;
   }
 
   // ------------------------------------------------------------ torre
@@ -310,7 +331,7 @@
     claveDia, numeroDia, palabraDelDia,
     puntosPalabra, totalPosible, rangoPorPct, siguienteRango,
     xpParaNivel, nivelPorXp, tituloNivel,
-    PLANTILLAS_MISIONES, RECOMPENSA_MISION, BONUS_TODAS_MISIONES, misionesDelDia,
+    PLANTILLAS_MISIONES, RECOMPENSA_MISION, BONUS_TODAS_MISIONES, misionesDelDia, TEMPORADAS, temporadaDe,
     esPisoJefe, nombreJefe,
     Diccionario,
   };

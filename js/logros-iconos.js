@@ -475,6 +475,15 @@
         fila(12, true) + fila(17.5, true) + fila(22.5 - 1.3, false);
     },
 
+    // Primavera del Ceibo: la flor de ceibo, con su hoja
+    ceibo: (k) =>
+      P(k, 'M16 28.5 C16 24 15.4 20.5 14.6 17.5', null, 2.2) +
+      P(k, 'M16.4 24.5 C19 21.6 23 21.4 25.6 23.2 C23.2 26.2 19.6 26.6 16.4 24.5Z', k.salvia) +
+      P(k, 'M14.8 18.4 C8.6 16 6.4 9.8 8.6 4 C12.8 6.8 15.8 11.6 14.8 18.4Z', k.coral) +
+      F('M14.8 18.4 C12.4 14.2 10.8 9.8 10.4 6.4 C13.4 9 15.4 13 14.8 18.4Z', k.coralLi) +
+      P(k, 'M14.8 18.4 C19.4 14.6 23.2 10.6 23.6 5.8 C19.2 7.6 15.8 12 14.8 18.4Z', k.coralSh) +
+      P(k, 'M14.8 18.4 C12 19.4 9.4 22 8.6 25 C12 24.4 14.2 21.8 14.8 18.4Z', k.coral),
+
     // Cumplidor: carpetas con el sello de hecho
     misiones25: (k) =>
       P(k, 'M5.5 7.6 C5.5 6.7 6.2 6 7.1 6 H12 L14 8.4 H25.4 C26.3 8.4 27 9.1 27 10 V22 H5.5Z', k.salvia) +

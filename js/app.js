@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.27.0',
+    version: '2.28.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -62,7 +62,9 @@
   const ICONO_MISION = { palabra: 'libro', larga: 'objetivo', completa: 'trofeo', diario: 'calendario', piso: 'torre', combo: 'llama', practica: 'vela', puntos: 'estrella', seis: 'rayo' };
   // ícono de logro: medallón dibujado (logros-iconos.js); si falta, el emoji de siempre
   const iconoLogro = (l, bloq) => (window.WWLogrosIconos && WWLogrosIconos.SIMBOLOS && WWLogrosIconos.SIMBOLOS[l.id]) ? WWLogrosIconos.html(l.id, bloq) : (bloq ? '🔒' : l.icono);
-  const iconoMision = (x) => ICONO_MISION[x.evento] ? WWIconos.html(ICONO_MISION[x.evento]) : x.icono;
+  // la flor de ceibo de la temporada (misma que escena.js, en chico)
+  const FLOR = '<svg class="ic flor-ceibo" viewBox="-12 -16 24 20"><path d="M0 0 Q-4 -7 -1 -13 Q3 -8 0 0Z" fill="#c9485b" stroke="#16262c" stroke-width="1.3"/><path d="M0 0 Q3 -4 5 -9 Q6 -4 0 0Z" fill="#e2737a" stroke="#16262c" stroke-width="1.2"/></svg>';
+  const iconoMision = (x) => x.temporada ? FLOR : ICONO_MISION[x.evento] ? WWIconos.html(ICONO_MISION[x.evento]) : x.icono;
   const azar = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const WW_LUGARES = {
     lista: [
@@ -97,6 +99,8 @@
       this.magos.juego = new Magos.Mago($('mago-juego'));
       this.magos.jefe = new Magos.Mago($('mago-jefe'), { paleta: 'sombra' });
       this.magos.menu.visible = this.magos.juego.visible = this.magos.jefe.visible = false;
+      this.temporada = WW.temporadaDe(new Date());
+      if (window.WWEscena && this.temporada) WWEscena.temporada = this.temporada.escena;
       if (window.WWEscena) { WWEscena.montar($('esc-atras'), $('esc-frente'), 'bosque'); WWEscena.intro(() => setTimeout(() => this.magos.titulo.animar('happy', 900), 2300)); }
       if (window.WWVida) { WWVida.montar($('vida'), $('fondo')); this.pintarVida(); }   // la primera pantalla no pasa por mostrar(): sin esto la araña y la luna arrancaban dormidas
       const logo = document.querySelector('#p-titulo .logo-titulo');
@@ -621,15 +625,41 @@
       cont.innerHTML = '';
       for (const x of m.lista) {
         const d = document.createElement('div');
-        d.className = 'mision' + (x.hecha ? ' hecha' : '');
+        d.className = 'mision' + (x.hecha ? ' hecha' : '') + (x.temporada ? ' de-temporada' : '');
         const pct = Math.min(100, (x.progreso / x.meta) * 100);
-        d.innerHTML = `<span class="mision-icono">${iconoMision(x)}</span><div class="mision-info"><span class="mision-texto">${esc(x.texto)}</span><div class="mision-barra"><div style="width:${pct}%"></div></div></div><span class="mision-n">${x.hecha ? '✓' : `${Math.min(x.progreso, x.meta)}/${x.meta}`}</span>`;
+        d.innerHTML = `<span class="mision-icono">${iconoMision(x)}</span><div class="mision-info">${x.temporada ? '<small class="mision-tag">De temporada · +1 flor</small>' : ''}<span class="mision-texto">${esc(x.texto)}</span><div class="mision-barra"><div style="width:${pct}%"></div></div></div><span class="mision-n">${x.hecha ? '✓' : `${Math.min(x.progreso, x.meta)}/${x.meta}`}</span>`;
         cont.appendChild(d);
       }
-      const hechas = m.lista.filter((x) => x.hecha).length;
-      $('misiones-puntos').innerHTML = m.lista.map((x) => `<i class="${x.hecha ? 'ok' : ''}"></i>`).join('');
-      $('misiones-estado').innerHTML = hechas === m.lista.length ? '¡TODAS!' : `${hechas}/${m.lista.length} · ${WWIconos.html('moneda')}${WW.RECOMPENSA_MISION.monedas} c/u`;
+      const comunes = m.lista.filter((x) => !x.temporada), hechas = comunes.filter((x) => x.hecha).length;
+      $('misiones-puntos').innerHTML = m.lista.map((x) => `<i class="${x.hecha ? 'ok' : ''}${x.temporada ? ' flor' : ''}"></i>`).join('');
+      $('misiones-estado').innerHTML = hechas === comunes.length ? '¡TODAS!' : `${hechas}/${comunes.length} · ${WWIconos.html('moneda')}${WW.RECOMPENSA_MISION.monedas} c/u`;
+      const t = this.temporada, pie = $('misiones-temporada');
+      if (pie) {
+        pie.classList.toggle('oculto', !t);
+        if (t) {
+          const f = this.floresTemporada(), dias = Math.max(0, Math.round((new Date(t.hasta + 'T12:00:00') - new Date(this.hoy + 'T12:00:00')) / 864e5));
+          pie.innerHTML = `<b>${esc(t.nombre)}</b><div class="mision-barra"><div style="width:${Math.min(100, f / t.flores * 100)}%"></div></div><small>${f >= t.flores ? '¡Completaste la primavera!' : `${f}/${t.flores} flores · ${dias === 1 ? 'queda 1 día' : `quedan ${dias} días`}`}</small>`;
+        }
+      }
       Estado.guardar();
+    },
+
+    floresTemporada() {
+      const t = this.temporada, p = Estado.perfil;
+      return t && p.temporadas && p.temporadas[t.id] ? p.temporadas[t.id].flores || 0 : 0;
+    },
+    /** Misión de temporada cumplida: una flor; con todas, el premio (una sola vez). */
+    sumarFlor() {
+      const t = this.temporada, p = Estado.perfil;
+      if (!t) return;
+      const reg = (p.temporadas = p.temporadas || {})[t.id] = p.temporadas[t.id] || { flores: 0, premio: false };
+      reg.flores += 1;
+      setTimeout(() => { Audio.mision(); this.toast(`<span>${FLOR}</span><div><b>Flor de ceibo</b><br><small>${reg.flores}/${t.flores} de la ${esc(t.nombre)}</small></div>`, 'logro'); }, 400);
+      if (reg.flores >= t.flores && !reg.premio) {
+        reg.premio = true;
+        Estado.sumarMonedas(t.premio);
+        setTimeout(() => this.toast(`<span>${FLOR}</span><div><b>¡Completaste la primavera!</b><br><small>+${t.premio} ${WWIconos.html('moneda')}</small></div>`, 'logro'), 1800);
+      }
     },
 
     /** Registra progreso de misiones. `valor` suma, o es el máximo alcanzado si la misión es de tipo máximo. */
@@ -640,7 +670,10 @@
       for (const x of m.lista) {
         if (x.hecha || x.evento !== evento) continue;
         x.progreso = x.maximo ? Math.max(x.progreso, valor) : x.progreso + (valor || 1);
-        if (x.progreso >= x.meta) {
+        if (x.progreso >= x.meta && x.temporada) {
+          x.hecha = true; cambio = true;
+          this.sumarFlor();
+        } else if (x.progreso >= x.meta) {
           x.hecha = true; cambio = true;
           p.stats.misiones = (p.stats.misiones || 0) + 1;
           Estado.sumarMonedas(WW.RECOMPENSA_MISION.monedas);
@@ -648,7 +681,7 @@
           setTimeout(() => { Audio.mision(); this.toast(`<span>${iconoMision(x)}</span><div><b>Misión cumplida</b><br><small>${esc(x.texto)} · +${WW.RECOMPENSA_MISION.monedas} ${WWIconos.html('moneda')} +${WW.RECOMPENSA_MISION.xp} XP</small></div>`, 'logro'); }, 400);
         }
       }
-      if (cambio && !m.bonus && m.lista.every((x) => x.hecha)) {
+      if (cambio && !m.bonus && m.lista.filter((x) => !x.temporada).every((x) => x.hecha)) {
         m.bonus = true;
         Estado.sumarMonedas(WW.BONUS_TODAS_MISIONES);
         setTimeout(() => this.toast(`<span>🎉</span><div><b>¡Las tres misiones!</b><br><small>Bonus +${WW.BONUS_TODAS_MISIONES} ${WWIconos.html('moneda')}</small></div>`, 'logro'), 1500);

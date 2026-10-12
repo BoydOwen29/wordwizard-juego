@@ -161,6 +161,10 @@
       const p = this.perfil;
       if (!p.misiones || p.misiones.fecha !== fechaHoy) {
         p.misiones = { fecha: fechaHoy, lista: window.WW.misionesDelDia(new Date(fechaHoy + 'T12:00:00')), bonus: false };
+      } else if (!p.misiones.lista.some((x) => x.temporada)) {
+        // misiones generadas con una versión sin temporadas: se suma la de temporada sin tocar las otras
+        const extra = window.WW.misionesDelDia(new Date(fechaHoy + 'T12:00:00')).find((x) => x.temporada);
+        if (extra) p.misiones.lista.push(extra);
       }
       return p.misiones;
     },

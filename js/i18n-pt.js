@@ -261,4 +261,6 @@ WWI18n.registrar('pt', {
   // v2.27: pantalla del Pase (B)
   "Todo el archivo": "Todo o arquivo", "Historias nuevas": "Histórias novas", "Traje de temporada": "Roupa da temporada", "cancelás cuando quieras": "cancele quando quiser", "{p} por mes": "{p} por mês", "{n} meses de regalo": "{n} meses de presente", "Sacar el Pase anual": "Assinar o Passe anual", "Sacar el Pase mensual": "Assinar o Passe mensal",
   "Muy pronto, desde la app de Android (Google Play).": "Em breve, pelo app de Android (Google Play).",
+  // v2.28: temporada del ceibo
+  "De temporada · +1 flor": "De temporada · +1 flor", "Primavera del Ceibo": "Primavera do Ceibo", "{f}/{t} flores · quedan {d} días": "{f}/{t} flores · faltam {d} dias", "{f}/{t} flores · queda 1 día": "{f}/{t} flores · falta 1 dia", "¡Completaste la primavera!": "Você completou a primavera!", "Flor de ceibo": "Flor de ceibo", "{n}/{t} de la {s}": "{n}/{t} da {s}", "Juntá 20 flores de ceibo en la temporada de primavera.": "Junte 20 flores de ceibo na temporada de primavera.",
 });

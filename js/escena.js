@@ -109,6 +109,44 @@
     return (sw ? circ(` fill="${c}" stroke="${L}" stroke-width="${sw * 2}"`) + base + ` fill="${c}" stroke="${L}" stroke-width="${sw * 2}"/>` : '') + circ(` fill="${c}"`) + base + ` fill="${c}"/>` + somb;
   }
 
+  // Flor de ceibo: un racimo de pétalos rojos en forma de quilla (la flor nacional de Argentina y Uruguay)
+  function florCeibo(x, y, s, rot, sw) {
+    const pet = `M0 0 Q${n1(-4 * s)} ${n1(-7 * s)} ${n1(-1 * s)} ${n1(-13 * s)} Q${n1(3 * s)} ${n1(-8 * s)} 0 0Z`;
+    return `<g transform="translate(${n1(x)} ${n1(y)}) rotate(${n1(rot)})">` +
+      `<path d="${pet}" fill="#c9485b"${sw ? ` stroke="${L}" stroke-width="${n1(sw * .55)}" stroke-linejoin="round"` : ''}/>` +
+      `<path d="M0 0 Q${n1(3 * s)} ${n1(-4 * s)} ${n1(5 * s)} ${n1(-9 * s)} Q${n1(6 * s)} ${n1(-4 * s)} 0 0Z" fill="#e2737a"${sw ? ` stroke="${L}" stroke-width="${n1(sw * .5)}" stroke-linejoin="round"` : ''}/></g>`;
+  }
+
+  // Ceibo: tronco retorcido que se abre en ramas y copa ancha y despareja, verde oliva (para que no se confunda con
+  // los pinos) y salpicada de racimos rojos. Mismo trazo que el resto: tonos planos y contorno.
+  function ceibo(x, y, h, w, cerca, sw, rnd, flores) {
+    const hoja = cerca ? '#2e4d3b' : '#4b6f56', hojaSh = cerca ? '#243f30' : '#3e5e48', corteza = cerca ? '#5a4638' : '#6b5646';
+    const tr = h * .5, tw = w * .07;
+    const tronco = `M${n1(x - tw)} ${n1(y)} Q${n1(x - tw * 2)} ${n1(y - tr * .4)} ${n1(x - tw * .4)} ${n1(y - tr * .62)}` +
+      ` Q${n1(x - w * .22)} ${n1(y - tr * .8)} ${n1(x - w * .3)} ${n1(y - tr * 1.05)} L${n1(x - w * .22)} ${n1(y - tr * 1.08)} Q${n1(x - w * .12)} ${n1(y - tr * .86)} ${n1(x - tw * .2)} ${n1(y - tr * .78)}` +
+      ` L${n1(x - tw * .3)} ${n1(y - tr * 1.1)} L${n1(x + tw * .5)} ${n1(y - tr * 1.1)} L${n1(x + tw * .4)} ${n1(y - tr * .8)}` +
+      ` Q${n1(x + w * .16)} ${n1(y - tr * .9)} ${n1(x + w * .27)} ${n1(y - tr * 1.1)} L${n1(x + w * .34)} ${n1(y - tr * 1.04)} Q${n1(x + w * .2)} ${n1(y - tr * .72)} ${n1(x + tw * 1.2)} ${n1(y - tr * .52)}` +
+      ` Q${n1(x + tw * 1.9)} ${n1(y - tr * .2)} ${n1(x + tw * 1.3)} ${n1(y)}Z`;
+    const grieta = `M${n1(x)} ${n1(y - 3)} Q${n1(x + tw * .6)} ${n1(y - tr * .3)} ${n1(x - tw * .1)} ${n1(y - tr * .58)}`;
+    // copa: lóbulos en abanico sobre las ramas, más anchos que altos
+    const copa = [], base = y - tr * 1.05;
+    const lobulos = [[-.36, .02, .17], [-.2, -.1, .2], [0, -.15, .22], [.2, -.1, .2], [.36, .02, .17], [-.1, .06, .18], [.12, .05, .18]];
+    for (const [dx, dy, r] of lobulos) copa.push([x + dx * w + (rnd() - .5) * w * .04, base + dy * w, r * w * (.92 + rnd() * .16)]);
+    const circ = (fill, st) => copa.map(([cx, cy, r]) => `<circle cx="${n1(cx)}" cy="${n1(cy)}" r="${n1(r)}" fill="${fill}"${st || ''}/>`).join('');
+    let out = P(tronco, corteza, sw) + `<path d="${grieta}" stroke="${L}" stroke-opacity=".35" stroke-width="${n1(Math.max(1.2, tw * .35))}" fill="none" stroke-linecap="round"/>`;
+    if (sw) out += circ(hoja, ` stroke="${L}" stroke-width="${sw * 2}"`);
+    out += circ(hoja);
+    out += copa.map(([cx, cy, r]) => `<circle cx="${n1(cx + r * .22)}" cy="${n1(cy + r * .32)}" r="${n1(r * .66)}" fill="${hojaSh}"/>`).join('');
+    if (flores) {
+      const n = Math.round(8 + w / 9), s = Math.min(1.7, Math.max(.75, w / 85));
+      for (let i = 0; i < n; i++) {
+        const [cx, cy, r] = copa[Math.floor(rnd() * copa.length)], a = -Math.PI * (.05 + rnd() * .9), d = r * (.35 + rnd() * .6);
+        out += florCeibo(cx + Math.cos(a) * d, cy + Math.sin(a) * d + 9 * s, s, -35 + rnd() * 70, sw);
+      }
+    }
+    return out;
+  }
+
   function cerros(W, yBase, amp, n, rnd) {
     let d = `M-10 ${n1(yBase + amp)}`;
     const pts = [];
@@ -120,9 +158,14 @@
 
   let LUG = LUGARES.bosque;
 
-  /** Genera el HTML de las capas para un tamaño y un lugar. */
-  function generar(W0, H0, lugar) {
+  /**
+   * Genera el HTML de las capas para un tamaño y un lugar.
+   * temp (temporada, solo en el bosque): { medio: cada cuántos árboles del medio va un ceibo, cerca: índice del árbol
+   * grande que pasa a ser ceibo, suelo: flores rojas en el pasto, petalos: cuántas flores caen }. Sin temp, el bosque de siempre.
+   */
+  function generar(W0, H0, lugar, temp) {
     LUG = LUGARES[lugar] || LUGARES.bosque;
+    const T = (lugar || 'bosque') === 'bosque' ? (temp === undefined ? Escena.temporada : temp) || {} : {};
     const C = LUG, M = 28, W = W0 + M * 2, H = H0 + M * 2;
     const rnd = azarCon(({ bosque: 7, cueva: 11, biblioteca: 23, cumbre: 31, cielo: 43 }[lugar] || 7) * 1000 + Math.round(W0 / 50));
     const svg = (cls, inner, prof) => `<svg class="esc-capa ${cls}" data-prof="${prof}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="left:${-M}px;top:${-M}px" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
@@ -210,7 +253,8 @@
     const nMedio = Math.max(5, Math.round(W / 58));
     for (let i = 0; i < nMedio; i++) {
       const x = (i + .2 + rnd() * .6) * W / nMedio, h = (70 + rnd() * 50) * esc, y = yMedio + rnd() * H * .04;
-      medio += `<g class="esc-arbol" data-x="${n1(x - M)}" style="--d:${n1(5 + rnd() * 3)}s;animation-delay:-${n1(rnd() * 6)}s">${arbol(x, y, h, h * .52, C.medio, C.medioSh, 2.5)}</g>`;
+      const esCeibo = T.medio && i % T.medio === 1;
+      medio += `<g class="esc-arbol" data-x="${n1(x - M)}" style="--d:${n1(5 + rnd() * 3)}s;animation-delay:-${n1(rnd() * 6)}s">${esCeibo ? ceibo(x, y, h * .95, h * .95, false, 2.5, rnd, true) : arbol(x, y, h, h * .52, C.medio, C.medioSh, 2.5)}</g>`;
     }
     medio += `<g class="esc-niebla-b"><ellipse cx="${n1(W * .6)}" cy="${n1(yMedio + 14)}" rx="${n1(W * .5)}" ry="${n1(H * .03)}" fill="${C.niebla}" opacity=".2"/></g>`;
 
@@ -220,7 +264,8 @@
     const lados = W0 > H0 ? [.04, .14, .86, .96] : [-.02, .1, .92, 1.03];
     lados.forEach((fx, i) => {
       const x = W * fx, h = (i % 2 ? 160 : 210) * esc * (W0 > H0 ? 1.4 : 1), y = ySuelo + 10 + rnd() * 10;
-      cerca += `<g class="esc-arbol grande" data-x="${n1(x - M)}" style="--d:${n1(6 + rnd() * 3)}s;animation-delay:-${n1(rnd() * 6)}s">${arbol(x, y, h, h * .5, C.cerca, C.cercaSh, 3)}</g>`;
+      const esCeibo = T.cerca !== undefined && i === T.cerca;
+      cerca += `<g class="esc-arbol grande" data-x="${n1(x - M)}" style="--d:${n1(6 + rnd() * 3)}s;animation-delay:-${n1(rnd() * 6)}s">${esCeibo ? ceibo(x, y, h * 1.25, h * 1.15, true, 3, rnd, true) : arbol(x, y, h, h * .5, C.cerca, C.cercaSh, 3)}</g>`;
     });
     if (C.buho) {
       const bx = W * lados[1] + 4, by = ySuelo - 70 * esc;
@@ -234,6 +279,16 @@
         : `<path d="M${n1(x - 5)} ${n1(y)} Q${n1(x - 4)} ${n1(y - 7)} ${n1(x - 6)} ${n1(y - 10)} M${n1(x)} ${n1(y)} Q${n1(x + 1)} ${n1(y - 9)} ${n1(x)} ${n1(y - 13)} M${n1(x + 5)} ${n1(y)} Q${n1(x + 5)} ${n1(y - 6)} ${n1(x + 7)} ${n1(y - 9)}" stroke="${C.sueloLuz}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
     }
 
+    if (T.suelo) {
+      for (let i = 0; i < T.suelo; i++) cerca += florCeibo(rnd() * W, ySuelo + 10 + rnd() * H * .05, .8 + rnd() * .3, -50 + rnd() * 100, 2);
+    }
+    if (T.petalos) {
+      for (let i = 0; i < T.petalos; i++) {
+        const x = rnd() * W, dur = 9 + rnd() * 8;
+        cerca += `<g class="esc-petalo" style="--px:${n1(x)}px;--deriva:${n1((rnd() - .5) * 120)}px;--h:${H}px;animation-duration:${n1(dur)}s;animation-delay:-${n1(rnd() * dur)}s">${florCeibo(0, 0, .75 + rnd() * .4, rnd() * 360, 1.6)}</g>`;
+      }
+    }
+
     return {
       atras: svg('esc-cielo', cielo, .08) + svg('esc-lejos', lejos, .22) + svg('esc-medio', medio, .5),
       frente: svg('esc-cerca', cerca, 1),
@@ -242,6 +297,7 @@
 
   // ---------------------------------------------------------------- montaje
   const Escena = {
+    temporada: null,
     lugar: 'bosque', atras: null, frente: null, W: 0, H: 0, px: 0, py: 0,
 
     /** atras/frente: contenedores (las luciérnagas van entre los dos). */
