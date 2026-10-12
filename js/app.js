@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.32.0',
+    version: '2.33.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -599,7 +599,7 @@
         Audio.click(); const on = b.dataset.reloj === '1'; ponerReloj(on);
         try { localStorage.setItem('ww.practica.reloj', on ? '1' : '0'); } catch (e) { /* sin almacenamiento */ }
       }));
-      $('btn-rankings').addEventListener('click', () => { Audio.click(); this.verRankings(Ranking.activo() ? 'mundo' : 'diario'); });
+      $('btn-rankings').addEventListener('click', () => { Audio.click(); this.verRankings(this.rankTab || 'hoy'); });
       $('btn-stats').addEventListener('click', () => { Audio.click(); this.verEstadisticas(); });
       $('btn-logros').addEventListener('click', () => { Audio.click(); this.verLogros(); });
       $('btn-ayuda').addEventListener('click', () => { Audio.click(); this.tutorial(); });
@@ -2050,23 +2050,29 @@
     },
 
     // ============================================================ rankings / estadísticas / logros / ajustes
+    /**
+     * Rankings (variante B de lab/rankings.html, elegida por Owen el 12/10/2026): un solo ranking, mundial, con
+     * Hoy · Semana · Torre. Arriba el podio y abajo "cerca tuyo" (los 2 de adelante y los 2 de atrás), así nadie
+     * queda solo ni perdido en el puesto 300. "Este celular" aparece solo si en el celular juegan 2 magos o más.
+     * Sin la nube (compu de desarrollo), se ve lo del celular.
+     */
     verRankings(tab) {
-      $('tab-mundo').classList.toggle('oculto', !Ranking.activo());
+      tab = { mundo: 'hoy', diario: 'hoy', magos: 'hoy' }[tab] || tab || 'hoy';
+      const todos = Estado.todos();
+      $('tab-local').classList.toggle('oculto', Object.keys(todos).length < 2);
       document.querySelectorAll('#tabs-ranking .tab').forEach((t) => t.classList.toggle('activa', t.dataset.tab === tab));
-      const todos = Estado.todos(), yo = Estado.perfil.nombre;
-      const cont = $('ranking-contenido');
-      let filas = [];
-      if (tab === 'mundo') return this.verMundo(this.mundoSub || 'hoy');
-      $('ranking-nota').textContent = 'Rankings de este dispositivo.';
-      if (tab === 'diario') {
-        filas = Object.values(todos).filter((p) => p.diarios && p.diarios[K(this.hoy)]).map((p) => ({ nombre: p.nombre, valor: p.diarios[K(this.hoy)].puntos, sub: `${p.diarios[K(this.hoy)].rango} · ${p.diarios[K(this.hoy)].encontradas.length} palabras`, unidad: 'PTS', yo: p.nombre === yo }));
-      } else if (tab === 'torre') {
-        filas = Object.values(todos).filter((p) => p.arcade && p.arcade.mejorPuntaje > 0).map((p) => ({ nombre: p.nombre, valor: p.arcade.mejorPuntaje, sub: `piso ${p.arcade.mejorPiso} · ${p.arcade.partidas} subidas · ${p.arcade.jefes || 0} jefes`, unidad: 'PTS', yo: p.nombre === yo }));
+      this.rankTab = tab;
+      if (tab !== 'local' && Ranking.activo()) return this.verMundo(tab);
+      const yo = Estado.perfil.nombre, cont = $('ranking-contenido');
+      let filas;
+      if (tab === 'torre') {
+        filas = Object.values(todos).filter((p) => p.arcade && p.arcade.mejorPuntaje > 0).map((p) => ({ nombre: p.nombre, valor: p.arcade.mejorPuntaje, sub: `piso ${p.arcade.mejorPiso} · ${p.arcade.jefes || 0} ${(p.arcade.jefes || 0) === 1 ? 'jefe' : 'jefes'}`, unidad: 'PTS', yo: p.nombre === yo }));
       } else {
-        filas = Object.values(todos).map((p) => ({ nombre: p.nombre, valor: p.xp || 0, sub: `nivel ${p.nivel || 1} · ${WW.tituloNivel(p.nivel || 1)} · ${Object.keys(p.logros || {}).length} logros`, unidad: 'XP', yo: p.nombre === yo }));
+        filas = Object.values(todos).filter((p) => p.diarios && p.diarios[K(this.hoy)]).map((p) => ({ nombre: p.nombre, valor: p.diarios[K(this.hoy)].puntos, sub: `${p.diarios[K(this.hoy)].rango} · ${p.diarios[K(this.hoy)].encontradas.length} palabras`, unidad: 'PTS', yo: p.nombre === yo }));
       }
-      this.pintarRanking(cont, filas, tab === 'diario' ? 'Nadie jugó el desafío de hoy todavía.' : 'Todavía no hay registros.');
-      this.mostrar('p-rankings');
+      $('ranking-nota').textContent = tab === 'local' ? 'Los magos de este celular, hoy.' : 'Rankings de este dispositivo.';
+      this.pintarRanking(cont, filas, tab === 'torre' ? 'Todavía no hay registros.' : 'Nadie jugó el desafío de hoy todavía.');
+      if (!$('p-rankings').classList.contains('activa')) this.mostrar('p-rankings');
     },
 
     /** Clave del mago para la nube: no cambia si se renombra. */
@@ -2075,25 +2081,51 @@
     verMundo(sub) {
       this.mundoSub = sub;
       const cont = $('ranking-contenido');
-      const subs = [['hoy', 'Hoy'], ['semana', 'Semana'], ['torre', 'Torre']];
-      cont.innerHTML = `<div class="mundo-sub">${subs.map(([k, t]) => `<button class="${k === sub ? 'activa' : ''}" data-sub="${k}">${t}</button>`).join('')}</div><div class="mundo-lista"><div class="rank-vacio">Cargando ranking mundial…</div></div>`;
-      cont.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => { Audio.click(); this.verMundo(b.dataset.sub); }));
+      cont.innerHTML = '<div class="rank-vacio">Cargando ranking mundial…</div>';
       $('ranking-nota').textContent = { hoy: 'Desafío de hoy, en todo el mundo.', semana: 'Puntos del desafío sumados desde el lunes.', torre: 'La mejor subida a la Torre Arcana de cada mago.' }[sub];
       if (!$('p-rankings').classList.contains('activa')) this.mostrar('p-rankings');
       const mio = Ranking.miId(this.claveNube());
       const lunes = (() => { const d = new Date(this.hoy + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); })();
-      const pedido = sub === 'hoy' ? Ranking.topDiario(this.hoy) : sub === 'semana' ? Ranking.topSemanal(lunes) : Ranking.topTorre();
+      // la lista entera (hasta 500): con eso se sabe tu puesto sin tocar la base
+      const pedido = sub === 'hoy' ? Ranking.topDiario(this.hoy, 500) : sub === 'semana' ? Ranking.topSemanal(lunes, 500) : Ranking.topTorre(500);
       pedido.then((rows) => {
-        const lista = cont.querySelector('.mundo-lista');
-        if (this.mundoSub !== sub || !lista) return;
-        if (rows === null) { lista.innerHTML = '<div class="rank-vacio">Sin conexión. El ranking mundial necesita internet.</div>'; return; }
+        if (this.mundoSub !== sub || this.rankTab !== sub) return;
+        if (rows === null) { cont.innerHTML = '<div class="rank-vacio">Sin conexión. El ranking mundial necesita internet.</div>'; return; }
         const filas = rows.map((r) => sub === 'torre'
           ? { nombre: r.nombre, valor: r.mejor_puntaje, sub: `piso ${r.mejor_piso} · ${r.jefes} ${r.jefes === 1 ? 'jefe' : 'jefes'}`, unidad: 'PTS', yo: r.usuario === mio }
           : sub === 'semana'
             ? { nombre: r.nombre, valor: r.puntos, sub: `${r.dias} ${r.dias === 1 ? 'día' : 'días'}`, unidad: 'PTS', yo: r.usuario === mio }
             : { nombre: r.nombre, valor: r.puntos, sub: `${r.rango} · ${r.palabras} palabras`, unidad: 'PTS', yo: r.usuario === mio });
-        this.pintarRanking(lista, filas, sub === 'torre' ? 'Nadie subió la Torre todavía. ¡Estrenala!' : 'Nadie jugó todavía. ¡Sé el primero!');
+        this.pintarPodio(cont, filas, sub);
       });
+    },
+
+    /** Podio arriba y "cerca tuyo" abajo. Si no estás en la lista, la sigue desde el 4.º y te dice cómo entrar. */
+    pintarPodio(cont, filas, sub) {
+      filas.sort((a, b) => b.valor - a.valor);
+      if (!filas.length) { cont.innerHTML = `<div class="rank-vacio">${sub === 'torre' ? 'Nadie subió la Torre todavía. ¡Estrenala!' : 'Nadie jugó todavía. ¡Sé el primero!'}</div>`; return; }
+      const total = filas.length, yo = filas.findIndex((f) => f.yo);
+      const fila = (f, i) => `<div class="rank-fila${f.yo ? ' yo' : ''}"><span class="rank-pos">${i + 1}</span><div class="rank-nombre">${esc(f.nombre)}<small>${esc(f.sub)}</small></div><div class="rank-valor">${f.valor}<small>${f.unidad}</small></div></div>`;
+      let html = '';
+      if (total >= 3) {
+        const pod = (i, c) => `<div class="rk-pod ${c}${filas[i].yo ? ' yo' : ''}"><i class="rk-medalla">${['🥇', '🥈', '🥉'][i]}</i><b>${esc(filas[i].nombre)}</b><span>${filas[i].valor}</span></div>`;
+        html += `<div class="rk-podio">${pod(1, 'p2')}${pod(0, 'p1')}${pod(2, 'p3')}</div>`;
+      }
+      const desde = total >= 3 ? 3 : 0;
+      let idx = [];
+      if (yo < 0 || yo <= 7) for (let i = desde; i < Math.min(total, Math.max(8, yo + 3)); i++) idx.push(i);
+      else idx = [yo - 2, yo - 1, yo, yo + 1, yo + 2].filter((i) => i >= desde && i < total);
+      if (idx.length && idx[0] > desde) html += '<div class="rk-corte">• • •</div>';
+      html += idx.map((i) => fila(filas[i], i)).join('');
+      if (yo >= 0) {
+        const pct = total > 1 ? Math.round((total - 1 - yo) / (total - 1) * 100) : 100;
+        const frase = yo === 0 ? (sub === 'hoy' ? '¡Vas primero hoy!' : sub === 'semana' ? '¡Vas primero esta semana!' : '¡Sos el mejor de la Torre!')
+          : sub === 'hoy' ? `Le ganaste al ${pct} % de los magos de hoy` : `Puesto ${yo + 1} de ${total} magos`;
+        html += `<div class="rk-frase">${frase}</div>`;
+      } else {
+        html += `<div class="rk-frase">${sub === 'torre' ? 'Subí la Torre para entrar al ranking.' : sub === 'semana' ? 'Jugá el desafío para entrar al ranking de la semana.' : 'Jugá el desafío de hoy para entrar al ranking.'}</div>`;
+      }
+      cont.innerHTML = html;
     },
 
     pintarRanking(cont, filas, vacio) {
