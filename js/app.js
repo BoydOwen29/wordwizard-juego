@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.28.0',
+    version: '2.28.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -114,6 +114,7 @@
       this.pwa();
       this.juice();
       this.compras();
+      this.atras();
       // cargar diccionario sin congelar la pantalla de título
       setTimeout(() => {
         try {
@@ -384,6 +385,34 @@
       this.pintarVida();
     },
 
+    /**
+     * Botón "atrás" de Android (en la app de Play es el del sistema; en el navegador, el de atrás). Sin esto salía
+     * de la app desde cualquier pantalla. Se deja una entrada "trampa" en el historial y cada atrás hace lo mismo que
+     * la flecha de la pantalla; en el inicio, sale de verdad.
+     */
+    atras() {
+      try { history.pushState({ ww: 1 }, ''); } catch (e) { return; }
+      addEventListener('popstate', () => {
+        if (this.volver()) { try { history.pushState({ ww: 1 }, ''); } catch (e) { /* nada */ } } else history.back();
+      });
+    },
+    /** Hace lo que haría "volver" en la pantalla actual. false = ya estamos en el inicio (salir). */
+    volver() {
+      const m = $('modal');
+      if (m && !m.classList.contains('oculto')) {
+        // un aviso con un solo botón se cierra; si hay que elegir (reintentar o rendirse), atrás no decide por vos
+        const bs = $('modal-caja').querySelectorAll('.fila:last-child .btn');
+        if (bs.length === 1) bs[0].click();
+        return true;
+      }
+      const id = this.pantalla;
+      if (id === 'p-juego') { this.pedirSalir(); return true; }
+      if (id === 'p-titulo' || id === 'p-menu' || !id) return false;
+      const v = document.querySelector('#' + id + ' .btn-volver');
+      if (v) v.click(); else this.irMenu();
+      return true;
+    },
+
     pintarVida() { if (window.WWVida) WWVida.activar((this.pantalla === 'p-titulo' || this.pantalla === 'p-menu') && !this.lugar); },
 
     /** La barra de pestañas va en las pantallas principales; en la Torre, solo si no hay una subida en curso. */
@@ -457,7 +486,7 @@
     eventos() {
       // iOS solo deja arrancar el audio en touchend/click (no en pointerdown) y lo vuelve a frenar tras una llamada o
       // el bloqueo: se escucha en cada toque hasta que el contexto corre, y otra vez si se interrumpe
-      const destrabar = () => { if (!Audio.ctx || Audio.ctx.state !== 'running') Audio.despertar(); };
+      const destrabar = () => { if (Audio.necesitaToque()) Audio.despertar(); };
       for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, destrabar, { passive: true, capture: true });
 
       $('form-nombre').addEventListener('submit', (e) => {

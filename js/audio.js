@@ -35,13 +35,19 @@
     /** Debe llamarse desde un gesto del usuario (click/tecla). */
     despertar() {
       this.init();
-      // iOS: el contexto puede estar 'suspended' o 'interrupted' (llamada, Siri, bloqueo); un buffer mudo lo destraba
-      if (this.ctx && this.ctx.state !== 'running') {
+      // iOS: el contexto puede estar 'suspended' o 'interrupted' (llamada, Siri, bloqueo); un buffer mudo lo destraba.
+      // Al volver del segundo plano, Safari a veces dice 'running' pero no suena hasta un toque: por eso _pideToque.
+      if (this.ctx && (this.ctx.state !== 'running' || this._pideToque)) {
+        this._pideToque = false;
         try { const b = this.ctx.createBufferSource(); b.buffer = this.ctx.createBuffer(1, 1, 22050); b.connect(this.ctx.destination); b.start(0); } catch (e) { /* nada */ }
-        const r = this.ctx.resume(); if (r && r.catch) r.catch(() => {});
+        const r = this.ctx.resume();
+        // si el resume tarda (o la música arrancó con el contexto frenado), se vuelve a programar desde ahora
+        if (r && r.then) r.then(() => { if (this.musica && this._musicaOn && this._rep) this._rep.siguiente = 0; if (this.musica && !this._musicaOn) this.iniciarMusica(); }).catch(() => {});
       }
       if (this.musica && !this._musicaOn) this.iniciarMusica();
     },
+    /** ¿Hace falta un toque para que vuelva a sonar? (lo mira el juego en cada toque) */
+    necesitaToque() { return !this.ctx || this.ctx.state !== 'running' || !!this._pideToque; },
 
     _nota(freq, t0, dur, tipo, vol, destino, desliz) {
       if (!this.ctx) return;
@@ -428,9 +434,11 @@
     vigilarVisibilidad() {
       document.addEventListener('visibilitychange', () => {
         if (!this.ctx) return;
-        if (document.hidden) this.ctx.suspend(); else { const r = this.ctx.resume(); if (r && r.catch) r.catch(() => {}); }
+        if (document.hidden) { this.ctx.suspend(); this._pideToque = true; } else { const r = this.ctx.resume(); if (r && r.catch) r.catch(() => {}); }
       });
-      window.addEventListener('pagehide', () => { if (this.ctx) this.ctx.suspend(); });
+      window.addEventListener('pagehide', () => { if (this.ctx) { this.ctx.suspend(); this._pideToque = true; } });
+      // vuelta desde la caché del navegador (iOS la usa al reabrir la app): igual que volver del segundo plano
+      window.addEventListener('pageshow', (e) => { if (e.persisted && this.ctx) this._pideToque = true; });
     },
     musicaSuave(suave) { if (this._ganMusica) this._ganMusica.gain.setTargetAtTime(suave ? this._volMusica.suave : this._volMusica.normal, this.ctx.currentTime, 0.3); },
   };
