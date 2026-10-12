@@ -25,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.29.0',
+    version: '2.30.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -346,6 +346,13 @@
       this.pintarMusica();
       this.irMenu();
       this.revisarEnCurso();
+      // v2.30: hasta la v2.29 la Torre solo se mandaba al cerrar la subida; quien la dejó a la mitad no figuraba.
+      // Una vez por mago se manda lo que ya tiene (la base no deja bajar un récord, así que repetir no hace daño).
+      const sub = p.subida && p.subida.puntajeTotal || 0;
+      if (Ranking.activo() && !p.arcade.torreEnviada && (p.arcade.mejorPuntaje > 0 || sub > 0)) {
+        Ranking.enviarTorre({ clave: this.claveNube(), nombre: p.nombre, puntaje: Math.max(p.arcade.mejorPuntaje, sub), piso: p.arcade.mejorPiso, jefes: Math.floor(p.arcade.mejorPiso / 5) });
+        p.arcade.torreEnviada = true; Estado.guardar();
+      }
     },
 
     // ============================================================ navegación
@@ -599,6 +606,7 @@
       const PAGINAS = { en: ['privacy.html', 'terms.html'], pt: ['privacidade.html', 'termos.html'] }[window.WWI18n.idioma];
       if (PAGINAS) document.querySelectorAll('#p-ajustes a[href="privacidad.html"], #p-ajustes a[href="terminos.html"]').forEach((a) => { a.href = a.getAttribute('href') === 'privacidad.html' ? PAGINAS[0] : PAGINAS[1]; });
       $('aj-idioma').addEventListener('change', (e) => { Audio.click(); Estado.guardar(); window.WWI18n.cambiar(e.target.value); });
+      $('aj-recordatorio').addEventListener('change', (e) => { Audio.click(); this.cambiarRecordatorio(e.target.value === '' ? null : Number(e.target.value)); });
       $('aj-sonido').addEventListener('change', (e) => { Estado.perfil.ajustes.sonido = e.target.checked; Audio.setSonido(e.target.checked); Estado.guardar(); Audio.click(); });
       $('aj-musica').addEventListener('change', (e) => { Estado.perfil.ajustes.musica = e.target.checked; Audio.setMusica(e.target.checked); Estado.guardar(); this.pintarMusica(); });
       $('aj-vibracion').addEventListener('change', (e) => { Estado.perfil.ajustes.vibracion = e.target.checked; Estado.guardar(); });
@@ -1510,6 +1518,35 @@
       });
     },
 
+    /** Recordatorio diario (game/js/recordatorio.js). hora null = apagar. */
+    async cambiarRecordatorio(hora) {
+      const R = window.WWRecordatorio; if (!R) return;
+      const sel = $('aj-recordatorio');
+      if (hora === null) { await R.apagar(); this.toast('Recordatorio apagado.'); return; }
+      const r = await R.prender(hora);
+      if (r === 'ok') this.toast(`Listo: si un día no jugaste el desafío, te aviso a las ${hora} h.`);
+      else {
+        if (sel) sel.value = R.estado().on ? String(R.estado().hora) : '';
+        if (r === 'instalar') this.toast('En iPhone, los avisos llegan con el juego instalado en la pantalla de inicio.');
+        else if (r === 'denegado') this.toast('El celular no dejó mandar avisos. Activalos para Word Wizard en los ajustes del celular.');
+        else this.toast('No se pudo prender el recordatorio. Probá de nuevo más tarde.');
+      }
+    },
+    /** Después del primer desafío del día, una sola vez: ¿te aviso mañana? */
+    ofrecerRecordatorio() {
+      const R = window.WWRecordatorio;
+      if (!R || !R.disponible() || R.pideInstalar() || R.estado().on || R.estado().preguntado) return;
+      if (window.Notification && Notification.permission === 'denied') return;
+      setTimeout(() => {
+        if (this.pantalla !== 'p-resultado' || !$('modal').classList.contains('oculto')) return;   // si hay otro aviso, otro día
+        R.marcarPreguntado();
+        this.modal(`<h3>¿TE AVISO MAÑANA?</h3><div class="modal-silabo" data-pose="happy"></div><p>Si un día todavía no jugaste el desafío, te mando <b>un solo aviso</b> a la tarde para que no se corte tu racha. Lo cambiás o lo apagás en Ajustes.</p>`, [
+          { texto: 'No, gracias', clase: 'btn-secundario' },
+          { texto: 'Sí, a las 19 h', clase: 'btn-primario', accion: () => this.cambiarRecordatorio(R.HORA_DEF) },
+        ]);
+      }, 2600);
+    },
+
     /** Prácticas jugadas hoy (las gratis son CONFIG.practicasGratis; con el Pase no hay límite). */
     practicasHoy() {
       const p = Estado.perfil;
@@ -1588,6 +1625,8 @@
       pa.arcade.puntajeTotal += pa.puntos + bonusPts;
       pa.arcade.palabrasTotal += pa.encontradas.length;
       p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, pa.arcade.piso);
+      // al ranking en cada piso pasado (antes solo al terminar la subida: quien la dejaba guardada a la mitad no aparecía)
+      if (Ranking.activo()) Ranking.enviarTorre({ clave: this.claveNube(), nombre: p.nombre, puntaje: Math.max(p.arcade.mejorPuntaje, pa.arcade.puntajeTotal), piso: p.arcade.mejorPiso, jefes: Math.floor(p.arcade.mejorPiso / 5) });
       this.anotarTiempo(pa);
       this.guardarSubida(pa.arcade);
       this.limpiarEfectos();
@@ -1754,6 +1793,7 @@
         const velasUsadas = Estado.registrarRacha(this.hoy);
         if (velasUsadas) setTimeout(() => this.toast(`${WWIconos.html('vela')}<div><b>La vela salvó tu racha</b><br><small>Se ${velasUsadas > 1 ? `consumieron ${velasUsadas} velas` : 'consumió una vela'}. Racha: ${p.racha} días</small></div>`, 'logro'), 1200);
         this.mision('diario', 1);
+        if (window.WWRecordatorio) { WWRecordatorio.jugo(this.hoy, p.racha); this.ofrecerRecordatorio(); }
         if (Ranking.activo()) Ranking.enviarDiario({ clave: this.claveNube(), fecha: this.hoy, numero: pa.numero, nombre: p.nombre, puntos: pa.puntos, palabras: pa.encontradas.length, rango: rango.nombre });
       } else if (pa.modo === 'archivo') {
         xp = Math.round(pa.puntos * 0.75);
@@ -2058,6 +2098,10 @@
 
     verAjustes() {
       const p = Estado.perfil;
+      if (window.WWRecordatorio) {
+        $('aj-recordatorio-fila').classList.toggle('oculto', !WWRecordatorio.disponible());
+        const e = WWRecordatorio.estado(); $('aj-recordatorio').value = e.on ? String(e.hora) : '';
+      }
       $('aj-sonido').checked = p.ajustes.sonido;
       $('aj-musica').checked = p.ajustes.musica;
       $('aj-vibracion').checked = p.ajustes.vibracion;
@@ -2129,6 +2173,7 @@
         { t: 'ARMÁ PALABRAS', h: `${fichas(LOCAL.base)}<div class="tut-flecha">↓</div><div class="tut-arma">${LOCAL.arma.split('').map((l, i) => `<span style="--i:${i}">${l}</span>`).join('')}<em style="--i:4">✓</em></div><p>Tocá las letras y mandá con <b>Enviar</b>. Mínimo 3 letras, cada una las veces que aparece. ${LOCAL.ejemplos.map((w) => `<b data-no-t>${w}</b>`).join(', ')}… <span data-no-t>${LOCAL.y}</span> <b data-no-t>${LOCAL.base.toLowerCase()}</b>.</p>` },
         { t: 'MÁS LARGAS, MÁS PUNTOS', h: `<div class="tut-puntos"><span><b>3</b> letras <i>1</i></span><span><b>5</b> letras <i>4</i></span><span><b>7</b> letras <i>10</i></span><span class="oro">la palabra entera <i>+15</i></span></div><p>Si acertás seguido armás <b>combo</b>: desde la tercera, cada palabra vale más, hasta ×2.</p>` },
         { t: 'TRES FORMAS DE JUGAR', h: `<div class="tut-filas">${fila('calendario', 'Desafío diario', 'La misma palabra para todos, 3 minutos, una vez por día.')}${fila('torre', 'Torre Arcana', 'Subí piso por piso, vencé jefes y juntá monedas.')}${fila('vela', 'Práctica', 'Sin reloj y con pistas, para aprender.')}</div>` },
+        { t: 'PODERES Y PISTAS', h: `<div class="tut-filas">${fila('pista', 'Pista', 'Te muestra cómo empieza una palabra que falta.')}${fila('arena', 'Reloj de arena', 'Suma 20 segundos.')}${fila('ojo', 'Ojo arcano', 'Revela una palabra entera (vale la mitad).')}${fila('escudo', 'Escudo', 'Un error no te corta el combo.')}</div><p>Están abajo de las letras. En la práctica son gratis; en la Torre se pagan con monedas. En el desafío del día no hay: es parejo para todos.</p>` },
         { t: 'VOLVÉ CADA DÍA', h: `<div class="tut-filas">${fila('llama', 'Racha', 'Jugá el desafío todos los días.')}${fila('vela', 'Vela de racha', 'Si un día faltás, salva tu racha.')}${fila('estrella', 'Misiones', 'Tres por día, con monedas de premio.')}</div><button class="link-reglas" id="tut-reglas">Ver las reglas completas</button>` },
       ];
       const n = pasos.length;
