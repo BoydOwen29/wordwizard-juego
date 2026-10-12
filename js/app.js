@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.31.0',
+    version: '2.32.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -1758,7 +1758,7 @@
         const tiene = this.tieneTraje(k), precio = PRECIO_TRAJE(v.nivel);
         const d = document.createElement('div');
         d.className = 'tienda-item traje' + (tiene ? ' tiene' : '');
-        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : `Gratis en el nivel ${v.nivel}`}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : `${WWIconos.html('moneda')}${precio}`}</button>`;
+        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : `Gratis en el nivel ${v.nivel}`}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : `${WWIconos.html('moneda')}${precio}`}</button>`;
         const b = d.querySelector('button');
         if (!tiene) b.disabled = p.monedas < precio;
         if (tiene && p.sombrero === k) b.disabled = true;
@@ -1784,7 +1784,7 @@
         const d = document.createElement('div');
         d.className = 'tienda-item traje especial' + (tiene ? ' tiene' : '') + (v.especial.apoyo ? ' apoyo' : '');
         const sub = v.especial.apoyo ? 'Invitale un mate a Silabo: para quien quiera bancar el juego' : `Temporada: ${v.especial.temporada}`;
-        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : sub}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : v.especial.precio}</button>`;
+        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : sub}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : v.especial.precio}</button>`;
         const b = d.querySelector('button');
         if (tiene && p.sombrero === k) b.disabled = true;
         b.addEventListener('click', () => {
@@ -2175,7 +2175,7 @@
         const hab = this.tieneTraje(k);
         b.className = 'sombrero' + (p.sombrero === k ? ' activo' : '');
         b.disabled = !hab;
-        b.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno }))}</span>${v.nombre}<small>${hab ? '' : 'NV ' + v.nivel}</small>`;
+        b.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span>${v.nombre}<small>${hab ? '' : 'NV ' + v.nivel}</small>`;
         b.addEventListener('click', () => { p.sombrero = k; Estado.guardar(); for (const m of ['titulo', 'menu', 'juego']) this.magos[m].setPaleta(k); Audio.click(); this.verAjustes(); });
         cont.appendChild(b);
       }

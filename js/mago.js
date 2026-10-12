@@ -12,17 +12,17 @@
   // Paletas desbloqueables por nivel (las claves se mantienen por compatibilidad con perfiles guardados)
   const PALETAS = {
     turquesa:  { nombre: 'Clásico', nivel: 1, c: {} },
-    esmeralda: { nombre: 'Bosque', nivel: 3, c: { hat: '#4f7a3a', hatSh: '#3b5d2b', robe: '#6b4a2f', robeSh: '#543a24', shoe: '#2f4a3a', band: '#e0b25a', hem: '#e0b25a', starRobe: '#e0b25a' } },
-    purpura:   { nombre: 'Ocaso', nivel: 5, c: { hat: '#8a4f8f', hatSh: '#6b3a70', robe: '#c46a4a', robeSh: '#a2553a', shoe: '#3f2a4a', band: '#ffd28a', hem: '#ffd28a', starRobe: '#ffe2a8' } },
-    rubi:      { nombre: 'Real', nivel: 8, c: { hat: '#3a3f8f', hatSh: '#2b2f70', robe: '#8f2f4a', robeSh: '#70233a', shoe: '#1f2347', band: '#f5d06b', hem: '#f5d06b', starRobe: '#f5d06b' } },
-    dorado:    { nombre: 'Dorado', nivel: 12, c: { hat: '#d9a441', hatSh: '#b4842c', robe: '#2c4d58', robeSh: '#223d46', shoe: '#1c2f38', band: '#fff1bf', hem: '#fff1bf', starRobe: '#fff1bf' } },
-    arcoiris:  { nombre: 'Bruma', nivel: 16, c: { hat: '#dfebd6', hatSh: '#bbd0b9', robe: '#67948f', robeSh: '#557d79', shoe: '#2c4d58', band: '#e8907a', hem: '#e8907a', starRobe: '#f3f6ee' } },
+    esmeralda: { estilo: { sombrero: 'hojas', motivo: 'hojas', punta: 'hoja', barba: 'rulos', barbaExtra: 'rulos', pecas: true }, nombre: 'Bosque', nivel: 3, c: { hat: '#4f7a3a', hatSh: '#3b5d2b', robe: '#6b4a2f', robeSh: '#543a24', shoe: '#2f4a3a', band: '#e0b25a', hem: '#e0b25a', starRobe: '#9fc27a' } },
+    purpura:   { estilo: { sombrero: 'franjas', motivo: 'franjas', tonos: ['#ffd28a', '#8a4f8f'], bufanda: ['#ffd28a', '#8a4f8f'], punta: 'sol', barbaExtra: 'cuentas', metal: '#ffd28a' }, nombre: 'Ocaso', nivel: 5, c: { hat: '#8a4f8f', hatSh: '#6b3a70', robe: '#c46a4a', robeSh: '#a2553a', shoe: '#3f2a4a', band: '#ffd28a', hem: '#ffd28a', starRobe: '#ffe2a8' } },
+    rubi:      { estilo: { sombrero: 'corona', motivo: 'armino', capa: '#2b2f70', punta: 'orbe', barba: 'bifida', bigote: 'manubrio' }, nombre: 'Real', nivel: 8, c: { hat: '#3a3f8f', hatSh: '#2b2f70', robe: '#8f2f4a', robeSh: '#70233a', shoe: '#1f2347', band: '#f5d06b', hem: '#f3f6ee', starRobe: '#f5d06b' } },
+    dorado:    { estilo: { sombrero: 'gema', motivo: 'runas', anteojos: '#f2c66d', mano: 'libro', punta: 'cristal', barbaExtra: 'trenza', nariz: 17 }, nombre: 'Dorado', nivel: 12, c: { hat: '#d9a441', hatSh: '#b4842c', robe: '#2c4d58', robeSh: '#223d46', shoe: '#1c2f38', band: '#fff1bf', hem: '#fff1bf', starRobe: '#f2c66d', star: '#bff0ff' } },
+    arcoiris:  { estilo: { forma: 'blando', sombrero: 'nube', motivo: 'nubes', bufanda: ['#e8907a', '#f3f6ee'], barba: 'rulos' }, nombre: 'Bruma', nivel: 16, c: { hat: '#dfebd6', hatSh: '#bbd0b9', robe: '#67948f', robeSh: '#557d79', shoe: '#2c4d58', band: '#e8907a', hem: '#e8907a', starRobe: '#f3f6ee', nose: '#f0b4a2', noseHi: '#fbd9cd' } },
     // de nivel alto: gratis al llegar, o se adelantan con monedas (nivel × 80)
-    aurora:     { nombre: 'Aurora', nivel: 20, c: { hat: '#4fa38f', hatSh: '#3b8474', robe: '#2b3f7a', robeSh: '#22325f', band: '#c9b6ff', hem: '#c9b6ff', starRobe: '#e2d6ff', shoe: '#1f2a52' } },
-    hongo:      { nombre: 'Hongo del claro', nivel: 25, c: { hat: '#d9574a', hatSh: '#b4443a', robe: '#efe3c8', robeSh: '#d6c7a5', band: '#f3f6ee', hem: '#d9574a', starRobe: '#d9574a', shoe: '#7a5a3c' } },
-    brasa:      { nombre: 'Brasa', nivel: 30, c: { hat: '#c46a4a', hatSh: '#a2553a', robe: '#3a3138', robeSh: '#2b242a', band: '#f2c66d', hem: '#f2a14a', starRobe: '#f2a14a', shoe: '#1f1a1e' } },
-    medianoche: { nombre: 'Medianoche', nivel: 35, c: { hat: '#1f2a52', hatSh: '#151d3b', robe: '#2c3566', robeSh: '#212850', band: '#dfe4ef', hem: '#dfe4ef', starRobe: '#f3f6ff', shoe: '#11162c', star: '#f3f6ff' } },
-    archimago:  { nombre: 'Archimago Blanco', nivel: 40, c: { hat: '#efe9dc', hatSh: '#d8cfba', robe: '#e2e4e6', robeSh: '#c4c8cc', band: '#f2c66d', hem: '#f2c66d', starRobe: '#d9a441', shoe: '#8a7a5a' } },
+    aurora:     { estilo: { sombrero: 'aurora', motivo: 'ondas', tonos: ['#7fd6c2', '#c9b6ff'], punta: 'cristal', barbaExtra: 'cuentas', metal: '#c9b6ff' }, nombre: 'Aurora', nivel: 20, c: { hat: '#4fa38f', hatSh: '#3b8474', robe: '#2b3f7a', robeSh: '#22325f', band: '#c9b6ff', hem: '#c9b6ff', starRobe: '#e2d6ff', shoe: '#1f2a52', star: '#e2d6ff' } },
+    hongo:      { estilo: { forma: 'hongo', sombrero: 'lunares', motivo: 'lunares', mano: 'hongo', nariz: 22, pecas: true }, nombre: 'Hongo del claro', nivel: 25, c: { hat: '#d9574a', hatSh: '#b4443a', robe: '#efe3c8', robeSh: '#d6c7a5', band: '#f3f6ee', hem: '#d9574a', starRobe: '#d9574a', shoe: '#7a5a3c', nose: '#e07a68' } },
+    brasa:      { estilo: { sombrero: 'llama', motivo: 'llamas', punta: 'llama', barba: 'bifida' }, nombre: 'Brasa', nivel: 30, c: { hat: '#c46a4a', hatSh: '#a2553a', robe: '#3a3138', robeSh: '#2b242a', band: '#f2c66d', hem: '#3a3138', starRobe: '#f2a14a', shoe: '#1f1a1e', nose: '#d9574a', noseHi: '#f2a08f' } },
+    medianoche: { estilo: { sombrero: 'luna', motivo: 'constelacion', capa: '#4a3f8f', mano: 'farol', punta: 'luna', barbaExtra: 'trenza', metal: '#dfe4ef' }, nombre: 'Medianoche', nivel: 35, c: { hat: '#1f2a52', hatSh: '#151d3b', robe: '#2c3566', robeSh: '#212850', band: '#dfe4ef', hem: '#dfe4ef', starRobe: '#f3f6ff', shoe: '#11162c', star: '#f3f6ff' } },
+    archimago:  { estilo: { forma: 'dormilon', sombrero: 'runas', motivo: 'runas', capa: '#d9a441', barbaFin: 214, punta: 'orbe', barbaExtra: 'trenza', bigote: 'manubrio' }, nombre: 'Archimago Blanco', nivel: 40, c: { hat: '#efe9dc', hatSh: '#d8cfba', robe: '#e2e4e6', robeSh: '#c4c8cc', band: '#d9a441', hem: '#f2c66d', starRobe: '#b4842c', shoe: '#8a7a5a' } },
     // especiales: solo se ven distinto, no dan ventaja. Se compran (Play) o vienen con el Pase en su temporada
     ceibo:       { adorno: 'flor', nombre: 'Ceibo', especial: { sku: 'traje_ceibo', precio: 'USD 1,99', temporada: 'Primavera' }, c: { hat: '#c9485b', hatSh: '#a33849', robe: '#4f7a3a', robeSh: '#3b5d2b', band: '#f2c66d', hem: '#f2c66d', starRobe: '#f2c66d', shoe: '#5c4330' } },
     albiceleste: { adorno: 'sol', nombre: 'Albiceleste', especial: { sku: 'traje_albiceleste', precio: 'USD 1,99', temporada: 'Fechas patrias' }, c: { hat: '#75aadb', hatSh: '#5b8fc0', robe: '#f3f6ee', robeSh: '#d7dfd6', band: '#f2c66d', hem: '#75aadb', starRobe: '#f2c66d', shoe: '#3f5f80' } },
@@ -65,6 +65,7 @@
         etapa: e.etapa, varita: e.varita * estirar, anguloVarita: e.angulo || D.OFICIAL.anguloVarita,
         colores: (PALETAS[this.paleta] || PALETAS.turquesa).c,
         adorno: (PALETAS[this.paleta] || {}).adorno,
+        estilo: (PALETAS[this.paleta] || {}).estilo,
       });
       this.dibujo.innerHTML = D.mago(o);
       this.nariz = this.dibujo.querySelector('.nariz');

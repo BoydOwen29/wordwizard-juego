@@ -58,7 +58,9 @@
   /* ---------- Estilo de los trajes (o.estilo): diseño propio, no solo color. Todo es opcional:
      { forma, barbaFin, sombrero: 'hojas'|'franjas'|'corona'|'gema'|'nube'|'aurora'|'lunares'|'llama'|'luna'|'runas',
        motivo: 'hojas'|'franjas'|'armino'|'runas'|'nubes'|'ondas'|'lunares'|'llamas'|'constelacion', tonos: [c1, c2],
-       capa: color, bufanda: [color, raya], anteojos: color, mano: 'libro'|'farol'|'hongo', punta: 'hoja'|'sol'|'orbe'|'cristal'|'llama'|'luna' } */
+       capa: color, bufanda: [color, raya], anteojos: color, mano: 'libro'|'farol'|'hongo', punta: 'hoja'|'sol'|'orbe'|'cristal'|'llama'|'luna',
+       barba: 'bifida'|'rulos' (corte), barbaExtra: 'trenza'|'cuentas'|'rulos', metal: color, bigote: 'manubrio', nariz: radio (19 = normal), pecas: true }
+     La esencia no se toca: barba blanca y nariz redonda. El tono de la nariz va en los colores (nose, noseHi). */
   let EST = null;
   const hojaD = 'M0 -8 C6 -4 6 4 0 9 C-6 4 -6 -4 0 -8Z';
   const hoja = (x, y, rot, k, fill) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${k})"><path d="${hojaD}" fill="${fill}" stroke="${L}" stroke-width="${(2.2 / k).toFixed(2)}" stroke-linejoin="round"/><path d="M0 -5 L0 7" stroke="${somb(fill, .3)}" stroke-width="${(1.4 / k).toFixed(2)}" stroke-linecap="round"/></g>`;
@@ -259,13 +261,29 @@
         </g>
         <path d="M78 156 C82 ${y - 30} 88 ${y - 16} 96 ${y - 6} M100 162 C100 ${y - 34} 104 ${y - 18} 112 ${y - 8} M121 156 C123 172 123 ${y - 26} 121 ${y - 14}" stroke="${somb(C.beardSh, .12)}" stroke-width="2.4" stroke-linecap="round" fill="none"/></g>`;
     }
-    const fondo = redonda
+    const corte = EST && EST.barba;
+    const fondo = redonda && corte === 'bifida' ? `${64 - a} ${y} 84 ${y + 9} Q93 ${y + 12} 100 ${y + 1} Q107 ${y + 12} 116 ${y + 9} C${136 + a} ${y} ${156 + a} 160 ${146 + a} 118 Z`
+      : redonda && corte === 'rulos' ? `${54 - a} ${y - 6} 68 ${y - 1} Q74 ${y + 10} 84 ${y + 4} Q92 ${y + 13} 100 ${y + 5} Q108 ${y + 13} 116 ${y + 4} Q126 ${y + 10} 132 ${y - 1} C${146 + a} ${y - 6} ${156 + a} 160 ${146 + a} 118 Z`
+      : redonda
       ? `${70 - a} ${y + 4} 100 ${y + 4} C${130 + a} ${y + 4} ${156 + a} 160 ${146 + a} 118 Z`
       : `${54 - a} ${y - 30} 80 ${y - 6} C98 ${y + 6} 124 ${y + 8} 148 ${y - 2} C${136 + a} ${y - 14} ${144 + a} ${y - 50} ${146 + a} 118 Z`;
     return `<g class="barba">${S(`M${54 - a} 118 C${44 - a} 160 ` + fondo, C.beard)}
       ${redonda ? F(`M128 124 C140 160 136 ${y - 16} 112 ${y + 2} C132 ${y} ${146 + a} ${y - 30} ${146 + a} 120 Z`, C.beardSh)
         : F(`M126 124 C136 156 130 ${y - 40} 132 ${y - 4} C138 ${y - 2} 144 ${y - 2} 148 ${y - 2} C${136 + a} ${y - 14} ${144 + a} ${y - 50} ${146 + a} 120 Z`, C.beardSh)}
-      <path d="M76 160 C80 ${y - 28} 88 ${y - 12} 102 ${y - 2} M110 166 C110 ${y - 32} 114 ${y - 16} 126 ${y - 8}" stroke="${C.strand}" stroke-width="3.6" stroke-linecap="round" fill="none"/></g>`;
+      <path d="M76 160 C80 ${y - 28} 88 ${y - 12} 102 ${y - 2} M110 166 C110 ${y - 32} 114 ${y - 16} 126 ${y - 8}" stroke="${C.strand}" stroke-width="3.6" stroke-linecap="round" fill="none"/>${redonda ? extrasBarba(y) : ''}</g>`;
+  }
+  /** Lo que se le cuelga a la barba: trenza con anillo o cuentas. EST.adornoBarba = color del metal. */
+  function extrasBarba(y) {
+    const e = EST && EST.barbaExtra, metal = (EST && EST.metal) || '#f2c66d';
+    if (e === 'rulos') return `<path d="M72 ${y - 22} c-4 0 -5 6 -1 7 M90 ${y - 12} c-4 0 -5 6 -1 7 M122 ${y - 18} c4 0 5 6 1 7" stroke="${C.strand}" stroke-width="3" stroke-linecap="round" fill="none"/>`;
+    if (e === 'trenza') {
+      const lobulo = (yy, rot) => `<ellipse cx="100" cy="${yy}" rx="6.5" ry="5" transform="rotate(${rot} 100 ${yy})" fill="${C.beard}" stroke="${L}" stroke-width="3"/>`;
+      return `${lobulo(y + 22, 14)}${lobulo(y + 15, -14)}${lobulo(y + 8, 14)}
+        <path d="M95 ${y + 31} C93 ${y + 38} 97 ${y + 41} 100 ${y + 37} C103 ${y + 41} 107 ${y + 38} 105 ${y + 31} Z" fill="${C.beard}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>
+        <rect x="93.5" y="${y + 25}" width="13" height="7" rx="2.5" fill="${metal}" stroke="${L}" stroke-width="2.6"/>`;
+    }
+    if (e === 'cuentas') return [[84, y - 6], [84, y + 1], [116, y - 6], [116, y + 1]].map(([x, yy]) => `<circle cx="${x}" cy="${yy}" r="3.4" fill="${metal}" stroke="${L}" stroke-width="2"/>`).join('');
+    return '';
   }
 
   function cara(cy, r) {
@@ -280,8 +298,11 @@
         <path d="M130 ${cy + 24} C135 ${cy + 22} 136 ${cy + 17} 132 ${cy + 15}" stroke="${L}" stroke-width="3" stroke-linecap="round" fill="none"/>
         <path d="M108 ${cy + 22.5} C116 ${cy + 25} 124 ${cy + 26} 129 ${cy + 25}" stroke="${C.beardSh}" stroke-width="2.4" stroke-linecap="round" fill="none"/>`;
     }
-    return `<g class="nariz"><circle cx="98" cy="${cy}" r="${r}" fill="${C.nose}" stroke="${L}" stroke-width="5.5"/><ellipse cx="91" cy="${cy - 7}" rx="6" ry="4.5" fill="${C.noseHi}"/></g>
-      ${S(`M98 ${cy + 18} C86 ${cy + 9} 68 ${cy + 13} 63 ${cy + 25} C76 ${cy + 28} 88 ${cy + 25} 98 ${cy + 20} C108 ${cy + 25} 120 ${cy + 28} 133 ${cy + 25} C128 ${cy + 13} 110 ${cy + 9} 98 ${cy + 18} Z`, C.beard, 4.5)}`;
+    const pecas = EST && EST.pecas ? [[89, cy + 3], [95, cy + 7], [103, cy + 6], [108, cy + 1], [100, cy + 1]].map(([x, yy]) => `<circle cx="${x}" cy="${yy}" r="1.5" fill="${somb(C.nose, .35)}"/>`).join('') : '';
+    const rulo = (x, d) => `<path d="M${x} ${cy + 25} C${x - d * 9} ${cy + 25} ${x - d * 11} ${cy + 15} ${x - d * 4} ${cy + 13} C${x + d * 1} ${cy + 12} ${x + d * 2} ${cy + 18} ${x - d * 2} ${cy + 19}" stroke="${L}" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M${x} ${cy + 25} C${x - d * 9} ${cy + 25} ${x - d * 11} ${cy + 15} ${x - d * 4} ${cy + 13} C${x + d * 1} ${cy + 12} ${x + d * 2} ${cy + 18} ${x - d * 2} ${cy + 19}" stroke="${C.beard}" stroke-width="3.4" stroke-linecap="round" fill="none"/>`;
+    const manubrio = EST && EST.bigote === 'manubrio' ? rulo(65, 1) + rulo(131, -1) : '';
+    return `<g class="nariz"><circle cx="98" cy="${cy}" r="${r}" fill="${C.nose}" stroke="${L}" stroke-width="5.5"/><ellipse cx="91" cy="${cy - 7}" rx="6" ry="4.5" fill="${C.noseHi}"/>${pecas}</g>
+      ${manubrio}${S(`M98 ${cy + 18} C86 ${cy + 9} 68 ${cy + 13} 63 ${cy + 25} C76 ${cy + 28} 88 ${cy + 25} 98 ${cy + 20} C108 ${cy + 25} 120 ${cy + 28} 133 ${cy + 25} C128 ${cy + 13} 110 ${cy + 9} 98 ${cy + 18} Z`, C.beard, 4.5)}`;
   }
 
   const FORMAS = {
@@ -328,6 +349,7 @@
     EST = o.estilo || null;
     if (EST && EST.forma) o = Object.assign({}, o, { forma: EST.forma });
     if (EST && EST.barbaFin) o = Object.assign({}, o, { barbaFin: EST.barbaFin });
+    if (EST && EST.nariz) o = Object.assign({}, o, { nariz: EST.nariz });
     const yHem = 230, yTop = 150;
     P = !!o.pulido;
     const k = o.cabeza || 1;
