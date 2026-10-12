@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.34.0',
+    version: '2.35.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -468,6 +468,7 @@
     /** Hace lo que haría "volver" en la pantalla actual. false = ya estamos en el inicio (salir). */
     volver() {
       const m = $('modal');
+      if (m && !m.classList.contains('oculto') && this.cerrarTraje()) return true;
       if (m && !m.classList.contains('oculto')) {
         // un aviso con un solo botón se cierra; si hay que elegir (reintentar o rendirse), atrás no decide por vos
         const caja = $('modal-caja'), bs = caja.querySelectorAll('.fila:last-child .btn');
@@ -1764,6 +1765,7 @@
         d.className = 'tienda-item traje' + (tiene ? ' tiene' : '');
         d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : `Gratis en el nivel ${v.nivel}`}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : `${WWIconos.html('moneda')}${precio}`}</button>`;
         const b = d.querySelector('button');
+        d.addEventListener('click', (e) => { if (!e.target.closest('button')) this.verTraje(k, d); });
         if (!tiene) b.disabled = p.monedas < precio;
         if (tiene && p.sombrero === k) b.disabled = true;
         b.addEventListener('click', () => {
@@ -1790,6 +1792,7 @@
         const sub = v.especial.apoyo ? 'Invitale un mate a Silabo: para quien quiera bancar el juego' : `Temporada: ${v.especial.temporada}`;
         d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : sub}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : v.especial.precio}</button>`;
         const b = d.querySelector('button');
+        d.addEventListener('click', (e) => { if (!e.target.closest('button')) this.verTraje(k, d); });
         if (tiene && p.sombrero === k) b.disabled = true;
         b.addEventListener('click', () => {
           Audio.click();
@@ -1805,6 +1808,36 @@
       pase.addEventListener('click', () => { Audio.click(); this.avisoPase(); });
       cont.insertBefore(pase, cont.firstChild);
     },
+
+    /**
+     * El traje en grande, encima de la tienda: Silabo vivo con ese traje, qué trae y el mismo botón de la fila
+     * (comprar, usar). "Volver" o el atrás de Android lo cierran y queda la tienda como estaba.
+     */
+    verTraje(k, fila) {
+      const v = Magos.PALETAS[k], caja = $('modal-caja'), p = Estado.perfil;
+      if (!v || !caja) return;
+      Audio.click();
+      this.cerrarTraje();
+      const bFila = fila.querySelector('button');
+      const etiqueta = fila.querySelector('small') ? fila.querySelector('small').textContent : '';
+      const capa = document.createElement('div');
+      capa.className = 'vista-traje';
+      capa.innerHTML = `<div class="vista-traje-escena"><div class="vista-traje-mago"></div></div>
+        <h3>${esc(v.nombre.toUpperCase())}</h3><p class="vista-traje-sub">${esc(etiqueta)}</p>${v.desc ? `<p>${esc(v.desc)}</p>` : ''}
+        <div class="fila"><button class="btn btn-secundario" data-volver>Volver</button><button class="btn btn-primario" data-accion></button></div>`;
+      const acc = capa.querySelector('[data-accion]');
+      acc.innerHTML = bFila.innerHTML === '✓' ? '✓' : bFila.innerHTML;
+      acc.disabled = bFila.disabled;
+      if (bFila.classList.contains('btn-secundario')) acc.classList.replace('btn-primario', 'btn-secundario');
+      acc.addEventListener('click', () => { this.cerrarTraje(); bFila.click(); });
+      capa.querySelector('[data-volver]').addEventListener('click', () => { Audio.click(); this.cerrarTraje(); });
+      caja.appendChild(capa);
+      caja.scrollTop = 0;
+      const mg = new Magos.Mago(capa.querySelector('.vista-traje-mago'), { paleta: k, etapa: Magos.etapaPorNivel(Math.max(p.nivel, 10)) });
+      mg.chispas(14, .5, .3);
+      WWIconos.pintar(capa);
+    },
+    cerrarTraje() { const c = document.querySelector('#modal-caja .vista-traje'); if (c) { c.remove(); return true; } return false; },
 
     /** Un traje es del jugador si llegó al nivel o si lo compró con monedas. */
     tieneTraje(k) {

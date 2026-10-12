@@ -1269,3 +1269,17 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .rk-corte { text-align: center; color: #eef4ec; text-shadow: 0 2px 0 rgba(22,38,44,.7); font: 700 18px var(--display); letter-spacing: 5px; line-height: 1; margin: 2px 0; }
 .rk-frase { margin-top: 8px; border-radius: 14px; padding: 9px 12px; background: rgba(242,198,109,.14); border: 2px dashed rgba(242,198,109,.55); color: #f6e6c0; font-size: calc(13px * var(--letra, 1)); text-align: center; }
 #ranking-contenido { display: flex; flex-direction: column; gap: 8px; }
+
+/* tienda: el traje en grande */
+.tienda-item.traje { cursor: pointer; }
+.tienda-item.traje:active:not(:has(button:active)) { transform: scale(.98); }
+.tienda-item.traje .mini-mago { position: relative; }
+.tienda-item.traje .mini-mago::after { content: ''; position: absolute; right: -4px; bottom: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--oro) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Ccircle cx='6' cy='6' r='3.4' fill='none' stroke='%232a2412' stroke-width='1.8'/%3E%3Cpath d='M8.6 8.6 L11.5 11.5' stroke='%232a2412' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/10px no-repeat; border: 2px solid var(--borde-m); }
+.vista-traje { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 18px 18px 16px; background: var(--piedra); border-radius: inherit; overflow-y: auto; animation: aparece .25s ease; }
+.vista-traje-escena { width: 100%; height: 300px; flex: none; border-radius: 16px; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(70% 60% at 50% 45%, rgba(242,198,109,.18), transparent 70%), linear-gradient(180deg, #3f666c, #2c4d58); border: 3px solid var(--borde-p); }
+.vista-traje-mago { width: 230px; height: 290px; }
+.vista-traje-mago .mago-dibujo, .vista-traje-mago svg { width: 100%; height: 100%; }
+.vista-traje h3 { margin: 10px 0 0; }
+.vista-traje-sub { margin: 0 !important; color: var(--oro) !important; font-size: calc(13px * var(--letra, 1)); }
+.vista-traje .fila { margin-top: auto; padding-top: 12px; width: 100%; display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+@media (max-height: 700px) { .vista-traje-escena { height: 230px; } .vista-traje-mago { width: 180px; height: 225px; } }
