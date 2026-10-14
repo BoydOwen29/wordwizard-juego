@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.37.4',
+    version: '2.37.5',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },

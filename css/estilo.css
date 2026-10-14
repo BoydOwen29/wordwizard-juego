@@ -1342,3 +1342,7 @@ body.con-pase .pase-brillo { display: block; }
 @media (prefers-reduced-motion: reduce) { .hud-yo.nube-guardando .hud-nube { animation: none; } }
 .hud-estado.pendiente { color: #b9cbbf; }
 .btn-cuenta-grande { display: block; width: 100%; margin: 4px 0 12px; }
+
+/* botones de los avisos: texto siempre centrado (en iPhone quedaba arriba y con tres líneas se salía) */
+.modal-caja .fila .btn { display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.15; padding: 10px 8px 13px; min-height: 56px; text-wrap: balance; }
+.modal-caja .fila:has(> .btn:nth-child(3)) .btn { font-size: calc(15px * var(--letra, 1)); padding-inline: 6px; }
