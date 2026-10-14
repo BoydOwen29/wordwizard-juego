@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.37.2',
+    version: '2.37.3',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -535,6 +535,7 @@
       $('hud-nivel').textContent = p.nivel;
       $('hud-yo').classList.toggle('con-pase', pase);
       document.body.classList.toggle('con-pase', pase);
+      this.pintarNube();
       $('hud-monedas').textContent = p.monedas;
       $('menu-nombre').textContent = p.nombre;
       $('menu-titulo').textContent = WW.tituloNivel(p.nivel);
@@ -2354,6 +2355,32 @@
         else if (!ocupado()) this.sincronizarCuenta();
       });
       this._vuelta = WWCuenta.alVolver();   // vuelve de la pantalla de Google: se termina cuando el título esté listo
+      WWCuenta.alEstado((clave, estado, subio) => { if (Estado.perfil && clave === this.claveNube()) this.pintarNube(estado, subio); });
+    },
+
+    /**
+     * Marca de cuenta (lab/cuenta.html, opción C elegida por Owen el 14/10): una nube al final del chip de arriba.
+     * Menta guardado, gris sin señal, coral si hay que volver a entrar. Cuando sube algo, el subtítulo dice
+     * "☁ Guardado" un ratito y vuelve al título de nivel; sin señal o con la sesión vencida, el subtítulo lo avisa.
+     */
+    pintarNube(estado, subio) {
+      const hud = $('hud-yo'); if (!hud || !Estado.perfil) return;
+      const c = this.tieneCuenta() && WWCuenta.de(this.claveNube());
+      if (estado) this._nube = estado;
+      if (c && c.perdida) this._nube = 'vencida';
+      let n = hud.querySelector('.hud-nube');
+      if (!c) { if (n) n.remove(); hud.classList.remove('nube-guardando', 'nube-pendiente', 'nube-vencida'); return; }
+      if (!n) { n = document.createElement('span'); n.className = 'hud-nube'; n.innerHTML = '<svg viewBox="0 0 18 12" aria-hidden="true"><path d="M5 11h9a3.4 3.4 0 0 0 .6-6.7A4.6 4.6 0 0 0 5.8 3.2 3.9 3.9 0 0 0 5 11z"/></svg>'; hud.appendChild(n); }
+      const e = this._nube || 'guardado';
+      for (const k of ['guardando', 'pendiente', 'vencida']) hud.classList.toggle('nube-' + k, e === k);
+      const t = $('hud-titulo'), titulo = WW.tituloNivel(Estado.perfil.nivel);
+      clearTimeout(this._tNube);
+      if (e === 'pendiente') t.innerHTML = '<span class="hud-estado pendiente">☁ Sin señal</span>';
+      else if (e === 'vencida') t.innerHTML = '<span class="hud-estado vencida">! Volvé a entrar</span>';
+      else if (e === 'guardado' && subio) {
+        t.innerHTML = '<span class="hud-estado">☁ Guardado</span>';
+        this._tNube = setTimeout(() => { $('hud-titulo').textContent = WW.tituloNivel(Estado.perfil.nivel); }, 2200);
+      } else if (e !== 'guardando') t.textContent = titulo;
     },
     tieneCuenta() { return !!(window.WWCuenta && Estado.perfil && WWCuenta.de(this.claveNube())); },
 

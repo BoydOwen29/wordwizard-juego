@@ -222,28 +222,40 @@
    * Sincroniza el mago: devuelve {perfil} si cambió acá (hay que aplicarlo), {} si no, o null si no se pudo.
    * soloSubir: durante una partida no se toca el perfil de acá; si otro dispositivo guardó en el medio, se espera.
    */
+  // la marca de cuenta del juego (arriba a la izquierda) escucha esto: 'guardando', 'guardado' (subio: si subió algo),
+  // 'pendiente' (sin señal) o 'vencida' (hay que volver a entrar)
+  let avisar = null;
+  function alEstado(fn) { avisar = fn; }
+  const aviso = (clave, estado, subio) => { if (avisar) try { avisar(clave, estado, !!subio); } catch (e) { /* nada */ } };
+
   function sincronizar(clave, perfil, opc) {
     if (!activo() || !de(clave) || enCurso) return Promise.resolve(null);
     opc = opc || {};
+    aviso(clave, 'guardando');
+    let subio = false;
     enCurso = (async () => {
       const s = await R().sesion(clave);
       for (let intento = 0; intento < 3; intento++) {
         const est = sinc(clave);
         const nube = await bajarCon(s.token);
-        if (!nube) { if (await subir(s.token, perfil, 0, opc.keepalive)) { anotarSinc(clave, 1, perfil); return {}; } continue; }
+        if (!nube) { if (await subir(s.token, perfil, 0, opc.keepalive)) { anotarSinc(clave, 1, perfil); subio = true; return {}; } continue; }
         if (est && nube.rev === est.rev) {
           if (igual(perfil, est.base)) return {};
-          if (await subir(s.token, perfil, nube.rev, opc.keepalive)) { anotarSinc(clave, nube.rev + 1, perfil); return {}; }
+          if (await subir(s.token, perfil, nube.rev, opc.keepalive)) { anotarSinc(clave, nube.rev + 1, perfil); subio = true; return {}; }
           continue;
         }
         if (opc.soloSubir) return {};
         const junto = est ? window.WWEstado.fusionar(est.base, perfil, nube.datos) : window.WWEstado.fusionar(nube.datos, perfil, nube.datos);
         junto.nombre = perfil.nombre; junto.creado = perfil.creado;
         if (igual(junto, nube.datos)) { anotarSinc(clave, nube.rev, junto); return { perfil: junto }; }
-        if (await subir(s.token, junto, nube.rev)) { anotarSinc(clave, nube.rev + 1, junto); return { perfil: junto }; }
+        if (await subir(s.token, junto, nube.rev)) { anotarSinc(clave, nube.rev + 1, junto); subio = true; return { perfil: junto }; }
       }
       return null;
-    })().catch(() => null).finally(() => { enCurso = null; });
+    })().catch(() => null).then((r) => {
+      const c = de(clave);
+      aviso(clave, r ? 'guardado' : c && c.perdida ? 'vencida' : 'pendiente', subio);
+      return r;
+    }).finally(() => { enCurso = null; });
     return enCurso;
   }
 
@@ -287,5 +299,5 @@
     return ok;
   }
 
-  window.WWCuenta = { activo, metodo, revisarVinculo, de, hayAlguna, preparar: prepararFusion, google, pedirCodigo, verificar, alVolver, completar, vincular, empezar, adoptar, sincronizar, programar, vaciar, compras, salir, borrar };
+  window.WWCuenta = { activo, metodo, revisarVinculo, alEstado, de, hayAlguna, preparar: prepararFusion, google, pedirCodigo, verificar, alVolver, completar, vincular, empezar, adoptar, sincronizar, programar, vaciar, compras, salir, borrar };
 })();

@@ -1328,3 +1328,16 @@ body.con-pase .pase-brillo { display: block; }
 .cuenta-caja .cuenta-aviso { color: #ffd9cf; }
 .cuenta-caja .btn { margin-top: 4px; }
 .btn-link-cuenta { display: block; margin: 12px auto 0; background: none; border: 0; color: var(--bronce-hi); font: 800 calc(14px * var(--letra, 1)) var(--texto-f); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px 10px; }
+
+/* ---------- marca de cuenta en el chip de arriba (v2.37, opción C de lab/cuenta.html) ---------- */
+.hud-nube { flex: none; margin-left: auto; display: grid; place-items: center; opacity: .9; }
+.hud-nube svg { width: 18px; height: 12px; display: block; }
+.hud-nube path { fill: #9ee6c4; stroke: #16262c; stroke-width: 1.4; transition: fill .3s; }
+.hud-yo.nube-pendiente .hud-nube path { fill: #8fa39a; }
+.hud-yo.nube-vencida .hud-nube path { fill: var(--coral, #e8907a); }
+.hud-yo.nube-guardando .hud-nube { animation: nube-latido 1s ease-in-out infinite; }
+@keyframes nube-latido { 50% { transform: translateY(-2px) scale(1.12); } }
+.hud-estado { color: #9ee6c4; }
+.hud-estado.vencida { color: #ffb8a6; }
+@media (prefers-reduced-motion: reduce) { .hud-yo.nube-guardando .hud-nube { animation: none; } }
+.hud-estado.pendiente { color: #b9cbbf; }
