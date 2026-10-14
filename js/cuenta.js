@@ -160,10 +160,8 @@
     const s0 = clave && R().sesiones()[clave];
     if (!s0 || !s0.refresh) return null;
     try {
-      const r = await api('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: JSON.stringify({ refresh_token: s0.refresh }) });
-      const s = r.ok && sesionDe(r.j);
-      if (!s) return null;
-      R().guardarSesion(clave, Object.assign({}, s0, s));   // la sesión renovada es la del mago, con o sin vínculo
+      // por ranking.js: una sola renovación a la vez (renovar en paralelo con el mismo token hacía perder la cuenta)
+      const s = await R().sesion(clave, { renovar: true });
       const u = await api('/auth/v1/user', { method: 'GET' }, s.token);
       return u.ok && u.j && u.j.is_anonymous === false ? { sesion: s } : null;
     } catch (e) { return null; }

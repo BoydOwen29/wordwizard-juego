@@ -43,11 +43,31 @@
     return { token: j.access_token, refresh: j.refresh_token, vence: (j.expires_at || 0) * 1000, id: j.user && j.user.id };
   }
 
-  async function sesion(clave) {
-    const todas = leer(LS_SESIONES, {});
-    let s = todas[clave];
-    if (s && s.vence > Date.now() + 60000) return s;
-    let nueva = s && s.refresh ? await auth('token?grant_type=refresh_token', { refresh_token: s.refresh }) : null;
+  // Renovar la sesión gasta el "refresh token" (Supabase da uno nuevo y el viejo no sirve más). Si dos partes del juego
+  // (o la app y una pestaña de Chrome) renovaban a la vez con el mismo, o la página se cerraba en el medio, la cuenta
+  // quedaba "vencida" y había que volver a entrar (14/10). Por eso: una sola renovación por mago a la vez, con candado
+  // entre pestañas (Web Locks), releyendo lo guardado adentro del candado; y "vencida" solo si Supabase dice que el
+  // token no sirve (400/401/403/404). Sin señal o un error del servidor no hacen perder la cuenta: se reintenta después.
+  const enCurso = {};
+  const conCandado = (nombre, fn) => (navigator.locks && navigator.locks.request ? navigator.locks.request(nombre, fn) : fn());
+  /** La sesión de ese mago, renovada si hace falta. opc.renovar: renovarla sí o sí y sin crear una anónima si no se puede. */
+  function sesion(clave, opc) {
+    const k = clave + (opc && opc.renovar ? ':r' : '');
+    if (!enCurso[k]) enCurso[k] = conCandado('ww-sesion-' + clave, () => renovar(clave, opc || {})).finally(() => { delete enCurso[k]; });
+    return enCurso[k];
+  }
+  async function renovar(clave, opc) {
+    let s = leer(LS_SESIONES, {})[clave];
+    if (s && !opc.renovar && s.vence > Date.now() + 60000) return s;   // otra pestaña ya la renovó
+    let nueva = null;
+    if (s && s.refresh) {
+      const res = await fetch(`${CONFIG.url}/auth/v1/token?grant_type=refresh_token`, { method: 'POST', headers: { apikey: CONFIG.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh }) });
+      if (res.ok) {
+        const j = await res.json();
+        nueva = { token: j.access_token, refresh: j.refresh_token, vence: (j.expires_at || 0) * 1000, id: j.user && j.user.id };
+      } else if (![400, 401, 403, 404].includes(res.status)) throw new Error('sin señal');
+    }
+    if (!nueva && opc.renovar) throw new Error('no se pudo renovar');
     // una cuenta con Google o mail (cuenta.js) nunca se reemplaza por una anónima: si la sesión venció del todo,
     // hay que volver a entrar (el juego lo avisa en Ajustes)
     if (!nueva && s && s.cuenta) { s.perdida = true; guardarSesion(clave, s); throw new Error('sesión vencida'); }
@@ -55,6 +75,7 @@
     if (!nueva) throw new Error('sin sesión');
     const mismo = s && nueva.id === s.id;
     s = Object.assign({}, mismo ? s : {}, nueva, { nombre: mismo ? s.nombre : null, perdida: false });
+    const todas = leer(LS_SESIONES, {});
     todas[clave] = s;
     escribir(LS_SESIONES, todas);
     return s;
