@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.37.3',
+    version: '2.37.4',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -392,6 +392,7 @@
         b.addEventListener('click', () => { Audio.despertar(); this.entrar(n); });
         cont.appendChild(b);
       }
+      this.pintarCuentaTitulo();
     },
 
     entrar(nombre) {
@@ -2385,7 +2386,17 @@
     tieneCuenta() { return !!(window.WWCuenta && Estado.perfil && WWCuenta.de(this.claveNube())); },
 
     /** "Ya tengo cuenta" en el título: solo si las cuentas andan (con conexión al ranking). */
-    pintarCuentaTitulo() { const b = $('btn-cuenta-entrar'); if (b) b.classList.toggle('oculto', !(window.WWCuenta && WWCuenta.activo())); },
+    pintarCuentaTitulo() {
+      const b = $('btn-cuenta-entrar'); if (!b) return;
+      b.classList.toggle('oculto', !(window.WWCuenta && WWCuenta.activo()));
+      // en un dispositivo sin magos (la compu nueva, otro celu), entrar con la cuenta es lo primero que se ofrece
+      const vacio = !Object.keys(Estado.todos()).length;
+      for (const c of ['btn', 'btn-secundario', 'btn-cuenta-grande']) b.classList.toggle(c, vacio);
+      b.classList.toggle('btn-link-cuenta', !vacio);
+      b.textContent = vacio ? '☁️ Entrar con mi cuenta' : '☁️ Ya tengo cuenta';
+      const form = $('form-nombre');
+      if (form && vacio) form.before(b); else if (form) form.after(b);
+    },
     /** Al abrir el título: si volvió de Google, termina de entrar. */
     cuentaAlAbrir() {
       const v = this._vuelta; this._vuelta = null;
@@ -2487,7 +2498,7 @@
     },
     pedirCodigoCuenta(clave, mail) {
       this.modal(`<h3>REVISÁ TU MAIL</h3><div class="modal-silabo" data-pose="happy"></div>
-        <p>Te mandé un código de 6 números (o un link para tocar) a</p><p class="cuenta-mail">${esc(mail)}</p>
+        <p>Te mandé un código (o un link para tocar) a</p><p class="cuenta-mail">${esc(mail)}</p>
         <input class="modal-input cuenta-codigo" id="cu-codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="······">
         <button class="btn btn-primario" id="cu-verificar">Entrar</button>
         <p class="cuenta-nota">¿No llegó? Mirá en spam o <a href="#" id="cu-otra">pedí otro</a>.</p>`, [], { cerrar: true });
@@ -2502,7 +2513,9 @@
         this.toast(r.error === 'codigo' ? 'Ese código no anda o ya venció. Fijate o pedí otro.' : 'No se pudo entrar. Probá de nuevo.');
       };
       $('cu-verificar').addEventListener('click', () => { Audio.click(); verificar(); });
-      $('cu-codigo').addEventListener('input', (e) => { if (e.target.value.replace(/\D/g, '').length === 6) verificar(); });
+      // entra solo cuando dejó de escribir (por si el código viniera más largo que 6)
+      let tCod = null;
+      $('cu-codigo').addEventListener('input', (e) => { clearTimeout(tCod); if (e.target.value.replace(/\D/g, '').length >= 6) tCod = setTimeout(verificar, 700); });
       $('cu-otra').addEventListener('click', (e) => { e.preventDefault(); this.entrarCuenta(clave); setTimeout(() => { const i = $('cu-mail'); if (i) i.value = mail; }, 50); });
     },
 
