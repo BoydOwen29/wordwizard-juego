@@ -1,8 +1,8 @@
 /**
  * Word Wizard — uso anónimo, para el tablero de métricas (tools/tablero.js).
  * Manda, sin esperar respuesta: que se abrió el juego y cada partida terminada (con su modo), junto con un
- * identificador al azar de este dispositivo, la plataforma, la versión y el idioma. Nada personal.
- * Tabla y función: supabase/migrations/20261012220000_actividad.sql. Si falla (sin internet), no pasa nada.
+ * identificador al azar de este dispositivo, la plataforma, la versión, el idioma y la zona horaria. Nada personal.
+ * Tabla y función: supabase/migrations/20261012220000_actividad.sql y 20261014180000_actividad_zona.sql. Si falla (sin internet), no pasa nada.
  */
 (function () {
   'use strict';
@@ -36,13 +36,27 @@
     const R = window.WWRanking;
     if (!R || !R.activo() || !fecha) return;
     const id = dispositivo(); if (!id) return;
+    if (esRobot()) return;
     const idioma = (window.WWI18n && window.WWI18n.idiomaDatos) || 'es';
-    fetch(`${R.CONFIG.url}/rest/v1/rpc/actividad_marcar`, {
+    const datos = { p_dispositivo: id, p_fecha: fecha, p_plataforma: plataforma(), p_version: version || null, p_idioma: idioma, p_modo: modo || null };
+    const mandar = (d) => fetch(`${R.CONFIG.url}/rest/v1/rpc/actividad_marcar`, {
       method: 'POST', keepalive: true,
       headers: { apikey: R.CONFIG.key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_dispositivo: id, p_fecha: fecha, p_plataforma: plataforma(), p_version: version || null, p_idioma: idioma, p_modo: modo || null }),
-    }).catch(() => { /* sin internet: no importa */ });
+      body: JSON.stringify(d),
+    });
+    // con la zona horaria (de qué país se juega); si la base todavía no la conoce, sin ella
+    mandar(Object.assign({ p_zona: zona() }, datos)).then((r) => { if (!r.ok) return mandar(datos); }).catch(() => { /* sin internet: no importa */ });
   }
 
-  window.WWMetricas = { marcar, plataforma };
+  /** La zona horaria del dispositivo (America/Argentina/Buenos_Aires…): el país, sin ubicación exacta. */
+  function zona() { try { return (Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 40) || null; } catch (e) { return null; } }
+
+  /** Buscadores, vistas previas de links y pruebas automáticas (la revisión de Play): no son jugadores. */
+  function esRobot() {
+    try {
+      return !!navigator.webdriver || /bot|crawl|spider|slurp|headless|lighthouse|inspectiontool/i.test(navigator.userAgent || '');
+    } catch (e) { return false; }
+  }
+
+  window.WWMetricas = { marcar, plataforma, esRobot };
 })();

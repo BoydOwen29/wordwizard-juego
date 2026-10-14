@@ -3,6 +3,9 @@
  */
 (function () {
   'use strict';
+  // algún archivo no llegó (index.html lo reintenta una vez y si no avisa): sin esto, la pantalla quedaba en blanco
+  if (!window.WWI18n || !window.WW || !window.WWEstado) { if (window.WWFalla) window.WWFalla(); return; }
+  try { sessionStorage.removeItem('ww.reintento'); } catch (e) { /* nada */ }
   const T = (es, v) => window.WWI18n.t(es, v), EN = window.WWI18n.idioma === 'en';
   const IDIOMA_DATOS = window.WWI18n.idiomaDatos;
   /**
@@ -55,7 +58,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.39.1',
+    version: '2.39.2',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -168,6 +171,7 @@
       this.compras();
       this.cuenta();
       this.atras();
+      this.otraPestana();
       this.chipIdioma();
       // uso anónimo (game/js/metricas.js): una apertura por día, también si vuelve del segundo plano otro día
       const abrir = () => { const d = WW.claveDia(); if (d !== this._abierto && window.WWMetricas) { this._abierto = d; WWMetricas.marcar(d, CONFIG.version, null); } };
@@ -471,6 +475,24 @@
         if (!this.volver()) history.back();
       });
     },
+    /**
+     * El juego abierto en dos lados del mismo dispositivo (la app de Play y una pestaña de Chrome comparten los datos):
+     * cuando el otro guarda, este se recarga para no pisarlo con lo viejo que tiene en memoria. En plena partida, al terminar.
+     */
+    otraPestana() {
+      addEventListener('storage', (e) => {
+        if (e.key !== 'ww.perfiles.v1' || !Estado.perfil) return;
+        let otro = null;
+        try { otro = (JSON.parse(e.newValue || '{}') || {})[Estado.perfil.nombre]; } catch (er) { return; }
+        if (!otro || JSON.stringify(otro) === JSON.stringify(Estado.perfil)) return;   // a este mago no le cambió nada
+        // como mucho una recarga por minuto (que dos lados abiertos no se recarguen uno al otro sin parar)
+        let ultima = 0; try { ultima = Number(sessionStorage.getItem('ww.recarga')) || 0; } catch (er) { /* nada */ }
+        const ya = Date.now() - ultima > 60000 && (document.hidden || !(this.partida && !this.partida.terminada));
+        if (!ya) { this._recargar = true; return; }
+        try { sessionStorage.setItem('ww.recarga', String(Date.now())); } catch (er) { /* nada */ }
+        location.reload();
+      });
+    },
     /** Hace lo que haría "volver" en la pantalla actual. false = ya estamos en el inicio (salir). */
     volver() {
       const m = $('modal');
@@ -510,6 +532,7 @@
     },
 
     irMenu() {
+      if (this._recargar) { this._recargar = false; try { sessionStorage.setItem('ww.recarga', String(Date.now())); } catch (e) { /* nada */ } location.reload(); return; }
       this.ponerLugar(null);
       const p = Estado.perfil;
       this.hoy = WW.claveDia();
