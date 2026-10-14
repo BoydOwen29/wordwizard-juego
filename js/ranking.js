@@ -56,9 +56,22 @@
     if (!enCurso[k]) enCurso[k] = conCandado('ww-sesion-' + clave, () => renovar(clave, opc || {})).finally(() => { delete enCurso[k]; });
     return enCurso[k];
   }
+  // Si la app se abre y se cierra enseguida (un arranque fallido en Android), una renovación cortada en el medio quema
+  // el token. Por eso no se renueva en los primeros segundos ni con la app en segundo plano: se espera.
+  const ARRANQUE = Date.now();
+  const esperarArranque = () => new Promise((listo) => {
+    const ver = () => {
+      const falta = 2500 - (Date.now() - ARRANQUE);
+      if (falta > 0) return setTimeout(ver, falta);
+      if (typeof document !== 'undefined' && document.hidden) return document.addEventListener('visibilitychange', function f() { if (!document.hidden) { document.removeEventListener('visibilitychange', f); listo(); } });
+      listo();
+    };
+    ver();
+  });
   async function renovar(clave, opc) {
     let s = leer(LS_SESIONES, {})[clave];
     if (s && !opc.renovar && s.vence > Date.now() + 60000) return s;   // otra pestaña ya la renovó
+    if (s && s.refresh) { await esperarArranque(); s = leer(LS_SESIONES, {})[clave] || s; if (!opc.renovar && s.vence > Date.now() + 60000) return s; }
     let nueva = null;
     if (s && s.refresh) {
       const res = await fetch(`${CONFIG.url}/auth/v1/token?grant_type=refresh_token`, { method: 'POST', headers: { apikey: CONFIG.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh }) });
