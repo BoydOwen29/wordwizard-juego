@@ -55,6 +55,33 @@
     escribir(cola);
     return vaciar();
   }
+  // ------------------------------------------------------------ diagnóstico de arranques (app de Android, 14/10)
+  // En un celu la app de Play se abría y se cerraba sola. Cada arranque anota hasta dónde llegó (html → app → título)
+  // y lo que pasó (oculta, popstate, back, salida). Si el arranque anterior se cortó antes del título, o se cerró en
+  // menos de 8 s, el siguiente lo manda como reporte. Solo en la app de Play; no guarda nada personal.
+  const TWA = (document.referrer || '').indexOf('android-app://') === 0 || 'getDigitalGoodsService' in window;
+  if (TWA) {
+    const T0 = Date.now(), LSD = 'ww.diag';
+    let prev = null; try { prev = JSON.parse(localStorage.getItem(LSD)); } catch (e) { /* nada */ }
+    const nav = (performance.getEntriesByType && (performance.getEntriesByType('navigation')[0] || {}).type) || '?';
+    const d = { t: T0, etapa: 'html', ev: [], ref: (document.referrer || '').slice(0, 60), nav, hist: history.length,
+      url: location.pathname + (location.search ? '?…' : '') + (location.hash ? '#' + location.hash.slice(1, 14) : ''), oculta: null };
+    const guardar = () => { try { localStorage.setItem(LSD, JSON.stringify(d)); } catch (e) { /* nada */ } };
+    const ev = (x) => { d.ev.push(x + '@' + (Date.now() - T0)); if (d.ev.length > 30) d.ev.shift(); guardar(); };
+    guardar();
+    window.WWDiag = { etapa(e) { d.etapa = e; ev(e); }, ev };
+    addEventListener('popstate', () => ev('popstate'));
+    addEventListener('pagehide', () => ev('pagehide'));
+    addEventListener('beforeunload', () => ev('salida'));
+    document.addEventListener('visibilitychange', () => { if (document.hidden && d.oculta == null) d.oculta = Date.now() - T0; ev(document.hidden ? 'oculta' : 'visible'); });
+    const atras = history.back.bind(history);
+    history.back = function () { ev('back'); return atras(); };
+    if (prev && T0 - prev.t < 864e5) {
+      const motivo = prev.etapa !== 'titulo' ? `se cortó en "${prev.etapa}"` : prev.oculta != null && prev.oculta < 8000 ? `se cerró a los ${Math.round(prev.oculta / 100) / 10} s` : null;
+      if (motivo) setTimeout(() => encolar('error', 'Diagnóstico: el arranque anterior de la app ' + motivo, prev), 4000);
+    }
+  }
+
   // ------------------------------------------------------------ errores automáticos
   function error(mensaje, detalle) {
     const clave = mensaje + '|' + (detalle && detalle.linea);

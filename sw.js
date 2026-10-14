@@ -1,18 +1,18 @@
 /* Word Wizard — service worker (solo cuando se sirve por http/https).
    Estrategia: red primero y, si no hay conexión, caché. Así una versión nueva
    se ve al instante y el juego sigue abriendo sin internet. */
-const VERSION = 'ww-v2.39.7';
+const VERSION = 'ww-v2.39.8';
 const ARCHIVOS = [
   './', './index.html', './manifest.json',
-  './css/estilo.css?v=2.39.7',
-  './js/reportes.js?v=2.39.7', './js/i18n.js?v=2.39.7', './js/i18n-en.js?v=2.39.7', './js/i18n-pt.js?v=2.39.7', './js/motor.js?v=2.39.7', './js/silabo.js?v=2.39.7', './js/iconos.js?v=2.39.7', './js/logros-iconos.js?v=2.39.7', './js/mago.js?v=2.39.7', './js/mapa.js?v=2.39.7', './js/escena.js?v=2.39.7', './js/vida.js?v=2.39.7', './js/audio.js?v=2.39.7', './js/logros.js?v=2.39.7', './js/estado.js?v=2.39.7', './js/ranking.js?v=2.39.7', './js/compras.js?v=2.39.7', './js/cuenta.js?v=2.39.7', './js/recordatorio.js?v=2.39.7', './js/metricas.js?v=2.39.7', './js/tarjeta.js?v=2.39.7', './js/qr.js?v=2.39.7', './js/app.js?v=2.39.7',
+  './css/estilo.css?v=2.39.8',
+  './js/reportes.js?v=2.39.8', './js/i18n.js?v=2.39.8', './js/i18n-en.js?v=2.39.8', './js/i18n-pt.js?v=2.39.8', './js/motor.js?v=2.39.8', './js/silabo.js?v=2.39.8', './js/iconos.js?v=2.39.8', './js/logros-iconos.js?v=2.39.8', './js/mago.js?v=2.39.8', './js/mapa.js?v=2.39.8', './js/escena.js?v=2.39.8', './js/vida.js?v=2.39.8', './js/audio.js?v=2.39.8', './js/logros.js?v=2.39.8', './js/estado.js?v=2.39.8', './js/ranking.js?v=2.39.8', './js/compras.js?v=2.39.8', './js/cuenta.js?v=2.39.8', './js/recordatorio.js?v=2.39.8', './js/metricas.js?v=2.39.8', './js/tarjeta.js?v=2.39.8', './js/qr.js?v=2.39.8', './js/app.js?v=2.39.8',
   ...['400', '600', '700'].map((w) => './assets/fonts/fredoka-' + w + '.woff2'), ...['400', '700', '800'].map((w) => './assets/fonts/nunito-' + w + '.woff2'),
   './assets/img/icon-192x192.png', './assets/img/icon-512x512.png', './assets/img/wordwizard.ico',
 ];
 // los datos (diccionario de unos 3 MB) solo del idioma de este jugador: la app registra sw.js?datos=data/en/
 const PEDIDO = new URL(location).searchParams.get('datos') || '';
 const DATOS = /^data\/([a-z]{2}\/)?$/.test(PEDIDO) ? PEDIDO : 'data/';
-ARCHIVOS.push(...['diccionario', 'desafios', 'totales'].map((n) => './' + DATOS + n + '.js?v=2.39.7'));
+ARCHIVOS.push(...['diccionario', 'desafios', 'totales'].map((n) => './' + DATOS + n + '.js?v=2.39.8'));
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));

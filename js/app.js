@@ -6,6 +6,7 @@
   // algún archivo no llegó (index.html lo reintenta una vez y si no avisa): sin esto, la pantalla quedaba en blanco
   if (!window.WWI18n || !window.WW || !window.WWEstado) { if (window.WWFalla) window.WWFalla(); return; }
   try { sessionStorage.removeItem('ww.reintento'); } catch (e) { /* nada */ }
+  if (window.WWDiag) WWDiag.etapa('app');
   const T = (es, v) => window.WWI18n.t(es, v), EN = window.WWI18n.idioma === 'en';
   const IDIOMA_DATOS = window.WWI18n.idiomaDatos;
   /**
@@ -58,7 +59,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.39.7',
+    version: '2.39.8',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -194,6 +195,7 @@
         if (p) { const b = $('btn-jugar'); b.textContent = '▶ Jugar como ' + p.nombre; b.classList.remove('oculto'); b.onclick = () => { Audio.despertar(); Audio.click(); this.entrar(p.nombre); }; }
         this.pintarCuentaTitulo();
         this.cuentaAlAbrir();
+        if (window.WWDiag) WWDiag.etapa('titulo');
       }, 60);
     },
 
