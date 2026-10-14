@@ -280,4 +280,5 @@ WWI18n.registrar('pt', {
   "¿Qué te pareció?": "O que você achou?",
   "ZONA {n}": "ZONA {n}",
   "Probá Word Wizard, un juego de palabras:": "Experimente o Word Wizard, um jogo de palavras:",
+  "Borrar todo": "Apagar tudo",
 });

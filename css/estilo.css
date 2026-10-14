@@ -295,6 +295,10 @@ body.lugar-cielo .tinte { opacity: 1; background: radial-gradient(90% 60% at 50%
 @keyframes sube { 0% { transform: translateY(0) scale(.6); opacity: 0; } 20% { transform: translateY(-10px) scale(1.2); opacity: 1; } 100% { transform: translateY(-60px) scale(1); opacity: 0; } }
 
 .palabra-actual { min-height: 58px; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; border-radius: 18px; padding: 7px; background: rgba(20,33,40,.42); transition: border-color .25s, box-shadow .25s; }
+.palabra-actual { position: relative; }
+/* ✕ en la esquina de la caja: saca todas las letras sin tapar ninguna */
+.palabra-actual .borrar-todo { position: absolute; right: -9px; top: -11px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--borde-m); padding: 0; background: var(--madera); color: #f3f6ee; font: 800 13px/24px var(--texto-f, sans-serif); box-shadow: 0 2px 0 var(--borde-m); cursor: pointer; z-index: 2; }
+.palabra-actual .borrar-todo:active { transform: translateY(2px); box-shadow: none; }
 .palabra-actual .placeholder { color: var(--texto-apagado); font-size: 13px; font-weight: 700; }
 .letra-actual { width: 38px; height: 42px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 600; font-size: 23px; color: var(--noche);
   background: #fff; border-radius: 11px; cursor: pointer; box-shadow: 0 3px 0 var(--bruma), 0 6px 12px rgba(10,20,25,.3); animation: aparece .3s var(--spring); }

@@ -58,7 +58,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.39.4',
+    version: '2.39.5',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -723,10 +723,16 @@
         if (f && !f.classList.contains('usada')) this.elegirFicha(Number(f.dataset.idx));
       });
       $('palabra-actual').addEventListener('click', (e) => {
+        if (e.target.closest('.borrar-todo')) { this.borrarTodo(); return; }
         const l = e.target.closest('.letra-actual');
         if (l) this.quitarLetra(Number(l.dataset.pos));
       });
-      $('btn-borrar').addEventListener('click', () => this.quitarLetra());
+      // Borrar: un toque saca la última letra; mantenerlo apretado las saca todas (también la ✕ de la palabra)
+      let tBorrar = null, largo = false;
+      const soltar = () => { clearTimeout(tBorrar); tBorrar = null; };
+      $('btn-borrar').addEventListener('pointerdown', () => { largo = false; soltar(); tBorrar = setTimeout(() => { largo = true; this.borrarTodo(); }, 450); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => $('btn-borrar').addEventListener(ev, soltar));
+      $('btn-borrar').addEventListener('click', () => { if (largo) { largo = false; return; } this.quitarLetra(); });
       $('btn-mezclar').addEventListener('click', () => this.mezclar());
       $('btn-enviar').addEventListener('click', () => this.enviar());
       $('btn-salir').addEventListener('click', () => this.pedirSalir());
@@ -1109,6 +1115,7 @@
         s.className = 'letra-actual'; s.dataset.pos = pos; s.textContent = pa.fichas[idx].l.toUpperCase();
         cont.appendChild(s);
       });
+      if (pa.seleccion.length >= 2) cont.insertAdjacentHTML('beforeend', `<button class="borrar-todo" type="button" aria-label="${T('Borrar todo')}" title="${T('Borrar todo')}">✕</button>`);
     },
 
     renderEncontradas() {
@@ -1247,6 +1254,14 @@
       const el = $('fichas').querySelector(`[data-idx="${idx}"]`);
       if (el) el.classList.remove('usada');
       this.renderSeleccion();
+    },
+
+    /** Saca todas las letras de la palabra que se está armando (pedido de los testers, 14/10). */
+    borrarTodo() {
+      const pa = this.partida;
+      if (!pa || pa.terminada || pa.bloqueo || !pa.seleccion.length) return;
+      Audio.click();
+      this.limpiarSeleccion();
     },
 
     limpiarSeleccion() {
