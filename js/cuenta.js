@@ -143,7 +143,9 @@
     escribir(LS_PENDIENTE, null);
     if (!q.get('access_token')) {
       const cod = q.get('error_code') || '';
-      return { error: q.get('error_description') || q.get('error'), yaExiste: /identity_already_exists|already linked|already exists/i.test(cod + ' ' + q.get('error_description')), clave: pend.clave || null };
+      // ese Google (o su mail) ya es de otra cuenta: identity_already_exists, email_exists, "already registered"…
+      const texto = cod + ' ' + (q.get('error_description') || '');
+      return { error: q.get('error_description') || q.get('error'), codigo: cod, yaExiste: /already_exists|email_exists|already linked|already exists|already registered|already been registered/i.test(texto), clave: pend.clave || null, modo: pend.modo || null };
     }
     const s = sesionDe({ access_token: q.get('access_token'), refresh_token: q.get('refresh_token'), expires_at: Number(q.get('expires_at')) || 0, expires_in: Number(q.get('expires_in')) || 3600 });
     return s ? { sesion: s, clave: pend.clave || null, secreto: pend.secreto || null, vinculo: pend.modo === 'vincular' } : null;

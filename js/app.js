@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.37.0',
+    version: '2.37.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -2373,6 +2373,8 @@
             { texto: 'Entrar a esa cuenta', clase: 'btn-primario', accion: () => WWCuenta.google(v.clave, true) },
           ]);
         } else this.toast('No se pudo entrar con Google. Probá de nuevo.');
+        // para entender qué pasó (llega a la base: node tools/reportes.js)
+        if (window.WWReportes) WWReportes.error('Cuenta: ' + String(v.error).slice(0, 200), { codigo: v.codigo, modo: v.modo, yaExiste: v.yaExiste });
         return;
       }
       if (p) Estado.cargar(p.nombre); else Estado.salir();
