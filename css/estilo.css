@@ -962,7 +962,7 @@ body.con-tabbar .pantalla.con-tabs, body.con-tabbar #p-mapa { padding-bottom: ca
 .misiones-puntos i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--borde-m); background: rgba(223,235,214,.25); }
 .misiones-puntos i.ok { background: var(--oro); box-shadow: 0 0 6px rgba(242,198,109,.7); }
 
-.mago-medallones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 6px; margin: 14px 0 12px; }
+.mago-medallones { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 10px 6px; margin: 12px 0 14px; }
 #p-mago .tarjeta-jugador { padding-left: 16px; }
 .modal-misiones .misiones { margin: 0; }
 
