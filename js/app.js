@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.37.5',
+    version: '2.37.6',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -1836,9 +1836,16 @@
         fila('Total de la subida', pa.arcade.puntajeTotal + ' pts', 'total'),
       ].filter(Boolean).join('');
       const titulo = pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`;
-      this.modal(`<h3>${titulo}</h3><div class="modal-silabo" data-pose="happy"></div><ul class="resumen-piso">${filas}</ul>`, [
+      // las palabras del piso: las que hiciste y las que te faltaron (pedido de los testers, 14/10)
+      this.modal(`<h3>${titulo}</h3><div class="modal-silabo" data-pose="happy"></div><ul class="resumen-piso">${filas}</ul>
+        <button class="btn-link-cuenta" id="piso-ver">Ver las palabras del piso</button>
+        <div id="piso-palabras" class="res-palabras piso-palabras oculto">${this.htmlPalabras({ base: pa.base, encontradas: pa.encontradas, nucleo: pa.nucleo })}</div>`, [
         { texto: `Seguir al piso ${pa.arcade.piso + 1}`, clase: 'btn-primario', accion: () => this.verTorre(info) },
       ]);
+      $('piso-ver').addEventListener('click', () => {
+        Audio.click(); const l = $('piso-palabras'); l.classList.toggle('oculto');
+        $('piso-ver').textContent = l.classList.contains('oculto') ? 'Ver las palabras del piso' : 'Ocultar las palabras';
+      });
       const lis = document.querySelectorAll('.resumen-piso li');
       lis.forEach((li, i) => { li.style.animationDelay = (250 + i * 260) + 'ms'; });
       lis.forEach((li, i) => setTimeout(() => Audio.tecla(), 250 + i * 260));
@@ -2097,8 +2104,9 @@
       if (r.nivel && r.nivel.subio) setTimeout(() => { if (this.pantalla === 'p-resultado') this.anunciarNivel(r.nivel.despues); else this.nivelPendiente = r.nivel.despues; }, 900);
     },
 
-    renderResPalabras(r) {
-      const cont = $('res-palabras');
+    renderResPalabras(r) { $('res-palabras').innerHTML = this.htmlPalabras(r); },
+    /** Todas las palabras de una base por largo: las encontradas, las que faltaron (apagadas) y las extra. */
+    htmlPalabras(r) {
       const enc = new Set(r.encontradas);
       const nucleo = r.nucleo || this.dic.nucleo(this.dic.derivables(r.base), r.base);
       const todas = Array.from(nucleo);
@@ -2112,7 +2120,7 @@
           ws.map((w) => `<span class="chip-palabra ${enc.has(w) ? (w === r.base ? 'completa' : '') : 'falta'}">${w}</span>`).join('') + '</div>';
       }
       if (extras.length) html += `<h4>${T('PALABRAS EXTRA')} · ${extras.length}</h4><div class="lista-chips">` + extras.map((w) => `<span class="chip-palabra extra">${w}</span>`).join('') + '</div>';
-      cont.innerHTML = html;
+      return html;
     },
 
     mostrarResultadoGuardado(d) {

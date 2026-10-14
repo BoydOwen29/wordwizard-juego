@@ -1346,3 +1346,9 @@ body.con-pase .pase-brillo { display: block; }
 /* botones de los avisos: texto siempre centrado (en iPhone quedaba arriba y con tres líneas se salía) */
 .modal-caja .fila .btn { display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.15; padding: 10px 8px 13px; min-height: 56px; text-wrap: balance; }
 .modal-caja .fila:has(> .btn:nth-child(3)) .btn { font-size: calc(15px * var(--letra, 1)); padding-inline: 6px; }
+.piso-palabras { max-height: 38vh; overflow-y: auto; margin-top: 6px; }
+/* palabras que faltaron: se leen bien (antes eran casi transparentes); se distinguen por el borde punteado sin relleno */
+.res-palabras .chip-palabra.falta { opacity: 1; background: rgba(12,22,26,.35); border: 2px dashed rgba(239,227,200,.55); color: #e9f1ea; box-shadow: none; }
+/* en el resumen del piso, con la lista abierta se esconde Silabo para que el botón de seguir quede a la vista */
+.modal-caja:has(.piso-palabras:not(.oculto)) .modal-silabo { display: none; }
+.piso-palabras { max-height: 34vh; }
