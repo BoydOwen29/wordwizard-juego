@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.39.0',
+    version: '2.39.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -373,7 +373,7 @@
         if (caja) caja.innerHTML = `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" shape-rendering="crispEdges"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#f3f6ee"/><path d="${d}" fill="#16262c"/></svg>`;
       };
       this.modal('<h3>INVITAR A JUGAR</h3><p>Que lo escaneen con la cámara del celular.</p><div class="qr-caja"></div><p class="qr-link">wordwizard.capralabsgames.com</p>', [
-        { texto: 'Compartir', clase: 'btn-secundario', accion: () => { if (navigator.share) navigator.share({ title: 'Word Wizard', text: 'Probá Word Wizard, un juego de palabras:', url }).catch(() => {}); else this.copiar(url); } },
+        { texto: 'Compartir', clase: 'btn-secundario', accion: () => { if (navigator.share) navigator.share({ title: 'Word Wizard', text: WWI18n.t('Probá Word Wizard, un juego de palabras:'), url }).catch(() => {}); else this.copiar(url); } },
         { texto: 'Listo', clase: 'btn-primario' },
       ]);
       if (window.qrcode) return pintarQR();
@@ -420,7 +420,8 @@
     /** Hay una versión nueva instalada: se aplica sola en cuanto no haya una partida en juego. */
     versionNueva() {
       this._versionNueva = true;
-      if (!this.aplicarVersion()) this.toast('✨ Hay una versión nueva. Tocá acá para actualizar.', 'accion', () => location.reload());
+      // en plena partida no se ofrece: recargar ahí cuesta el piso (se aplica sola al terminar)
+      if (!this.aplicarVersion() && this.pantalla !== 'p-juego') this.toast('✨ Hay una versión nueva. Tocá acá para actualizar.', 'accion', () => location.reload());
     },
     aplicarVersion() {
       if (!this._versionNueva || this.pantalla === 'p-juego' || document.querySelector('#modal:not(.oculto)')) return false;
@@ -802,24 +803,24 @@
       const comunes = m.lista.filter((x) => !x.temporada), hechas = comunes.filter((x) => x.hecha).length;
       $('misiones-puntos').innerHTML = m.lista.map((x) => `<i class="${x.hecha ? 'ok' : ''}${x.temporada ? ' flor' : ''}"></i>`).join('');
       $('misiones-estado').innerHTML = hechas === comunes.length ? '¡TODAS!' : `${hechas}/${comunes.length} · ${WWIconos.html('moneda')}${WW.RECOMPENSA_MISION.monedas} c/u`;
-      const t = this.temporada, pie = $('misiones-temporada');
+      const t = WW.temporadaDe(new Date()), pie = $('misiones-temporada');
       if (pie) {
         pie.classList.toggle('oculto', !t);
         if (t) {
           const f = this.floresTemporada(), dias = Math.max(0, Math.round((new Date(t.hasta + 'T12:00:00') - new Date(this.hoy + 'T12:00:00')) / 864e5));
-          pie.innerHTML = `<b>${esc(t.nombre)}</b><div class="mision-barra"><div style="width:${Math.min(100, f / t.flores * 100)}%"></div></div><small>${f >= t.flores ? '¡Completaste la primavera!' : `${f}/${t.flores} flores · ${dias === 1 ? 'queda 1 día' : `quedan ${dias} días`}`}</small>`;
+          pie.innerHTML = `<b>${esc(t.nombre)}</b><div class="mision-barra"><div style="width:${Math.min(100, f / t.flores * 100)}%"></div></div><small>${f >= t.flores ? '¡Completaste la primavera!' : `${f}/${t.flores} flores · ${dias === 0 ? 'último día' : dias === 1 ? 'queda 1 día' : `quedan ${dias} días`}`}</small>`;
         }
       }
       Estado.guardar();
     },
 
     floresTemporada() {
-      const t = this.temporada, p = Estado.perfil;
+      const t = WW.temporadaDe(new Date()), p = Estado.perfil;
       return t && p.temporadas && p.temporadas[t.id] ? p.temporadas[t.id].flores || 0 : 0;
     },
     /** Misión de temporada cumplida: una flor; con todas, el premio (una sola vez). */
     sumarFlor() {
-      const t = this.temporada, p = Estado.perfil;
+      const t = WW.temporadaDe(new Date()), p = Estado.perfil;
       if (!t) return;
       const reg = (p.temporadas = p.temporadas || {})[t.id] = p.temporadas[t.id] || { flores: 0, premio: false };
       reg.flores += 1;
@@ -1490,6 +1491,7 @@
 
     salirDiario() {
       const pa = this.partida;
+      if (!pa || pa.terminada) return;   // el reloj llegó a cero con el "¿Salir?" abierto: ya se terminó
       this.guardarEnCurso();
       pa.terminada = true; clearInterval(pa.timer);
       if (window.WWMetricas) WWMetricas.marcar(WW.claveDia(), CONFIG.version, { arcade: 'torre' }[pa.modo] || pa.modo);
@@ -1510,6 +1512,7 @@
 
     abandonarPractica() {
       const pa = this.partida;
+      if (!pa || pa.terminada) return;
       pa.terminada = true; clearInterval(pa.timer);
       this.limpiarEfectos();
       Estado.guardar();
@@ -2055,6 +2058,7 @@
         pa.arcade.palabrasTotal += pa.encontradas.length;
       }
       if (pa.modo === 'arcade') return this.cerrarArcade(pa);
+      if (window.WWMetricas) WWMetricas.marcar(WW.claveDia(), CONFIG.version, pa.modo);   // para el tablero ("qué juegan")
 
       // --- diario / práctica
       const pct = pa.totalPuntos ? (pa.puntosBase / pa.totalPuntos) * 100 : 0;
@@ -2101,12 +2105,13 @@
       const a = pa.arcade;
       if (a.cerrada) return;
       a.cerrada = true; clearTimeout(this._tModalPiso);
+      if (window.WWMetricas) WWMetricas.marcar(WW.claveDia(), CONFIG.version, 'torre');
       p.subida = null;
       // 0,45 (era 0,8): desde la v2.16 se sube más alto en la Torre; así el nivel no se acelera (docs/ECONOMIA.md)
       const xp = Math.round(a.puntajeTotal * 0.45 + a.piso * 8);
       const esRecord = a.puntajeTotal > p.arcade.mejorPuntaje;
       p.arcade.mejorPuntaje = Math.max(p.arcade.mejorPuntaje, a.puntajeTotal);
-      p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, a.piso);
+      // el mejor piso es el último SUPERADO (lo anota pisoSuperado): el piso donde se perdió no cuenta, ni su jefe
       p.arcade.partidas += 1;
       if (Ranking.activo()) Ranking.enviarTorre({ clave: this.claveNube(), nombre: p.nombre, puntaje: p.arcade.mejorPuntaje, piso: p.arcade.mejorPiso, jefes: Math.floor(p.arcade.mejorPiso / 5) });
       p.arcade.historial.unshift({ fecha: this.hoy, puntos: a.puntajeTotal, piso: a.piso, jefes: a.jefes });
@@ -2114,7 +2119,7 @@
       p.stats.partidas += 1;
       Estado.sumarXp(xp);
       const nivel = { antes: this.nivelSesion || p.nivel, despues: p.nivel, subio: p.nivel > (this.nivelSesion || p.nivel) };
-      const nuevos = Logros.evaluar(p, { tipo: 'fin', encontradas: pa.nEnc, total: pa.total, modo: 'arcade' });
+      const nuevos = Logros.evaluar(p, { tipo: 'fin', encontradas: pa.nEnc - [...pa.ojos].filter((w) => pa.nucleo.has(w)).length, total: pa.total, modo: 'arcade' });
       if (nuevos.length) Estado.sumarMonedas(5 * nuevos.length);
       Estado.guardar();
       this.resultadoActual = { modo: 'arcade', base: pa.base, puntos: a.puntajeTotal, encontradas: pa.encontradas, nucleo: pa.nucleo, nEnc: pa.nEnc, extras: pa.extras, total: pa.total, totalPuntos: pa.totalPuntos, piso: a.piso, jefes: a.jefes, palabrasTotal: a.palabrasTotal, xp, monedas: a.monedas, nivel, nuevos, mejorPalabra: pa.mejorPalabra, combo: pa.mejorCombo, derivables: pa.derivables, esRecord };
@@ -2415,7 +2420,11 @@
     cuenta() {
       if (!window.WWCuenta) return;
       const ocupado = () => !!(this.partida && !this.partida.terminada);
-      Estado.alGuardar = () => { if (Estado.perfil) WWCuenta.programar(this.claveNube(), () => Estado.perfil, ocupado); };
+      Estado.alGuardar = () => {
+        if (!Estado.perfil) return;
+        const clave = this.claveNube();
+        WWCuenta.programar(clave, () => Estado.perfil, ocupado, (nuevo) => this.aplicarNube(clave, nuevo));
+      };
       document.addEventListener('visibilitychange', () => {
         if (!Estado.perfil) return;
         if (document.hidden) WWCuenta.vaciar(this.claveNube(), Estado.perfil);
@@ -2497,11 +2506,17 @@
     /** Trae lo de la nube y lo junta con lo de acá (al entrar, al volver a la app). También las compras de la cuenta. */
     async sincronizarCuenta() {
       if (!this.tieneCuenta()) return;
-      const clave = this.claveNube(), r = await WWCuenta.sincronizar(clave, Estado.perfil);
+      const clave = this.claveNube();
+      await WWCuenta.sincronizar(clave, Estado.perfil, { aplicar: (nuevo) => this.aplicarNube(clave, nuevo) });
       if (!Estado.perfil || this.claveNube() !== clave) return;
-      if (r && r.perfil && !(this.partida && !this.partida.terminada)) this.aplicarPerfil(r.perfil);
       const lista = await WWCuenta.compras(clave);
       if (window.WWCompras && WWCompras.desdeCuenta(lista)) this.repintarPase();
+    },
+    /** Lo junto con la nube se aplica solo si sigue el mismo mago y no hay partida en curso (si no, se junta la próxima vez). */
+    aplicarNube(clave, nuevo) {
+      if (!Estado.perfil || this.claveNube() !== clave || (this.partida && !this.partida.terminada)) return false;
+      this.aplicarPerfil(nuevo);
+      return true;
     },
     /** El perfil que vino de la nube pasa a ser el de acá, sin cambiar de pantalla. */
     aplicarPerfil(nuevo) {
@@ -2607,14 +2622,20 @@
         this.sincronizarCuenta();
       };
       // nunca se borra un mago: si se trae el de la cuenta, el de acá queda en el dispositivo (sin cuenta)
+      const canjear = () => WWCuenta.canjear(sesion, secreto);
       const traer = (soltarLocal) => {
+        canjear();
         if (soltarLocal && local) Ranking.olvidar(clave);
-        const p = Estado.instalar(nube.datos);
+        // si ese mismo mago ya está en este dispositivo (volvió a entrar desde el título), se junta: lo jugado acá no se pierde
+        const todos = Estado.todos(), mismo = Object.values(todos).find((m) => m && m.creado && m.creado === nube.datos.creado);
+        const datos = mismo ? Object.assign(Estado.fusionar(WWCuenta.baseDe(mismo.creado), mismo, nube.datos), { creado: mismo.creado }) : nube.datos;
+        const p = Estado.instalar(datos);
         WWCuenta.vincular(p.creado, sesion, cuenta);
         WWCuenta.adoptar(p.creado, nube);
-        listo(p.nombre, `☁️ ¡Hola de nuevo, ${p.nombre}!`);
+        listo(p.nombre, `☁️ ¡Hola de nuevo, ${esc(p.nombre)}!`);
       };
       const guardarLocal = async (rev) => {
+        await canjear();
         WWCuenta.vincular(clave, sesion, cuenta);
         try { await WWCuenta.empezar(clave, local, rev); } catch (e) { /* se reintenta en la próxima sincronización */ }
         listo(local.nombre, '☁️ Listo: tu progreso queda guardado en tu cuenta.');
@@ -2622,10 +2643,10 @@
       if (local) {
         // vinculado: es la MISMA cuenta que el mago ya usaba (mismo id), así que la nube está vacía o es suya
         if (vinculo || !nube) return guardarLocal(nube ? nube.rev : 0);
-        if (nube.datos.creado === local.creado) { WWCuenta.vincular(clave, sesion, cuenta); return listo(local.nombre, '☁️ Volviste a entrar.'); }
+        if (nube.datos.creado === local.creado) { canjear(); WWCuenta.vincular(clave, sesion, cuenta); return listo(local.nombre, '☁️ Volviste a entrar.'); }
         const n = nube.datos;
         this.modal(`<h3>TU CUENTA YA TIENE UN MAGO</h3><div class="modal-silabo"></div>
-          <p>En la cuenta está <b>${esc(n.nombre)}</b> (nivel ${n.nivel}). Acá tenés a <b>${esc(local.nombre)}</b> (nivel ${local.nivel}).</p>
+          <p>En la cuenta está <b>${esc(n.nombre)}</b> (nivel ${Number(n.nivel) || 1}). Acá tenés a <b>${esc(local.nombre)}</b> (nivel ${local.nivel}).</p>
           <p>¿Cuál queda en la cuenta? Ninguno se borra: el otro sigue en este dispositivo y la cuenta guarda una copia del anterior.</p>`, [
           { texto: `Traer a ${n.nombre}`, clase: 'btn-primario', accion: () => traer(true) },
           { texto: `Guardar a ${local.nombre}`, clase: 'btn-secundario', accion: () => guardarLocal(nube.rev) },
@@ -2638,7 +2659,7 @@
       this.modal(`<h3>TU CUENTA ESTÁ VACÍA</h3><div class="modal-silabo"></div><p>Todavía no guardaste ningún mago en esta cuenta.</p>
         <p>Si ya jugás en otro dispositivo (el celu, por ejemplo), entrá ahí primero: <b>Ajustes → Guardar mi progreso</b>. Después volvé acá y tocá "Ya tengo cuenta".</p>`, [
         { texto: 'Entendido', clase: 'btn-primario', accion: () => this.cerrarSesionSuelta(sesion) },
-        { texto: 'Empezar uno nuevo', clase: 'btn-secundario', accion: () => this.crearEnCuenta(sesion, cuenta, listo) },
+        { texto: 'Empezar uno nuevo', clase: 'btn-secundario', accion: () => { canjear(); this.crearEnCuenta(sesion, cuenta, listo); } },
       ]);
     },
     /** Se entró a una cuenta pero no se usa: se cierra esa sesión (no queda guardada en ningún mago). */
@@ -2723,17 +2744,6 @@
       $('aj-vibracion').checked = p.ajustes.vibracion;
       $('aj-letra').value = String(Letra.factor());
       $('aj-grilla').checked = p.ajustes.grilla !== false;
-      const cont = $('aj-sombreros'); cont.innerHTML = '';
-      for (const [k, v] of Object.entries(Magos.PALETAS)) {
-        const b = document.createElement('button');
-        if (v.nivel > 100 || (v.especial && !this.tieneTraje(k))) continue;
-        const hab = this.tieneTraje(k);
-        b.className = 'sombrero' + (p.sombrero === k ? ' activo' : '');
-        b.disabled = !hab;
-        b.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span>${v.nombre}<small>${hab ? '' : 'NV ' + v.nivel}</small>`;
-        b.addEventListener('click', () => { p.sombrero = k; Estado.guardar(); for (const m of ['titulo', 'menu', 'juego']) this.magos[m].setPaleta(k); Audio.click(); this.verAjustes(); });
-        cont.appendChild(b);
-      }
       $('aj-info').textContent = `${p.nombre} · ${p.stats.palabras} palabras encontradas · ${p.stats.partidas} partidas · desde ${p.creado.slice(0, 10)} · v${CONFIG.version}`;
       this.mostrar('p-ajustes');
     },

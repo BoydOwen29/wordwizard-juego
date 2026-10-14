@@ -190,6 +190,7 @@
     registrarRacha(fecha) {
       const p = this.perfil;
       if (p.ultimoDiario === fecha) return 0;
+      if (p.ultimoDiario && fecha < p.ultimoDiario) return 0;   // un diario viejo que se cierra tarde no mueve la racha para atrás
       const perdidos = this.diasPerdidos(fecha), velas = p.inventario.vela || 0;
       let usadas = 0;
       if (p.ultimoDiario && perdidos === 0) p.racha += 1;

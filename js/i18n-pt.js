@@ -276,5 +276,8 @@ WWI18n.registrar('pt', {
   // Mi mago (v2.38)
   "Mis cosas": "Minhas coisas", "Trajes": "Roupas", "Pociones": "Poções", "Tocá un traje para ponértelo.": "Toque numa roupa para vestir.", "Ya tenés puesto {n}.": "Você já está usando {n}.", "¡Te pusiste {n}!": "Você vestiu {n}!", "se consigue en la tienda.": "você consegue na loja.", "llega solo en el nivel {n}, o lo adelantás con monedas.": "chega sozinha no nível {n}, ou adiante com moedas.", "Ver en la tienda ›": "Ver na loja ›", "Conseguir más en la tienda": "Conseguir mais na loja", "Desbloqueaste el traje": "Você desbloqueou a roupa", ". Ya está en Mi mago → Mis cosas.": ". Já está em Meu mago → Minhas coisas.", "Ver mis cosas": "Ver minhas coisas", "Ponérmelo ahora": "Vestir agora", "Pistas": "Dicas", "Relojes": "Ampulhetas", "Ojos": "Olhos", "Escudos": "Escudos", "Velas": "Velas", "{a} de {b} logros. Cada uno da 5 monedas.": "{a} de {b} conquistas. Cada uma dá 5 moedas.",
   "Para pedir otro código esperá un minuto.": "Espere um minuto para pedir outro código.",
-  "Para pedir otro código esperá un minuto.": "Espere um minuto para pedir outro código.",
+  "{f}/{t} flores · último día": "{f}/{t} flores · último dia",
+  "¿Qué te pareció?": "O que você achou?",
+  "ZONA {n}": "ZONA {n}",
+  "Probá Word Wizard, un juego de palabras:": "Experimente o Word Wizard, um jogo de palavras:",
 });

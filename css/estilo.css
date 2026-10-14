@@ -89,7 +89,7 @@ body.lugar-cielo .tinte { opacity: 1; background: radial-gradient(90% 60% at 50%
 .nota { font-size: calc(12px * var(--letra, 1)); color: var(--texto-apagado); margin-top: auto; padding-top: 12px; text-align: center; font-weight: 600; }
 
 /* paneles de vidrio */
-.tarjeta-jugador, .form-nombre, .res-rango, .res-stat, .res-palabras, .rank-fila, .logro, .ejemplo, .sombrero, .perfil-btn, .encontradas, .palabra-actual, .misiones, .stats-panel {
+.tarjeta-jugador, .form-nombre, .res-rango, .res-stat, .res-palabras, .rank-fila, .logro, .ejemplo, .perfil-btn, .encontradas, .palabra-actual, .misiones, .stats-panel {
   background: var(--vidrio); color: var(--texto); border: 1px solid var(--vidrio-borde); border-radius: 18px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: var(--sombra); }
 
 /* ------------------------------------------------------------ botones */
@@ -434,16 +434,9 @@ body.lugar-cielo .tinte { opacity: 1; background: radial-gradient(90% 60% at 50%
 kbd { background: rgba(223,235,214,.14); border-radius: 6px; padding: 1px 8px; font-family: var(--display); font-size: calc(12px * var(--letra, 1)); }
 .ajustes { display: flex; flex-direction: column; gap: 6px; }
 .ajustes h3 { font-family: var(--display); font-weight: 600; font-size: calc(17px * var(--letra, 1)); color: var(--menta); margin: 14px 0 6px; }
-.sombreros { display: flex; flex-wrap: wrap; gap: 10px; }
-.sombrero { display: flex; flex-direction: column; align-items: center; gap: 4px; border-radius: 16px; padding: 8px 10px 10px; font-size: calc(12px * var(--letra, 1)); font-family: var(--texto-f); font-weight: 800; min-width: 86px; transition: transform .15s var(--spring), border-color .2s; }
-.sombrero .mini-mago { width: 54px; }
-.sombrero .mini-mago svg { width: 100%; height: auto; overflow: visible; }
-.sombrero small { color: var(--texto-apagado); }
-.sombrero.activo { border-color: var(--oro); transform: scale(1.04); }
-.sombrero:disabled { opacity: .4; }
 
 /* ------------------------------------------------------------ toasts / modal / confeti */
-#toasts { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 50; pointer-events: none; width: min(92%, 420px); }
+#toasts { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 50; pointer-events: none; width: min(92%, 420px); }
 .toast { background: rgba(20,33,40,.85); color: var(--texto); border: 1px solid var(--vidrio-borde); border-radius: 16px; padding: 10px 14px; font-size: calc(14px * var(--letra, 1)); box-shadow: 0 12px 30px rgba(10,20,25,.45); backdrop-filter: blur(12px); animation: toast 3s var(--suave) forwards; display: flex; gap: 12px; align-items: center; }
 .toast.logro { border-color: rgba(242,198,109,.55); }
 .toast.logro small { color: var(--texto-suave); }
@@ -494,7 +487,7 @@ kbd { background: rgba(223,235,214,.14); border-radius: 6px; padding: 1px 8px; f
   --piedra: #3f666c; --piedra-sh: #2c4d58; --piedra-hi: #67948f; --borde-p: #16262c;
 }
 /* paneles de madera */
-.tarjeta-jugador, .form-nombre, .res-rango, .res-stat, .rank-fila, .logro, .stats-panel, .perfil-btn, .sombrero, .ejemplo, .res-palabras {
+.tarjeta-jugador, .form-nombre, .res-rango, .res-stat, .rank-fila, .logro, .stats-panel, .perfil-btn, .ejemplo, .res-palabras {
   background: var(--madera) repeating-linear-gradient(180deg, transparent 0 10px, var(--veta) 10px 12px, transparent 12px 24px);
   border: 3px solid var(--borde-m); backdrop-filter: none; -webkit-backdrop-filter: none;
   box-shadow: inset 0 3px 0 var(--madera-hi), inset 0 -5px 0 var(--madera-sh), 0 5px 0 var(--borde-m); color: #f3f6ee; }
@@ -1074,6 +1067,7 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 @supports (-webkit-touch-callout: none) {
   .mago-dibujo { position: relative; isolation: isolate; }
   .mago-dibujo svg, .mago.levita .mago-dibujo svg { filter: none; }
+  .escenario .jefe, .logo-titulo { filter: none; }   /* también se animan: Safari los repinta en cada cuadro */
   .mago-dibujo::after { content: ''; position: absolute; left: 24%; right: 24%; bottom: -1%; height: 7%; border-radius: 50%; background: radial-gradient(closest-side, rgba(10,20,25,.42), rgba(10,20,25,0)); z-index: -1; pointer-events: none; }
   .mago.levita .mago-dibujo::after { background: radial-gradient(closest-side, rgba(242,198,109,.35), rgba(10,20,25,0)); }
   .niebla { mix-blend-mode: normal; filter: none; }

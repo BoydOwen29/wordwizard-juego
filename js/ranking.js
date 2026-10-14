@@ -93,7 +93,11 @@
     vaciando = (async () => {
       for (const item of leer(LS_COLA, [])) {
         let listo = false;
-        try { listo = await mandar(item); } catch (e) { break; }   // sin conexión: se reintenta después
+        try { listo = await mandar(item); } catch (e) {
+          // un mago con la sesión vencida no traba a los demás: lo suyo espera a que vuelva a entrar
+          if (e && e.message === 'sesión vencida') continue;
+          break;   // sin conexión: se reintenta después
+        }
         if (listo) escribir(LS_COLA, leer(LS_COLA, []).filter((x) => x.uid !== item.uid));
       }
     })().finally(() => { vaciando = null; });

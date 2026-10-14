@@ -170,7 +170,7 @@
   }
 
   /**
-   * Termina de entrar: averigua quién es, reclama lo del mago anónimo (si había) y trae el progreso de la nube.
+   * Termina de entrar: averigua quién es y trae el progreso de la nube.
    * Devuelve {cuenta, nube} — nube = {datos, rev} o null si la cuenta todavía no tiene un mago guardado.
    */
   async function completar(sesion, secreto) {
@@ -179,9 +179,13 @@
     sesion.id = u.j.id;
     const proveedor = (u.j.app_metadata && u.j.app_metadata.provider) || 'email';
     const cuenta = { email: u.j.email || '', proveedor: proveedor === 'google' ? 'google' : 'email' };
-    if (secreto) { try { await api('/rest/v1/rpc/fusionar', { method: 'POST', body: JSON.stringify({ secreto_: secreto }) }, sesion.token); } catch (e) { /* lo del anónimo queda donde estaba */ } }
     const nube = await bajarCon(sesion.token);
     return { cuenta, nube };
+  }
+  /** Reclama lo del mago anónimo (ranking, compras) para la cuenta. Recién cuando se eligió qué mago queda: si cancela, no se toca. */
+  async function canjear(sesion, secreto) {
+    if (!secreto) return;
+    try { await api('/rest/v1/rpc/fusionar', { method: 'POST', body: JSON.stringify({ secreto_: secreto }) }, sesion.token); } catch (e) { /* lo del anónimo queda donde estaba */ }
   }
 
   /** Deja la sesión permanente como la sesión de ese mago (desde acá, el ranking y las compras van con la cuenta). */
@@ -196,6 +200,8 @@
     return r.j && r.j[0] ? { datos: r.j[0].datos, rev: r.j[0].rev } : null;
   }
   const sinc = (clave) => leer(LS_SINC, {})[clave] || null;
+  // sin base conocida (nunca se sincronizó acá) se junta sin restar nada: los números quedan en el máximo y lo demás se suma
+  const baseDe = (clave) => { const est = sinc(clave); return est ? est.base : {}; };
   function anotarSinc(clave, rev, base) { const t = leer(LS_SINC, {}); if (rev == null) delete t[clave]; else t[clave] = { rev, base }; escribir(LS_SINC, t); }
 
   /** Sube el perfil como revisión nueva, si la nube sigue en `rev` (0 = todavía no hay nada). true si se pudo. */
@@ -229,26 +235,37 @@
   const aviso = (clave, estado, subio) => { if (avisar) try { avisar(clave, estado, !!subio); } catch (e) { /* nada */ } };
 
   function sincronizar(clave, perfil, opc) {
-    if (!activo() || !de(clave) || enCurso) return Promise.resolve(null);
+    if (!activo() || !de(clave)) return Promise.resolve(null);
     opc = opc || {};
+    // si ya hay una en curso, se espera y se vuelve a mirar (sin esto, salir de la cuenta decía "sin conexión")
+    if (enCurso) return enCurso.then(() => sincronizar(clave, perfil, opc));
     aviso(clave, 'guardando');
     let subio = false;
+    // foto del perfil al arrancar: lo que se juegue mientras se espera a la red no entra en la base, así sube la próxima vez
+    const foto = JSON.parse(JSON.stringify(perfil));
+    // lo junto con la nube se aplica acá si se puede (mismo mago, sin partida en curso, nada cambió en el medio) y pasa a
+    // ser la base. Si no, la base es la foto y la revisión queda en -1 (no coincide con ninguna): la próxima vez se junta
+    // foto → perfil de acá → nube sí o sí, sin contar nada dos veces ni pisar lo que subió otro dispositivo
+    const anotarJunto = (rev, junto) => {
+      if (igual(perfil, foto) && !!opc.aplicar && opc.aplicar(junto) !== false) anotarSinc(clave, rev, junto);
+      else anotarSinc(clave, -1, foto);
+    };
     enCurso = (async () => {
       const s = await R().sesion(clave);
       for (let intento = 0; intento < 3; intento++) {
         const est = sinc(clave);
         const nube = await bajarCon(s.token);
-        if (!nube) { if (await subir(s.token, perfil, 0, opc.keepalive)) { anotarSinc(clave, 1, perfil); subio = true; return {}; } continue; }
+        if (!nube) { if (await subir(s.token, foto, 0, opc.keepalive)) { anotarSinc(clave, 1, foto); subio = true; return {}; } continue; }
         if (est && nube.rev === est.rev) {
-          if (igual(perfil, est.base)) return {};
-          if (await subir(s.token, perfil, nube.rev, opc.keepalive)) { anotarSinc(clave, nube.rev + 1, perfil); subio = true; return {}; }
+          if (igual(foto, est.base)) return {};
+          if (await subir(s.token, foto, nube.rev, opc.keepalive)) { anotarSinc(clave, nube.rev + 1, foto); subio = true; return {}; }
           continue;
         }
         if (opc.soloSubir) return {};
-        const junto = est ? window.WWEstado.fusionar(est.base, perfil, nube.datos) : window.WWEstado.fusionar(nube.datos, perfil, nube.datos);
-        junto.nombre = perfil.nombre; junto.creado = perfil.creado;
-        if (igual(junto, nube.datos)) { anotarSinc(clave, nube.rev, junto); return { perfil: junto }; }
-        if (await subir(s.token, junto, nube.rev)) { anotarSinc(clave, nube.rev + 1, junto); subio = true; return { perfil: junto }; }
+        const junto = window.WWEstado.fusionar(baseDe(clave), foto, nube.datos);
+        junto.nombre = foto.nombre; junto.creado = foto.creado;
+        if (igual(junto, nube.datos)) { anotarJunto(nube.rev, junto); return { perfil: junto }; }
+        if (await subir(s.token, junto, nube.rev)) { anotarJunto(nube.rev + 1, junto); subio = true; return { perfil: junto }; }
       }
       return null;
     })().catch(() => null).then((r) => {
@@ -261,10 +278,10 @@
 
   let tSubir = null;
   /** Después de guardar: sube en un rato (agrupa muchos guardados seguidos en una sola subida). */
-  function programar(clave, perfilFn, ocupado) {
+  function programar(clave, perfilFn, ocupado, aplicar) {
     if (!activo() || !de(clave)) return;
     clearTimeout(tSubir);
-    tSubir = setTimeout(() => { tSubir = null; const p = perfilFn(); if (p) sincronizar(clave, p, { soloSubir: ocupado() }); }, 20000);
+    tSubir = setTimeout(() => { tSubir = null; const p = perfilFn(); if (p) sincronizar(clave, p, { soloSubir: ocupado(), aplicar }); }, 20000);
   }
   /** Al cerrar o mandar la app al fondo: sube ya lo pendiente. */
   function vaciar(clave, perfil) {
@@ -299,5 +316,5 @@
     return ok;
   }
 
-  window.WWCuenta = { activo, metodo, revisarVinculo, alEstado, de, hayAlguna, preparar: prepararFusion, google, pedirCodigo, verificar, alVolver, completar, vincular, empezar, adoptar, sincronizar, programar, vaciar, compras, salir, borrar };
+  window.WWCuenta = { activo, metodo, revisarVinculo, alEstado, de, hayAlguna, preparar: prepararFusion, google, pedirCodigo, verificar, alVolver, completar, canjear, vincular, empezar, adoptar, baseDe, sincronizar, programar, vaciar, compras, salir, borrar };
 })();
