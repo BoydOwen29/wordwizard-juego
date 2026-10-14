@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.37.1',
+    version: '2.37.2',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -2364,6 +2364,15 @@
       const v = this._vuelta; this._vuelta = null;
       if (!v) return;
       const p = v.clave && Object.values(Estado.todos()).find((x) => x.creado === v.clave);
+      if (v.error && p && v.modo === 'vincular') {
+        // Google a veces vuelve dos veces: la primera vincula y la segunda trae el error. Se pregunta antes de avisar.
+        Estado.cargar(p.nombre);
+        WWCuenta.revisarVinculo(v.clave).then((ok) => {
+          if (ok) return this.cuentaLista(ok.sesion, v.clave, null, true);
+          this._vuelta = Object.assign({}, v, { modo: 'revisado' }); this.cuentaAlAbrir();
+        });
+        return;
+      }
       if (v.error) {
         // ese Google ya tiene su propia cuenta (la armó en otro dispositivo): se puede entrar a esa
         if (v.yaExiste && p) {

@@ -152,6 +152,24 @@
   }
 
   /**
+   * ¿La cuenta de este mago ya quedó vinculada aunque la vuelta haya traído un error? Pasa en Android: Google
+   * devuelve dos veces, la primera vincula bien y la segunda llega con "OAuth state has expired" y tapa a la primera.
+   * Se renueva la sesión del mago y se pregunta quién es: si ya no es anónima, ya está. Devuelve {sesion} o null.
+   */
+  async function revisarVinculo(clave) {
+    const s0 = clave && R().sesiones()[clave];
+    if (!s0 || !s0.refresh) return null;
+    try {
+      const r = await api('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: JSON.stringify({ refresh_token: s0.refresh }) });
+      const s = r.ok && sesionDe(r.j);
+      if (!s) return null;
+      R().guardarSesion(clave, Object.assign({}, s0, s));   // la sesión renovada es la del mago, con o sin vínculo
+      const u = await api('/auth/v1/user', { method: 'GET' }, s.token);
+      return u.ok && u.j && u.j.is_anonymous === false ? { sesion: s } : null;
+    } catch (e) { return null; }
+  }
+
+  /**
    * Termina de entrar: averigua quién es, reclama lo del mago anónimo (si había) y trae el progreso de la nube.
    * Devuelve {cuenta, nube} — nube = {datos, rev} o null si la cuenta todavía no tiene un mago guardado.
    */
@@ -269,5 +287,5 @@
     return ok;
   }
 
-  window.WWCuenta = { activo, metodo, de, hayAlguna, preparar: prepararFusion, google, pedirCodigo, verificar, alVolver, completar, vincular, empezar, adoptar, sincronizar, programar, vaciar, compras, salir, borrar };
+  window.WWCuenta = { activo, metodo, revisarVinculo, de, hayAlguna, preparar: prepararFusion, google, pedirCodigo, verificar, alVolver, completar, vincular, empezar, adoptar, sincronizar, programar, vaciar, compras, salir, borrar };
 })();
