@@ -58,7 +58,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.39.2',
+    version: '2.39.3',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -421,22 +421,23 @@
     },
 
     // ============================================================ navegación
-    /** Hay una versión nueva instalada: se aplica sola en cuanto no haya una partida en juego. */
+    /**
+     * Hay una versión nueva instalada. Nunca se recarga delante del jugador: la próxima vez que abre el juego ya arranca
+     * con la nueva, y si la app quedó viva en segundo plano, se aplica al volver después de un rato (10 minutos o más),
+     * que es cuando igual se espera que arranque de cero. En plena partida, nunca.
+     */
     versionNueva() {
       this._versionNueva = true;
-      // en plena partida no se ofrece: recargar ahí cuesta el piso (se aplica sola al terminar)
-      if (!this.aplicarVersion() && this.pantalla !== 'p-juego') this.toast('✨ Hay una versión nueva. Tocá acá para actualizar.', 'accion', () => location.reload());
-    },
-    aplicarVersion() {
-      if (!this._versionNueva || this.pantalla === 'p-juego' || document.querySelector('#modal:not(.oculto)')) return false;
-      this._versionNueva = false;
-      this.toast('✨ Actualizando a la versión nueva…');
-      setTimeout(() => location.reload(), 900);
-      return true;
+      if (this._vigilaVersion) return;
+      this._vigilaVersion = true;
+      let oculta = 0;
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) { oculta = Date.now(); return; }
+        if (this._versionNueva && oculta && Date.now() - oculta > 10 * 60000 && this.pantalla !== 'p-juego') location.reload();
+      });
     },
 
     mostrar(id) {
-      if (this._versionNueva && id !== 'p-juego') setTimeout(() => this.aplicarVersion(), 400);
       document.querySelectorAll('.pantalla').forEach((s) => s.classList.toggle('activa', s.id === id));
       this.pantalla = id;
       if (id === 'p-practica') { this.pintarArchivo(); this.pintarPracticas(); }
