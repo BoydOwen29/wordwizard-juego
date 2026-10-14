@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.37.6',
+    version: '2.38.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -524,7 +524,60 @@
       this.ponerLugar(null);
       this.hoy = WW.claveDia();
       this.pintarPerfil();
+      this.pintarMagoPanel();
       this.mostrar('p-mago');
+    },
+
+    // ------------------------------------------------ Mi mago: Mis cosas · Logros · Números (lab/baul.html, opción A)
+    /** Silabo con el traje puesto, en la tarjeta de arriba. */
+    pintarMagoTarjeta() {
+      const c = $('mago-tarjeta'), p = Estado.perfil; if (!c || !p) return;
+      const v = Magos.PALETAS[p.sombrero] || Magos.PALETAS.turquesa;
+      c.innerHTML = window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo, etapa: Magos.etapaPorNivel(p.nivel) }));
+    },
+    pintarMagoPanel(tab) {
+      const panel = $('mago-panel'), p = Estado.perfil; if (!panel || !p) return;
+      this.magoTab = tab || this.magoTab || 'cosas';
+      document.querySelectorAll('#mago-pestanas [data-mp]').forEach((b) => b.classList.toggle('on', b.dataset.mp === this.magoTab));
+      this.pintarMagoTarjeta();
+      if (this.magoTab === 'logros') { panel.innerHTML = `<p class="texto">${this.resumenLogros()}</p><div class="logros-grilla">${this.htmlLogros()}</div>`; return; }
+      if (this.magoTab === 'numeros') { panel.innerHTML = `<div class="stats">${this.htmlEstadisticas()}</div>`; return; }
+      // Mis cosas: los trajes (tocás y te lo ponés; lo que falta dice cómo se consigue) y las pociones que tenés
+      const trajes = Object.entries(Magos.PALETAS).filter(([, v]) => v.nivel < 100 || v.especial);
+      const mini = (v) => window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }));
+      const POC = [['pista', 'pista', 'Pistas'], ['tiempo', 'arena', 'Relojes'], ['ojo', 'ojo', 'Ojos'], ['escudo', 'escudo', 'Escudos'], ['vela', 'vela', 'Velas']];
+      panel.innerHTML = `<h4 class="mis-cosas-cab">Trajes</h4>
+        <div class="mis-trajes">${trajes.map(([k, v]) => {
+          const tiene = this.tieneTraje(k);
+          return `<button class="mi-traje ${tiene ? '' : 'bloq'} ${p.sombrero === k ? 'puesto' : ''}" data-k="${k}"><span class="mini-mago">${mini(v)}</span><b>${esc(v.nombre)}</b>${tiene ? '' : `<small>${v.especial ? v.especial.precio : 'NV ' + v.nivel}</small>`}</button>`;
+        }).join('')}</div>
+        <p class="mis-cosas-nota" id="mis-cosas-nota">Tocá un traje para ponértelo.</p>
+        <h4 class="mis-cosas-cab">Pociones</h4>
+        <div class="mis-pociones">${POC.map(([k, ic, n]) => `<span title="${n}">${WWIconos.html(ic)}<b>x${p.inventario[k] || 0}</b></span>`).join('')}</div>
+        <button class="btn btn-secundario mis-cosas-tienda" id="mis-cosas-tienda">${WWIconos.html('moneda')} Conseguir más en la tienda</button>`;
+      WWIconos.pintar(panel);
+      $('mis-cosas-tienda').addEventListener('click', () => { Audio.click(); this.abrirTienda(); });
+      panel.querySelectorAll('.mi-traje').forEach((b) => b.addEventListener('click', () => {
+        const k = b.dataset.k, v = Magos.PALETAS[k], nota = $('mis-cosas-nota');
+        if (this.tieneTraje(k)) {
+          if (p.sombrero === k) { Audio.click(); nota.textContent = `Ya tenés puesto ${v.nombre}.`; return; }
+          this.ponerTraje(k);
+          this.pintarMagoPanel();
+          $('mis-cosas-nota').textContent = `¡Te pusiste ${v.nombre}!`;
+          return;
+        }
+        Audio.click();
+        nota.innerHTML = `<b>${esc(v.nombre)}</b>: ${v.especial ? 'se consigue en la tienda.' : `llega solo en el nivel ${v.nivel}, o lo adelantás con monedas.`} <a href="#" id="mis-cosas-ver">Ver en la tienda ›</a>`;
+        $('mis-cosas-ver').addEventListener('click', (e) => { e.preventDefault(); this.verEnTienda(k); });
+      }));
+    },
+    /** Abre la tienda directo en ese traje (en grande, con su botón de comprar). */
+    verEnTienda(k) {
+      this.abrirTienda();
+      setTimeout(() => {
+        const fila = document.querySelector(`#tienda .tienda-item[data-k="${k}"]`);
+        if (fila) { fila.scrollIntoView({ block: 'center' }); this.verTraje(k, fila); }
+      }, 60);
     },
 
     /** Datos del mago en el inicio (barra de arriba, botón del desafío) y en Mi mago. */
@@ -590,7 +643,7 @@
       });
       $('mapa-tienda').addEventListener('click', () => { Audio.click(); this.abrirTienda(); });
       this.abrirTienda = () => {
-        this.modal(`<h3>TIENDA</h3><p class="tienda-saldo">TENÉS ${Estado.perfil.monedas} ${WWIconos.html('moneda')}</p><div class="tienda" id="tienda"></div>`, [{ texto: 'Listo', clase: 'btn-primario', accion: () => this.pintarPerfil() }]);
+        this.modal(`<h3>TIENDA</h3><p class="tienda-saldo">TENÉS ${Estado.perfil.monedas} ${WWIconos.html('moneda')}</p><div class="tienda" id="tienda"></div>`, [{ texto: 'Listo', clase: 'btn-primario', accion: () => { this.pintarPerfil(); if (this.pantalla === 'p-mago') this.pintarMagoPanel(); } }]);
         this.renderTienda();
       };
       $('mapa-salir').addEventListener('click', () => {
@@ -617,6 +670,7 @@
       $('btn-rankings').addEventListener('click', () => { Audio.click(); this.verRankings(this.rankTab || 'hoy'); });
       $('btn-stats').addEventListener('click', () => { Audio.click(); this.verEstadisticas(); });
       $('btn-logros').addEventListener('click', () => { Audio.click(); this.verLogros(); });
+      document.querySelectorAll('#mago-pestanas [data-mp]').forEach((b) => b.addEventListener('click', () => { Audio.click(); this.pintarMagoPanel(b.dataset.mp); }));
       $('btn-ayuda').addEventListener('click', () => { Audio.click(); this.tutorial(); });
       $('btn-ajustes').addEventListener('click', () => { Audio.click(); this.verAjustes(); });
       $('btn-instalar').addEventListener('click', () => this.instalar());
@@ -1622,6 +1676,7 @@
       const p = Estado.perfil; if (!p || !Magos.PALETAS[k]) return;
       Audio.click(); p.sombrero = k; Estado.guardar();
       for (const m of ['titulo', 'menu', 'juego', 'mapa']) this.magos[m].setPaleta(k);
+      this.pintarMagoTarjeta();
     },
 
     /** Pase de Mago activo (mensual o anual): lo dice Play (WWCompras); perfil.derechos queda por compatibilidad. */
@@ -1884,7 +1939,7 @@
         if (v.especial || v.nivel <= 1 || v.nivel > 100) continue;
         const tiene = this.tieneTraje(k), precio = PRECIO_TRAJE(v.nivel);
         const d = document.createElement('div');
-        d.className = 'tienda-item traje' + (tiene ? ' tiene' : '');
+        d.className = 'tienda-item traje' + (tiene ? ' tiene' : ''); d.dataset.k = k;
         d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : `Gratis en el nivel ${v.nivel}`}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : `${WWIconos.html('moneda')}${precio}`}</button>`;
         const b = d.querySelector('button');
         d.addEventListener('click', (e) => { if (!e.target.closest('button')) this.verTraje(k, d); });
@@ -1910,7 +1965,7 @@
         if (!v.especial) continue;
         const tiene = this.tieneTraje(k);
         const d = document.createElement('div');
-        d.className = 'tienda-item traje especial' + (tiene ? ' tiene' : '') + (v.especial.apoyo ? ' apoyo' : '');
+        d.className = 'tienda-item traje especial' + (tiene ? ' tiene' : '') + (v.especial.apoyo ? ' apoyo' : ''); d.dataset.k = k;
         const sub = (v.especial.apoyo ? 'Invitale un mate a Silabo: para quien quiera bancar el juego' : `Temporada: ${v.especial.temporada}`)
           + (k === CONFIG.trajeTemporada && !tiene ? '<span class="chip-pase chico"><i class="sello-pase"></i>Incluido en el Pase</span>' : '');
         d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : sub}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : v.especial.precio}</button>`;
@@ -2141,7 +2196,11 @@
       this.magos.menu.animar('happy', 2000);
       this.confeti(60); this.vineta('flash-oro'); this.banner('⭐', 'NIVEL ' + n, WW.tituloNivel(n), 'oro');
       const nuevoSombrero = Object.entries(Magos.PALETAS).find(([, v]) => v.nivel === n);
-      this.modal(`<h3>¡NIVEL ${n}!</h3><div class="modal-silabo" data-pose="happy"></div><p>Ahora sos <b>${WW.tituloNivel(n)}</b>. +10 ${WWIconos.html('moneda')}</p>${crecio ? `<p>✨ <b>¡La varita de Silabo creció!</b> Ahora es una ${crecio.nombre.toLowerCase()}.</p>` : ''}${nuevoSombrero ? `<p>Desbloqueaste el sombrero <b>${nuevoSombrero[1].nombre}</b>. Cambialo en Ajustes.</p>` : ''}`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+      this.modal(`<h3>¡NIVEL ${n}!</h3><div class="modal-silabo" data-pose="happy"></div><p>Ahora sos <b>${WW.tituloNivel(n)}</b>. +10 ${WWIconos.html('moneda')}</p>${crecio ? `<p>✨ <b>¡La varita de Silabo creció!</b> Ahora es una ${crecio.nombre.toLowerCase()}.</p>` : ''}${nuevoSombrero ? `<p>Desbloqueaste el traje <b>${nuevoSombrero[1].nombre}</b>. Ya está en Mi mago → Mis cosas.</p>` : ''}`,
+        nuevoSombrero ? [
+          { texto: 'Ver mis cosas', clase: 'btn-secundario', accion: () => { this.magoTab = 'cosas'; this.verMago(); } },
+          { texto: 'Ponérmelo ahora', clase: 'btn-primario', accion: () => { this.ponerTraje(nuevoSombrero[0]); this.toast(`¡Te pusiste ${nuevoSombrero[1].nombre}!`); } },
+        ] : [{ texto: '¡Genial!', clase: 'btn-primario' }]);
       Estado.sumarMonedas(10); Estado.guardar();
     },
 
@@ -2302,6 +2361,10 @@
     },
 
     verEstadisticas() {
+      $('stats-contenido').innerHTML = this.htmlEstadisticas();
+      this.mostrar('p-stats');
+    },
+    htmlEstadisticas() {
       const p = Estado.perfil, s = p.stats;
       const diarios = Object.values(p.diarios).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
       const dist = {};
@@ -2332,23 +2395,18 @@
       if (diarios.length) {
         html += `<div class="stats-panel"><h3>📜 Últimos desafíos</h3><div class="hist">${diarios.slice(-14).reverse().map((d) => `<div class="hist-fila"><span class="hist-fecha">${(d.fecha || '').slice(5).replace('-', '/')}</span><span class="hist-palabra">${d.palabra.toUpperCase()}</span><span class="hist-rango">${(WW.RANGOS.find((r) => r.nombre === d.rango) || {}).icono || ''} ${d.rango}</span><span class="hist-pts">${d.puntos} pts</span></div>`).join('')}</div></div>`;
       }
-      $('stats-contenido').innerHTML = html;
-      this.mostrar('p-stats');
+      return html;
     },
 
     verLogros() {
-      const p = Estado.perfil;
-      const cont = $('logros-grilla'); cont.innerHTML = '';
-      const n = Object.keys(p.logros).length;
-      $('logros-resumen').textContent = `${n} de ${Logros.LOGROS.length} logros. Cada uno da 5 monedas.`;
-      for (const l of Logros.LOGROS) {
-        const d = document.createElement('div');
-        const ok = !!p.logros[l.id];
-        d.className = 'logro' + (ok ? '' : ' bloqueado');
-        d.innerHTML = `<span>${iconoLogro(l, !ok)}</span><b>${l.nombre}</b><small>${l.desc}</small>`;
-        cont.appendChild(d);
-      }
+      $('logros-grilla').innerHTML = this.htmlLogros();
+      $('logros-resumen').textContent = this.resumenLogros();
       this.mostrar('p-logros');
+    },
+    resumenLogros() { return `${Object.keys(Estado.perfil.logros).length} de ${Logros.LOGROS.length} logros. Cada uno da 5 monedas.`; },
+    htmlLogros() {
+      const p = Estado.perfil;
+      return Logros.LOGROS.map((l) => { const ok = !!p.logros[l.id]; return `<div class="logro${ok ? '' : ' bloqueado'}"><span>${iconoLogro(l, !ok)}</span><b>${l.nombre}</b><small>${l.desc}</small></div>`; }).join('');
     },
 
     // ============================================================ cuenta (game/js/cuenta.js, docs/LOGIN.md)

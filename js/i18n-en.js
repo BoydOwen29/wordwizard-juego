@@ -273,4 +273,6 @@ WWI18n.registrar('en', {
   "☁ Guardado": "☁ Saved", "☁ Sin señal": "☁ Offline", "! Volvé a entrar": "! Sign in again",
   "☁️ Entrar con mi cuenta": "☁️ Sign in to my account", "Te mandé un código (o un link para tocar) a": "I sent a code (or a link to tap) to",
   "Ver las palabras del piso": "See this floor's words", "Ocultar las palabras": "Hide the words",
+  // Mi mago (v2.38)
+  "Mis cosas": "My things", "Trajes": "Outfits", "Pociones": "Potions", "Tocá un traje para ponértelo.": "Tap an outfit to wear it.", "Ya tenés puesto {n}.": "You are already wearing {n}.", "¡Te pusiste {n}!": "You put on {n}!", "se consigue en la tienda.": "you can get it in the shop.", "llega solo en el nivel {n}, o lo adelantás con monedas.": "unlocks at level {n}, or get it early with coins.", "Ver en la tienda ›": "See in the shop ›", "Conseguir más en la tienda": "Get more in the shop", "Desbloqueaste el traje": "You unlocked the", ". Ya está en Mi mago → Mis cosas.": " outfit. It is in My wizard → My things.", "Ver mis cosas": "See my things", "Ponérmelo ahora": "Wear it now", "Pistas": "Hints", "Relojes": "Hourglasses", "Ojos": "Eyes", "Escudos": "Shields", "Velas": "Candles", "{a} de {b} logros. Cada uno da 5 monedas.": "{a} of {b} achievements. Each gives 5 coins.",
 });
