@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.36.1',
+    version: '2.37.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -166,6 +166,7 @@
       this.pwa();
       this.juice();
       this.compras();
+      this.cuenta();
       this.atras();
       this.chipIdioma();
       // uso anónimo (game/js/metricas.js): una apertura por día, también si vuelve del segundo plano otro día
@@ -187,6 +188,8 @@
         $('titulo-perfiles').classList.remove('oculto');
         const p = Estado.cargar();
         if (p) { const b = $('btn-jugar'); b.textContent = '▶ Jugar como ' + p.nombre; b.classList.remove('oculto'); b.onclick = () => { Audio.despertar(); Audio.click(); this.entrar(p.nombre); }; }
+        this.pintarCuentaTitulo();
+        this.cuentaAlAbrir();
       }, 60);
     },
 
@@ -402,6 +405,7 @@
       this.pintarMusica();
       this.irMenu();
       this.revisarEnCurso();
+      this.sincronizarCuenta();
       // v2.30: hasta la v2.29 la Torre solo se mandaba al cerrar la subida; quien la dejó a la mitad no figuraba.
       // Una vez por mago se manda lo que ya tiene (la base no deja bajar un récord, así que repetir no hace daño).
       const sub = p.subida && p.subida.puntajeTotal || 0;
@@ -512,6 +516,7 @@
       this.pintarPerfil();
       this.mostrar('p-menu');
       this.momentosPase();
+      this.momentoCuenta();
     },
 
     verMago() {
@@ -685,11 +690,13 @@
       $('aj-tutorial').addEventListener('click', () => { Audio.click(); this.tutorial(); });
       $('aj-exportar').addEventListener('click', () => this.exportar());
       $('aj-borrar').addEventListener('click', () => {
+        if (this.tieneCuenta()) return this.borrarCuenta();
         this.modal(`<h3>¿BORRAR A ${esc(Estado.perfil.nombre).toUpperCase()}?</h3><p>Se pierde todo el progreso de este mago en este dispositivo${Ranking.activo() ? ' y sus resultados en el ranking mundial' : ''}.</p>`, [
           { texto: 'Cancelar', clase: 'btn-secundario' },
           { texto: 'Borrar', clase: 'btn-peligro', accion: () => { if (Ranking.activo()) Ranking.borrar(this.claveNube()); Estado.borrar(Estado.perfil.nombre); this.renderPerfiles(); this.mostrar('p-titulo'); } },
         ]);
       });
+      $('btn-cuenta-entrar').addEventListener('click', () => { Audio.despertar(); this.entrarCuenta(null); });
 
       window.addEventListener('beforeunload', (e) => {
         if (this.partida && !this.partida.terminada && this.partida.modo === 'diario') { e.preventDefault(); e.returnValue = ''; }
@@ -2334,8 +2341,259 @@
       this.mostrar('p-logros');
     },
 
+    // ============================================================ cuenta (game/js/cuenta.js, docs/LOGIN.md)
+    // Opcional: sin cuenta se juega igual. Con cuenta (Google o código por mail) el progreso queda guardado y se
+    // sincroniza entre dispositivos; el ranking y las compras pasan a ser de la cuenta.
+    cuenta() {
+      if (!window.WWCuenta) return;
+      const ocupado = () => !!(this.partida && !this.partida.terminada);
+      Estado.alGuardar = () => { if (Estado.perfil) WWCuenta.programar(this.claveNube(), () => Estado.perfil, ocupado); };
+      document.addEventListener('visibilitychange', () => {
+        if (!Estado.perfil) return;
+        if (document.hidden) WWCuenta.vaciar(this.claveNube(), Estado.perfil);
+        else if (!ocupado()) this.sincronizarCuenta();
+      });
+      this._vuelta = WWCuenta.alVolver();   // vuelve de la pantalla de Google: se termina cuando el título esté listo
+    },
+    tieneCuenta() { return !!(window.WWCuenta && Estado.perfil && WWCuenta.de(this.claveNube())); },
+
+    /** "Ya tengo cuenta" en el título: solo si las cuentas andan (con conexión al ranking). */
+    pintarCuentaTitulo() { const b = $('btn-cuenta-entrar'); if (b) b.classList.toggle('oculto', !(window.WWCuenta && WWCuenta.activo())); },
+    /** Al abrir el título: si volvió de Google, termina de entrar. */
+    cuentaAlAbrir() {
+      const v = this._vuelta; this._vuelta = null;
+      if (!v) return;
+      const p = v.clave && Object.values(Estado.todos()).find((x) => x.creado === v.clave);
+      if (v.error) {
+        // ese Google ya tiene su propia cuenta (la armó en otro dispositivo): se puede entrar a esa
+        if (v.yaExiste && p) {
+          Estado.cargar(p.nombre);
+          this.modal(`<h3>ESE GOOGLE YA TIENE CUENTA</h3><div class="modal-silabo"></div><p>Esa cuenta de Google ya tiene un mago guardado.</p><p>Podés entrar a esa cuenta: te muestro los dos magos y elegís. No se borra ninguno.</p>`, [
+            { texto: 'Ahora no', clase: 'btn-secundario' },
+            { texto: 'Entrar a esa cuenta', clase: 'btn-primario', accion: () => WWCuenta.google(v.clave, true) },
+          ]);
+        } else this.toast('No se pudo entrar con Google. Probá de nuevo.');
+        return;
+      }
+      if (p) Estado.cargar(p.nombre); else Estado.salir();
+      this.cuentaLista(v.sesion, p ? v.clave : null, v.secreto, v.vinculo);
+    },
+
+    /** Trae lo de la nube y lo junta con lo de acá (al entrar, al volver a la app). También las compras de la cuenta. */
+    async sincronizarCuenta() {
+      if (!this.tieneCuenta()) return;
+      const clave = this.claveNube(), r = await WWCuenta.sincronizar(clave, Estado.perfil);
+      if (!Estado.perfil || this.claveNube() !== clave) return;
+      if (r && r.perfil && !(this.partida && !this.partida.terminada)) this.aplicarPerfil(r.perfil);
+      const lista = await WWCuenta.compras(clave);
+      if (window.WWCompras && WWCompras.desdeCuenta(lista)) this.repintarPase();
+    },
+    /** El perfil que vino de la nube pasa a ser el de acá, sin cambiar de pantalla. */
+    aplicarPerfil(nuevo) {
+      const p = Estado.perfil, nombre = p.nombre;
+      for (const k of Object.keys(p)) delete p[k];
+      Object.assign(p, nuevo, { nombre });   // el nombre es de cada dispositivo (es la clave del mago acá)
+      Estado.guardar();
+      for (const k of ['titulo', 'menu', 'juego', 'resultado', 'mapa']) { this.magos[k].setPaleta(Estado.perfil.sombrero); this.magos[k].setNivel(Estado.perfil.nivel); }
+      if (this.pantalla === 'p-menu') this.pintarPerfil();
+      if (this.pantalla === 'p-ajustes') this.verAjustes();
+    },
+
+    /** Silabo ofrece guardar el progreso: con el Pase, o después de unas partidas; como mucho 3 veces, una por semana. */
+    momentoCuenta() {
+      const p = Estado.perfil;
+      if (!p || !window.WWCuenta || !WWCuenta.activo() || this.tieneCuenta()) return;
+      const v = p.vistos && p.vistos.cuenta || { veces: 0, dia: null };
+      const dias = v.dia ? (new Date(this.hoy) - new Date(v.dia)) / 864e5 : 99;
+      const pase = this.tienePase();
+      if (v.veces >= 3 || dias < 7 || (!pase && p.stats.partidas < 6) || (p.ventas && p.ventas.dia === this.hoy)) return;
+      setTimeout(() => {
+        if (this.pantalla !== 'p-menu' || !$('modal').classList.contains('oculto') || this.tieneCuenta()) return;
+        p.vistos = Object.assign({}, p.vistos, { cuenta: { veces: v.veces + 1, dia: this.hoy } }); Estado.guardar();
+        const racha = Estado.rachaVigente(this.hoy);
+        this.modal(`<h3>¿TE GUARDO EL PROGRESO?</h3><div class="modal-silabo" data-pose="happy"></div>
+          <p>${pase ? 'Tenés el Pase de Mago.' : `Ya vas por el nivel ${p.nivel}${racha >= 2 ? ` con ${racha} días de racha` : ''}.`}</p>
+          <p>Con una cuenta no lo perdés si cambiás de celular, y seguís jugando en la compu.</p>`, [
+          { texto: 'Ahora no', clase: 'btn-secundario' },
+          { texto: 'Guardar mi progreso', clase: 'btn-primario', accion: () => this.entrarCuenta(this.claveNube()) },
+        ]);
+      }, 1500);
+    },
+
+    /** Pantalla para entrar: Google o código por mail. clave = el mago de acá que se guarda (null: traer uno de la cuenta). */
+    entrarCuenta(clave) {
+      Audio.click();
+      if (!window.WWCuenta || !WWCuenta.activo()) { this.toast('Las cuentas necesitan conexión a internet.'); return; }
+      const guardar = !!clave;
+      this.modal(`<h3>${guardar ? 'GUARDÁ TU PROGRESO' : 'ENTRÁ CON TU CUENTA'}</h3><div class="modal-silabo"></div>
+        <p>${guardar ? 'Así no lo perdés y seguís en la compu o en otro celular.' : 'Traigo tu mago con todo lo que hiciste.'}</p>
+        <div class="cuenta-entrar">
+          ${WWCuenta.metodo('google') ? '' : '<!--'}<button class="btn btn-google" id="cu-google"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span>Seguir con Google</span></button>${WWCuenta.metodo('google') ? '' : '-->'}
+          ${WWCuenta.metodo('google') && WWCuenta.metodo('mail') ? '<div class="cuenta-o"><span>o con tu mail</span></div>' : ''}
+          ${WWCuenta.metodo('mail') ? '' : '<!--'}<input class="modal-input" id="cu-mail" type="email" inputmode="email" autocomplete="email" placeholder="tu@mail.com" maxlength="120">
+          <button class="btn btn-primario" id="cu-mandar">Mandame un código</button>${WWCuenta.metodo('mail') ? '' : '-->'}
+          <p class="cuenta-nota">Tu mail solo sirve para reconocer tu cuenta. Nada de publicidad.</p>
+        </div>`, [], { cerrar: true });
+      if ($('cu-google')) $('cu-google').addEventListener('click', () => { Audio.click(); $('cu-google').disabled = true; WWCuenta.google(clave); });
+      const mandar = async () => {
+        const mail = $('cu-mail').value, b = $('cu-mandar');
+        b.disabled = true; b.textContent = 'Mandando…';
+        const r = await WWCuenta.pedirCodigo(mail, clave);
+        if (r === 'ok') return this.pedirCodigoCuenta(clave, mail.trim().toLowerCase());
+        b.disabled = false; b.textContent = 'Mandame un código';
+        this.toast(r === 'mail' ? 'Revisá el mail: parece que está mal escrito.' : r === 'espera' ? 'Pediste muchos códigos seguidos. Esperá un minuto.' : 'No se pudo mandar el código. Probá de nuevo.');
+      };
+      if (!$('cu-mandar')) return;
+      $('cu-mandar').addEventListener('click', () => { Audio.click(); mandar(); });
+      $('cu-mail').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); mandar(); } });
+    },
+    pedirCodigoCuenta(clave, mail) {
+      this.modal(`<h3>REVISÁ TU MAIL</h3><div class="modal-silabo" data-pose="happy"></div>
+        <p>Te mandé un código de 6 números (o un link para tocar) a</p><p class="cuenta-mail">${esc(mail)}</p>
+        <input class="modal-input cuenta-codigo" id="cu-codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="······">
+        <button class="btn btn-primario" id="cu-verificar">Entrar</button>
+        <p class="cuenta-nota">¿No llegó? Mirá en spam o <a href="#" id="cu-otra">pedí otro</a>.</p>`, [], { cerrar: true });
+      setTimeout(() => { const i = $('cu-codigo'); if (i) i.focus(); }, 150);
+      const verificar = async () => {
+        const b = $('cu-verificar'), cod = $('cu-codigo').value;
+        if (cod.replace(/\D/g, '').length < 6) return this.toast('El código tiene 6 números.');
+        b.disabled = true; b.textContent = 'Entrando…';
+        const r = await WWCuenta.verificar(mail, cod);
+        if (r.sesion) { $('modal').classList.add('oculto'); return this.cuentaLista(r.sesion, clave, r.secreto, r.vinculo); }
+        b.disabled = false; b.textContent = 'Entrar';
+        this.toast(r.error === 'codigo' ? 'Ese código no anda o ya venció. Fijate o pedí otro.' : 'No se pudo entrar. Probá de nuevo.');
+      };
+      $('cu-verificar').addEventListener('click', () => { Audio.click(); verificar(); });
+      $('cu-codigo').addEventListener('input', (e) => { if (e.target.value.replace(/\D/g, '').length === 6) verificar(); });
+      $('cu-otra').addEventListener('click', (e) => { e.preventDefault(); this.entrarCuenta(clave); setTimeout(() => { const i = $('cu-mail'); if (i) i.value = mail; }, 50); });
+    },
+
+    /**
+     * Ya entró (con Google o con el código): se reclama lo del mago anónimo y se decide qué mago queda.
+     *  · el mago de acá y la cuenta vacía → la cuenta guarda este mago
+     *  · la cuenta ya tiene un mago → si es el mismo, se juntan; si es otro, elige con cuál seguir
+     *  · sin mago de acá (entró desde el título) → se trae el de la cuenta, o se crea uno nuevo si está vacía
+     */
+    async cuentaLista(sesion, clave, secreto, vinculo) {
+      this.toast('☁️ Entrando…');
+      let r;
+      try { r = await WWCuenta.completar(sesion, secreto); } catch (e) { this.toast('No se pudo entrar. Probá de nuevo.'); return; }
+      const { cuenta, nube } = r;
+      const local = clave && Estado.perfil && this.claveNube() === clave ? Estado.perfil : null;
+      const listo = (nombre, msj) => {
+        this.toast(msj);
+        if (this.pantalla === 'p-titulo' || !Estado.perfil || Estado.perfil.nombre !== nombre) { this.renderPerfiles(); this.entrar(nombre); }
+        else if (this.pantalla === 'p-ajustes') this.verAjustes();
+        this.sincronizarCuenta();
+      };
+      // nunca se borra un mago: si se trae el de la cuenta, el de acá queda en el dispositivo (sin cuenta)
+      const traer = (soltarLocal) => {
+        if (soltarLocal && local) Ranking.olvidar(clave);
+        const p = Estado.instalar(nube.datos);
+        WWCuenta.vincular(p.creado, sesion, cuenta);
+        WWCuenta.adoptar(p.creado, nube);
+        listo(p.nombre, `☁️ ¡Hola de nuevo, ${p.nombre}!`);
+      };
+      const guardarLocal = async (rev) => {
+        WWCuenta.vincular(clave, sesion, cuenta);
+        try { await WWCuenta.empezar(clave, local, rev); } catch (e) { /* se reintenta en la próxima sincronización */ }
+        listo(local.nombre, '☁️ Listo: tu progreso queda guardado en tu cuenta.');
+      };
+      if (local) {
+        // vinculado: es la MISMA cuenta que el mago ya usaba (mismo id), así que la nube está vacía o es suya
+        if (vinculo || !nube) return guardarLocal(nube ? nube.rev : 0);
+        if (nube.datos.creado === local.creado) { WWCuenta.vincular(clave, sesion, cuenta); return listo(local.nombre, '☁️ Volviste a entrar.'); }
+        const n = nube.datos;
+        this.modal(`<h3>TU CUENTA YA TIENE UN MAGO</h3><div class="modal-silabo"></div>
+          <p>En la cuenta está <b>${esc(n.nombre)}</b> (nivel ${n.nivel}). Acá tenés a <b>${esc(local.nombre)}</b> (nivel ${local.nivel}).</p>
+          <p>¿Cuál queda en la cuenta? Ninguno se borra: el otro sigue en este dispositivo y la cuenta guarda una copia del anterior.</p>`, [
+          { texto: `Traer a ${n.nombre}`, clase: 'btn-primario', accion: () => traer(true) },
+          { texto: `Guardar a ${local.nombre}`, clase: 'btn-secundario', accion: () => guardarLocal(nube.rev) },
+          { texto: 'Cancelar', clase: 'btn-secundario', atras: true, accion: () => this.cerrarSesionSuelta(sesion) },
+        ]);
+        return;
+      }
+      if (nube) return traer(false);
+      // la cuenta está vacía y acá no hay mago: lo más probable es que el mago esté en otro dispositivo sin guardar
+      this.modal(`<h3>TU CUENTA ESTÁ VACÍA</h3><div class="modal-silabo"></div><p>Todavía no guardaste ningún mago en esta cuenta.</p>
+        <p>Si ya jugás en otro dispositivo (el celu, por ejemplo), entrá ahí primero: <b>Ajustes → Guardar mi progreso</b>. Después volvé acá y tocá "Ya tengo cuenta".</p>`, [
+        { texto: 'Entendido', clase: 'btn-primario', accion: () => this.cerrarSesionSuelta(sesion) },
+        { texto: 'Empezar uno nuevo', clase: 'btn-secundario', accion: () => this.crearEnCuenta(sesion, cuenta, listo) },
+      ]);
+    },
+    /** Se entró a una cuenta pero no se usa: se cierra esa sesión (no queda guardada en ningún mago). */
+    cerrarSesionSuelta(sesion) { try { fetch(`${Ranking.CONFIG.url}/auth/v1/logout?scope=local`, { method: 'POST', headers: { apikey: Ranking.CONFIG.key, Authorization: 'Bearer ' + sesion.token } }); } catch (e) { /* nada */ } },
+    crearEnCuenta(sesion, cuenta, listo) {
+      this.modal(`<h3>¿CÓMO SE LLAMA TU MAGO?</h3><div class="modal-silabo"></div><p>Armemos tu mago nuevo.</p>
+        <input class="modal-input" id="cu-nombre" type="text" maxlength="16" placeholder="Tu nombre">`, [
+        { texto: 'Crear', clase: 'btn-primario', accion: async () => {
+          const nom = ($('cu-nombre') && $('cu-nombre').value.trim()) || 'Mago';
+          const p = Estado.crear(Estado.todos()[nom] ? nom.slice(0, 13) + ' 2' : nom);
+          if (!p) return;
+          WWCuenta.vincular(p.creado, sesion, cuenta);
+          try { await WWCuenta.empezar(p.creado, p, 0); } catch (e) { /* se reintenta */ }
+          listo(p.nombre, '☁️ ¡Listo! Tu mago queda guardado en tu cuenta.');
+        } },
+      ]);
+    },
+
+    /** Ajustes → Tu cuenta. */
+    pintarCuenta() {
+      const caja = $('aj-cuenta'); if (!caja) return;
+      const ok = window.WWCuenta && WWCuenta.activo();
+      caja.classList.toggle('oculto', !ok);
+      $('aj-borrar').textContent = 'Borrar este mago';
+      if (!ok) return;
+      const c = WWCuenta.de(this.claveNube());
+      if (!c) {
+        caja.innerHTML = `<div class="cuenta-caja"><b>☁️ Guardá tu progreso</b><small>Entrá con Google o con tu mail para no perderlo y jugar en otros dispositivos.</small>
+          <button class="btn btn-primario" id="aj-cuenta-entrar">Guardar mi progreso</button></div>`;
+        $('aj-cuenta-entrar').addEventListener('click', () => this.entrarCuenta(this.claveNube()));
+        return;
+      }
+      $('aj-borrar').textContent = 'Borrar mi cuenta';
+      caja.innerHTML = `<div class="cuenta-caja con-cuenta"><b>☁️ Tu cuenta</b>
+        <small class="cuenta-quien">${c.proveedor === 'google' ? 'Google' : 'Mail'} · <span data-no-t>${esc(c.email)}</span></small>
+        ${c.perdida ? '<small class="cuenta-aviso">Tu sesión venció: volvé a entrar para seguir guardando.</small><button class="btn btn-primario" id="aj-cuenta-volver">Volver a entrar</button>' : '<small>Tu progreso se guarda solo.</small>'}
+        <button class="btn btn-secundario" id="aj-cuenta-salir">Salir de la cuenta</button></div>`;
+      if ($('aj-cuenta-volver')) $('aj-cuenta-volver').addEventListener('click', () => this.entrarCuenta(this.claveNube()));
+      $('aj-cuenta-salir').addEventListener('click', () => this.salirCuenta());
+    },
+
+    salirCuenta() {
+      Audio.click();
+      const p = Estado.perfil, clave = this.claveNube();
+      this.modal(`<h3>¿SALIR DE LA CUENTA?</h3><p><b>${esc(p.nombre)}</b> se va de este dispositivo. Queda guardado en tu cuenta: lo recuperás entrando de nuevo.</p>`, [
+        { texto: 'Cancelar', clase: 'btn-secundario' },
+        { texto: 'Sí, salir', clase: 'btn-peligro', accion: async () => {
+          this.toast('☁️ Guardando…');
+          const r = await WWCuenta.sincronizar(clave, Estado.perfil);
+          if (!r) { this.toast('Sin conexión: si salís ahora se pierde lo último. Probá en un rato.'); return; }
+          await WWCuenta.salir(clave);
+          if (window.WWCompras) WWCompras.olvidarCuenta();
+          Estado.borrar(p.nombre); this.renderPerfiles(); this.mostrar('p-titulo');
+          this.toast('Saliste de la cuenta. Tu mago te espera ahí.');
+        } },
+      ]);
+    },
+
+    borrarCuenta() {
+      const p = Estado.perfil, clave = this.claveNube();
+      this.modal(`<h3>¿BORRAR TU CUENTA?</h3><p>Se borra <b>${esc(p.nombre)}</b> con todo su progreso, en este y en todos tus dispositivos, y sus resultados en el ranking. No se puede deshacer.</p>
+        <p class="cuenta-nota">Si tenés el Pase de Mago, la suscripción se cancela aparte, desde Google Play.</p>`, [
+        { texto: 'Cancelar', clase: 'btn-secundario' },
+        { texto: 'Borrar todo', clase: 'btn-peligro', accion: async () => {
+          if (!(await WWCuenta.borrar(clave))) { this.toast('Sin conexión: no se pudo borrar. Probá de nuevo.'); return; }
+          if (window.WWCompras) WWCompras.olvidarCuenta();
+          Estado.borrar(p.nombre); this.renderPerfiles(); this.mostrar('p-titulo');
+          this.toast('Tu cuenta se borró.');
+        } },
+      ]);
+    },
+
     verAjustes() {
       const p = Estado.perfil;
+      this.pintarCuenta();
       if (window.WWRecordatorio) {
         $('aj-recordatorio-fila').classList.toggle('oculto', !WWRecordatorio.disponible());
         const e = WWRecordatorio.estado(); $('aj-recordatorio').value = e.on ? String(e.hora) : '';

@@ -48,9 +48,13 @@
     let s = todas[clave];
     if (s && s.vence > Date.now() + 60000) return s;
     let nueva = s && s.refresh ? await auth('token?grant_type=refresh_token', { refresh_token: s.refresh }) : null;
+    // una cuenta con Google o mail (cuenta.js) nunca se reemplaza por una anónima: si la sesión venció del todo,
+    // hay que volver a entrar (el juego lo avisa en Ajustes)
+    if (!nueva && s && s.cuenta) { s.perdida = true; guardarSesion(clave, s); throw new Error('sesión vencida'); }
     if (!nueva) nueva = await auth('signup', {});           // primera vez, o la sesión se perdió
     if (!nueva) throw new Error('sin sesión');
-    s = Object.assign({}, nueva, { nombre: nueva.id === (s && s.id) ? s.nombre : null });
+    const mismo = s && nueva.id === s.id;
+    s = Object.assign({}, mismo ? s : {}, nueva, { nombre: mismo ? s.nombre : null, perdida: false });
     todas[clave] = s;
     escribir(LS_SESIONES, todas);
     return s;
@@ -140,5 +144,9 @@
     setTimeout(vaciarCola, 4000);
   }
 
-  window.WWRanking = { CONFIG, activo, enviarDiario, enviarTorre, topDiario, topSemanal, topTorre, miId, borrar, nombreOk, vaciarCola };
+  // lo que usa cuenta.js (login con Google o mail sobre la misma sesión)
+  const sesiones = () => leer(LS_SESIONES, {});
+  /** Se olvida la sesión de ese mago en este dispositivo (salir de la cuenta) y lo que tenía en cola. */
+  function olvidar(clave) { const t = sesiones(); delete t[clave]; escribir(LS_SESIONES, t); escribir(LS_COLA, leer(LS_COLA, []).filter((x) => x.clave !== clave)); }
+  window.WWRanking = { CONFIG, activo, enviarDiario, enviarTorre, topDiario, topSemanal, topTorre, miId, borrar, nombreOk, vaciarCola, sesion, sesiones, guardarSesion, olvidar, rest, auth, nombrePublico };
 })();

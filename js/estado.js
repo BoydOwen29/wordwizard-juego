@@ -44,8 +44,58 @@
   addEventListener('pagehide', vaciar);
   document.addEventListener('visibilitychange', () => { if (document.hidden) vaciar(); });
 
+  // ------------------------------------------------------------ juntar dos versiones del mismo mago
+  // Pasa cuando se jugó en dos dispositivos con la misma cuenta sin que se sincronizaran en el medio. `base` es lo que
+  // ambos tenían la última vez que coincidieron; se suma lo que cada uno ganó desde ahí:
+  //   · números (xp, monedas, inventario, contadores): nube + (local − base); los récords ("mejor…"), el máximo
+  //   · objetos (diarios, logros, trajes, registro…): campo por campo; lo que solo uno tiene, se queda (ENTERO: de a uno)
+  //   · listas (historial, mejores palabras): se juntan sin repetir
+  //   · lo demás (sombrero, ajustes, nombre): gana este dispositivo si lo cambió
+  //   · la racha va con el que jugó el diario más reciente
+  const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const copia = (x) => (x === undefined ? undefined : JSON.parse(JSON.stringify(x)));
+  const esObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+  const MAXIMO = /^(mejor|nivel$|checkpoint$|totalPuntos$|total$|pct$)/;
+  // cosas que valen enteras (una partida a medias, las misiones del día, un día del diario): si las dos cambiaron, la de acá
+  const ENTERO = /^(enCurso|subida|misiones|ajustes|torreHoy|practicasHoy|ventas|\d)/;
+  function juntar(b, l, n, k) {
+    if (l === undefined) return b === undefined ? copia(n) : undefined;   // lo borró este dispositivo (o nunca lo tuvo)
+    if (n === undefined) return b === undefined ? copia(l) : undefined;
+    if (igual(l, b)) return copia(n);
+    if (igual(n, b)) return copia(l);
+    if (typeof l === 'number' && typeof n === 'number') {
+      if (MAXIMO.test(k) || typeof b !== 'number') return Math.max(l, n);
+      return Math.max(0, n + (l - b));
+    }
+    if (Array.isArray(l) && Array.isArray(n)) {
+      const vistos = new Set(), out = [];
+      for (const x of [...l, ...n]) { const j = JSON.stringify(x); if (!vistos.has(j)) { vistos.add(j); out.push(copia(x)); } }
+      if (k === 'mejoresPalabras') return out.filter((x, i) => out.findIndex((y) => y.p === x.p) === i).sort((x, y) => y.n - x.n || String(x.p).localeCompare(y.p)).slice(0, 10);
+      if (k === 'historial') return out.sort((x, y) => String(y.fecha).localeCompare(String(x.fecha)) || y.puntos - x.puntos).slice(0, 20);
+      return out;
+    }
+    // una entrada que apareció en los dos lados a la vez (el mismo día jugado en dos lados): queda la de acá entera
+    if (esObj(l) && esObj(n) && esObj(b) && !ENTERO.test(k)) {
+      const out = {};
+      for (const c of new Set([...Object.keys(n), ...Object.keys(l)])) { const v = juntar(b[c], l[c], n[c], c); if (v !== undefined) out[c] = v; }
+      return out;
+    }
+    return copia(l);
+  }
+  function fusionar(base, local, nube) {
+    if (!base) return copia(local);
+    const p = juntar(base, local, nube, '');
+    const deNube = String(nube.ultimoDiario || '') > String(local.ultimoDiario || '');
+    p.racha = deNube ? nube.racha : local.racha;
+    p.ultimoDiario = deNube ? nube.ultimoDiario : local.ultimoDiario;
+    p.mejorRacha = Math.max(p.racha || 0, local.mejorRacha || 0, nube.mejorRacha || 0);
+    if (window.WW && window.WW.nivelPorXp) p.nivel = window.WW.nivelPorXp(p.xp);
+    return p;
+  }
+
   const Estado = {
     perfil: null,
+    fusionar,
 
     /** ¿Se puede guardar en este navegador? */
     almacenamientoOk() { try { localStorage.setItem('ww.prueba', '1'); localStorage.removeItem('ww.prueba'); return true; } catch (e) { return false; } },
@@ -82,6 +132,7 @@
       const todos = leerTodos();
       todos[this.perfil.nombre] = this.perfil;
       guardarTodos(todos);
+      if (this.alGuardar) try { this.alGuardar(this.perfil); } catch (e) { /* la nube nunca frena el juego */ }
     },
 
     renombrar(nuevo) {
@@ -177,6 +228,25 @@
       s.mejoresPalabras.push({ p: palabra, n: puntos });
       s.mejoresPalabras.sort((a, b) => b.n - a.n || a.p.localeCompare(b.p));
       s.mejoresPalabras = s.mejoresPalabras.slice(0, 10);
+    },
+
+    /** Avisos cuando el perfil se guarda (cuenta.js sube el progreso a la nube un rato después). */
+    alGuardar: null,
+
+    /**
+     * Trae un perfil de la nube a este dispositivo: reemplaza al mago con ese `creado` (o al del mismo nombre)
+     * y lo deja activo. Si el nombre está ocupado por otro mago de acá, le agrega un número.
+     */
+    instalar(datos) {
+      const todos = leerTodos();
+      let viejo = Object.keys(todos).find((k) => todos[k].creado && todos[k].creado === datos.creado);
+      let n = String(datos.nombre || 'Mago').trim().slice(0, 16) || 'Mago';
+      if (viejo && viejo !== n) delete todos[viejo];
+      for (let i = 2; todos[n] && todos[n].creado !== datos.creado && i < 99; i++) n = String(datos.nombre).slice(0, 13) + ' ' + i;
+      todos[n] = Object.assign({}, datos, { nombre: n });
+      guardarTodos(todos);
+      vaciar();
+      return this.cargar(n);
     },
 
     exportar() { return JSON.stringify(leerTodos()); },

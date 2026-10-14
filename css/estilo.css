@@ -1308,3 +1308,23 @@ body.con-pase .pase-brillo { display: block; }
 .pase-bienv-grilla { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .pase-bienv { border: 2px solid var(--borde-p); border-radius: 12px; padding: 8px 6px; background: rgba(20,33,40,.45); color: #f3f6ee; font: 700 calc(12.5px * var(--letra, 1)) var(--texto-f); }
 .pase-bienv em { display: block; font-style: normal; font: 600 calc(11.5px * var(--letra, 1)) var(--display); color: var(--oro); margin-top: 3px; }
+
+/* ---------- cuenta (v2.37): entrar con Google o mail, Ajustes → Tu cuenta ---------- */
+.cuenta-entrar { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1f1f1f; border: 3px solid var(--borde-m); box-shadow: 0 4px 0 var(--borde-m); font: 800 calc(16px * var(--letra, 1)) var(--texto-f); }
+.btn-google:disabled { opacity: .6; }
+.cuenta-o { display: flex; align-items: center; gap: 10px; color: var(--texto-suave); font: 700 calc(12.5px * var(--letra, 1)) var(--texto-f); margin-top: 4px; }
+.cuenta-o::before, .cuenta-o::after { content: ''; flex: 1; height: 1px; background: currentColor; opacity: .35; }
+.cuenta-entrar .modal-input { margin: 0; }
+.cuenta-nota { font-size: calc(12px * var(--letra, 1)); color: var(--texto-suave); margin: 6px 0 0; font-weight: 600; }
+.cuenta-nota a { color: var(--bronce-hi); }
+.cuenta-mail { font: 800 calc(15px * var(--letra, 1)) var(--texto-f); color: var(--bronce-hi); margin: -4px 0 4px; word-break: break-all; }
+.cuenta-codigo { text-align: center; letter-spacing: .45em; font-size: calc(24px * var(--letra, 1)) !important; }
+#cu-verificar { width: 100%; margin-top: 4px; }
+.cuenta-caja { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; margin: 14px 0 4px; border-radius: 16px; border: 2px solid var(--borde-p, var(--vidrio-borde)); background: rgba(20,33,40,.45); text-align: left; }
+.cuenta-caja b { font: 700 calc(16px * var(--letra, 1)) var(--display, var(--texto-f)); color: var(--bronce-hi); }
+.cuenta-caja small { font-size: calc(13px * var(--letra, 1)); color: var(--texto-suave); font-weight: 600; }
+.cuenta-caja .cuenta-quien { color: var(--texto); font-weight: 800; word-break: break-all; }
+.cuenta-caja .cuenta-aviso { color: #ffd9cf; }
+.cuenta-caja .btn { margin-top: 4px; }
+.btn-link-cuenta { display: block; margin: 12px auto 0; background: none; border: 0; color: var(--bronce-hi); font: 800 calc(14px * var(--letra, 1)) var(--texto-f); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px 10px; }

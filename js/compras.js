@@ -114,5 +114,24 @@
     return 'ok';
   }
 
-  window.WWCompras = { PASE, iniciar, disponible, precios, formato, tiene, tienePase, estadoPase, restaurar, comprar };
+  /**
+   * Lo que la cuenta del mago compró en otro dispositivo (cuenta.js → mis_compras): así el Pase y los trajes llegan a
+   * la compu o a otro celular. Lo que dice Play en este celular manda; esto solo completa. true si cambió algo.
+   */
+  function desdeCuenta(lista) {
+    if (!Array.isArray(lista)) return false;
+    const d = leer(), antes = JSON.stringify(d);
+    for (const k of Object.keys(d)) if (d[k].nube) delete d[k];
+    for (const x of lista) {
+      if (d[x.sku]) continue;
+      d[x.sku] = { nube: true, vence: PASE.includes(x.sku) ? x.expira : 0 };
+      if (x.expira) d[x.sku].expira = new Date(x.expira).toISOString();
+    }
+    escribir(d);
+    return JSON.stringify(d) !== antes;
+  }
+  /** Al salir de la cuenta: se va lo que venía de ella. */
+  function olvidarCuenta() { const d = leer(); for (const k of Object.keys(d)) if (d[k].nube) delete d[k]; escribir(d); }
+
+  window.WWCompras = { PASE, iniciar, disponible, precios, formato, tiene, tienePase, estadoPase, restaurar, comprar, desdeCuenta, olvidarCuenta };
 })();
