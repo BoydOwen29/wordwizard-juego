@@ -55,7 +55,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.38.0',
+    version: '2.38.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -2556,7 +2556,7 @@
         const r = await WWCuenta.pedirCodigo(mail, clave);
         if (r === 'ok') return this.pedirCodigoCuenta(clave, mail.trim().toLowerCase());
         b.disabled = false; b.textContent = 'Mandame un código';
-        this.toast(r === 'mail' ? 'Revisá el mail: parece que está mal escrito.' : r === 'espera' ? 'Pediste muchos códigos seguidos. Esperá un minuto.' : 'No se pudo mandar el código. Probá de nuevo.');
+        this.toast(r === 'mail' ? 'Revisá el mail: parece que está mal escrito.' : r === 'espera' ? 'Para pedir otro código esperá un minuto.' : 'No se pudo mandar el código. Probá de nuevo.');
       };
       if (!$('cu-mandar')) return;
       $('cu-mandar').addEventListener('click', () => { Audio.click(); mandar(); });
@@ -2569,18 +2569,21 @@
         <button class="btn btn-primario" id="cu-verificar">Entrar</button>
         <p class="cuenta-nota">¿No llegó? Mirá en spam o <a href="#" id="cu-otra">pedí otro</a>.</p>`, [], { cerrar: true });
       setTimeout(() => { const i = $('cu-codigo'); if (i) i.focus(); }, 150);
+      // un código se usa una sola vez: si ya se está mandando (el envío solo al pegar + el botón), no se manda de nuevo
+      let verificando = false, tCod = null;
       const verificar = async () => {
+        clearTimeout(tCod);
+        if (verificando) return;
         const b = $('cu-verificar'), cod = $('cu-codigo').value;
         if (cod.replace(/\D/g, '').length < 6) return this.toast('El código tiene 6 números.');
-        b.disabled = true; b.textContent = 'Entrando…';
+        verificando = true; b.disabled = true; b.textContent = 'Entrando…';
         const r = await WWCuenta.verificar(mail, cod);
         if (r.sesion) { $('modal').classList.add('oculto'); return this.cuentaLista(r.sesion, clave, r.secreto, r.vinculo); }
-        b.disabled = false; b.textContent = 'Entrar';
+        verificando = false; b.disabled = false; b.textContent = 'Entrar';
         this.toast(r.error === 'codigo' ? 'Ese código no anda o ya venció. Fijate o pedí otro.' : 'No se pudo entrar. Probá de nuevo.');
       };
       $('cu-verificar').addEventListener('click', () => { Audio.click(); verificar(); });
       // entra solo cuando dejó de escribir (por si el código viniera más largo que 6)
-      let tCod = null;
       $('cu-codigo').addEventListener('input', (e) => { clearTimeout(tCod); if (e.target.value.replace(/\D/g, '').length >= 6) tCod = setTimeout(verificar, 700); });
       $('cu-otra').addEventListener('click', (e) => { e.preventDefault(); this.entrarCuenta(clave); setTimeout(() => { const i = $('cu-mail'); if (i) i.value = mail; }, 50); });
     },
