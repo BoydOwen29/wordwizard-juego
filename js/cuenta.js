@@ -24,7 +24,7 @@
   // Cada forma de entrar se prende cuando está configurada en Supabase (docs/LOGIN.md): Google necesita el cliente de
   // Google Cloud; el mail, el SMTP propio (el de Supabase solo le manda a los dueños del proyecto).
   // Para probar antes de prenderlas: localStorage 'ww.cuenta.prueba' = '1'.
-  const METODOS = { google: false, mail: false };
+  const METODOS = { google: true, mail: true };   // prendidas el 14/10/2026
   // también con el link ?cuentas=prueba (queda guardado en ese dispositivo; ?cuentas=no lo saca)
   const prueba = (() => {
     try {
