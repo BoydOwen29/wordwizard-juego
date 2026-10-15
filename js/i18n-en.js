@@ -1,5 +1,5 @@
 /* Word Wizard — English. Keys are the Spanish text exactly as it is shown; {x} are blanks. */
-WWI18n.registrar('en', {
+window.WWI18n && WWI18n.registrar('en', {   // si i18n.js no llegó, index.html reintenta (WWFalla): sin el && esto sumaba un error
   // ---------------------------------------------------------------- title and profiles
   'Silabo te espera': 'Silabo is waiting',
   'CARGANDO HECHIZOS...': 'LOADING SPELLS...',

@@ -1,5 +1,5 @@
 /* Word Wizard — Português (Brasil). As chaves são o texto em espanhol exatamente como aparece; {x} são lacunas. */
-WWI18n.registrar('pt', {
+window.WWI18n && WWI18n.registrar('pt', {   // si i18n.js no llegó, index.html reintenta (WWFalla): sin el && esto sumaba un error
   // ---------------------------------------------------------------- título e perfis
   'Silabo te espera': 'Silabo está te esperando',
   'CARGANDO HECHIZOS...': 'CARREGANDO FEITIÇOS...',
