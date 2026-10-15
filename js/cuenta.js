@@ -52,6 +52,19 @@
   }
   const sesionDe = (j) => j && j.access_token ? { token: j.access_token, refresh: j.refresh_token, vence: (j.expires_at || (Date.now() / 1000 + (j.expires_in || 3600))) * 1000, id: j.user && j.user.id } : null;
 
+  // PKCE (14/10/2026): la sesión ya no viaja en la dirección al volver de Google o del link del mail. Se manda un
+  // desafío (el hash de un secreto que queda guardado acá) y Supabase devuelve ?code=…, corto y de un solo uso, que el
+  // juego canjea con ese secreto. Antes la vuelta traía #access_token=… y Moto Secure (Motorola) la tomaba como
+  // sospechosa. Si el navegador no puede hashear (http sin localhost), se sigue como antes.
+  const b64url = (bytes) => btoa(String.fromCharCode.apply(null, bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  async function desafio() {
+    try {
+      const v = b64url(crypto.getRandomValues(new Uint8Array(48)));
+      const h = b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v))));
+      return { verificador: v, pkce: `&code_challenge=${h}&code_challenge_method=s256`, cuerpo: { code_challenge: h, code_challenge_method: 's256' } };
+    } catch (e) { return { verificador: null, pkce: '', cuerpo: {} }; }
+  }
+
   // ------------------------------------------------------------ entrar
   /** El secreto con que la cuenta nueva reclama lo que hizo el mago anónimo (null si no tenía cuenta anónima). */
   async function prepararFusion(clave) {
@@ -75,20 +88,21 @@
 
   /** Va a la pantalla de Google; al volver, la página arranca de nuevo y App llama a alVolver(). entrar: no vincular. */
   async function google(clave, entrar) {
+    const d = await desafio();
     if (!entrar && anonima(clave)) {
       try {
         const s = await R().sesion(clave);
-        const r = await api(`/auth/v1/user/identities/authorize?provider=google&skip_http_redirect=true&redirect_to=${encodeURIComponent(vuelta())}`, { method: 'GET' }, s.token);
+        const r = await api(`/auth/v1/user/identities/authorize?provider=google&skip_http_redirect=true&redirect_to=${encodeURIComponent(vuelta())}${d.pkce}`, { method: 'GET' }, s.token);
         if (r.ok && r.j && r.j.url) {
-          escribir(LS_PENDIENTE, { clave, modo: 'vincular', id: s.id, t: Date.now() });
+          escribir(LS_PENDIENTE, { clave, modo: 'vincular', id: s.id, verificador: d.verificador, t: Date.now() });
           location.href = r.j.url;
           return;
         }
       } catch (e) { /* sin señal o sin vincular habilitado: se entra con fusión */ }
     }
     const secreto = await prepararFusion(clave);
-    escribir(LS_PENDIENTE, { clave: clave || null, modo: 'entrar', secreto, t: Date.now() });
-    location.href = `${R().CONFIG.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(vuelta())}`;
+    escribir(LS_PENDIENTE, { clave: clave || null, modo: 'entrar', secreto, verificador: d.verificador, t: Date.now() });
+    location.href = `${R().CONFIG.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(vuelta())}${d.pkce}`;
   }
 
   /**
@@ -100,19 +114,20 @@
     const m = String(email || '').trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(m)) return 'mail';
     const destino = encodeURIComponent(vuelta());
+    const d = await desafio();
     try {
       if (anonima(clave)) {
         const s = await R().sesion(clave);
-        const r = await api('/auth/v1/user?redirect_to=' + destino, { method: 'PUT', body: JSON.stringify({ email: m }) }, s.token);
-        if (r.ok) { escribir(LS_PENDIENTE, { clave, modo: 'vincular', id: s.id, email: m, t: Date.now() }); return 'ok'; }
+        const r = await api('/auth/v1/user?redirect_to=' + destino, { method: 'PUT', body: JSON.stringify(Object.assign({ email: m }, d.cuerpo)) }, s.token);
+        if (r.ok) { escribir(LS_PENDIENTE, { clave, modo: 'vincular', id: s.id, email: m, verificador: d.verificador, t: Date.now() }); return 'ok'; }
         if (r.status === 429) return 'espera';
         if (r.status === 400) return 'mail';
         // 422: ese mail ya tiene cuenta → se entra a esa cuenta (abajo)
       }
       const p = leer(LS_PENDIENTE, null);
       const secreto = p && p.modo === 'entrar' && p.clave === (clave || null) && p.secreto && Date.now() - p.t < 864e5 ? p.secreto : await prepararFusion(clave);
-      escribir(LS_PENDIENTE, { clave: clave || null, modo: 'entrar', secreto, email: m, t: Date.now() });
-      const r = await api('/auth/v1/otp?redirect_to=' + destino, { method: 'POST', body: JSON.stringify({ email: m, create_user: true }) });
+      escribir(LS_PENDIENTE, { clave: clave || null, modo: 'entrar', secreto, email: m, verificador: d.verificador, t: Date.now() });
+      const r = await api('/auth/v1/otp?redirect_to=' + destino, { method: 'POST', body: JSON.stringify(Object.assign({ email: m, create_user: true }, d.cuerpo)) });
       return r.ok ? 'ok' : r.status === 429 ? 'espera' : r.status === 400 || r.status === 422 ? 'mail' : 'error';
     } catch (e) { return 'error'; }
   }
@@ -132,23 +147,37 @@
 
   /**
    * Si la página vuelve de Google (o del link del mail): {sesion, clave, secreto, vinculo}, o {error, yaExiste, clave}
-   * si Google no dejó (yaExiste: ese Google ya es de otra cuenta). Limpia la dirección.
+   * si Google no dejó (yaExiste: ese Google ya es de otra cuenta). Con PKCE la vuelta trae ?code=… y hay que canjearlo:
+   * entonces devuelve {canje: Promise} que termina en uno de los dos de arriba. Limpia la dirección.
    */
   function alVolver() {
     const h = location.hash.slice(1), b = location.search.slice(1);
     const q = new URLSearchParams(/access_token=|error/.test(h) ? h : b);
-    if (!q.get('access_token') && !q.get('error') && !q.get('error_description')) return null;
+    const codigo = q.get('code');
+    if (!q.get('access_token') && !codigo && !q.get('error') && !q.get('error_description')) return null;
     try { history.replaceState(null, '', location.pathname); } catch (e) { /* nada */ }
     const pend = leer(LS_PENDIENTE, null) || {};
     escribir(LS_PENDIENTE, null);
-    if (!q.get('access_token')) {
-      const cod = q.get('error_code') || '';
+    const listo = (s) => s ? { sesion: s, clave: pend.clave || null, secreto: pend.secreto || null, vinculo: pend.modo === 'vincular' } : null;
+    const fallo = (desc, cod) => {
       // ese Google (o su mail) ya es de otra cuenta: identity_already_exists, email_exists, "already registered"…
-      const texto = cod + ' ' + (q.get('error_description') || '');
-      return { error: q.get('error_description') || q.get('error'), codigo: cod, yaExiste: /already_exists|email_exists|already linked|already exists|already registered|already been registered/i.test(texto), clave: pend.clave || null, modo: pend.modo || null };
-    }
-    const s = sesionDe({ access_token: q.get('access_token'), refresh_token: q.get('refresh_token'), expires_at: Number(q.get('expires_at')) || 0, expires_in: Number(q.get('expires_in')) || 3600 });
-    return s ? { sesion: s, clave: pend.clave || null, secreto: pend.secreto || null, vinculo: pend.modo === 'vincular' } : null;
+      const texto = (cod || '') + ' ' + (desc || '');
+      return { error: desc || cod || 'error', codigo: cod || '', yaExiste: /already_exists|email_exists|already linked|already exists|already registered|already been registered/i.test(texto), clave: pend.clave || null, modo: pend.modo || null };
+    };
+    if (codigo) return { canje: canjearCodigo(codigo, pend.verificador, listo, fallo), clave: pend.clave || null, modo: pend.modo || null };
+    if (!q.get('access_token')) return fallo(q.get('error_description') || q.get('error'), q.get('error_code') || '');
+    return listo(sesionDe({ access_token: q.get('access_token'), refresh_token: q.get('refresh_token'), expires_at: Number(q.get('expires_at')) || 0, expires_in: Number(q.get('expires_in')) || 3600 }));
+  }
+  /** Canjea el ?code= de la vuelta por la sesión, con el secreto guardado al ir (PKCE). */
+  async function canjearCodigo(codigo, verificador, listo, fallo) {
+    if (!verificador) return fallo('Abrí el link en el mismo navegador donde lo pediste, o entrá con el código de 6 números.', 'sin_secreto');
+    try {
+      const r = await api('/auth/v1/token?grant_type=pkce', { method: 'POST', body: JSON.stringify({ auth_code: codigo, code_verifier: verificador }) });
+      const s = r.ok && sesionDe(r.j);
+      if (s) return listo(s);
+      const j = r.j || {};
+      return fallo(j.error_description || j.msg || j.error || 'error', j.error_code || j.code || '');
+    } catch (e) { return fallo('Sin señal. Probá de nuevo.', 'red'); }
   }
 
   /**

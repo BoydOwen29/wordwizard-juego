@@ -59,7 +59,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.39.8',
+    version: '2.39.9',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -2517,6 +2517,7 @@
     cuentaAlAbrir() {
       const v = this._vuelta; this._vuelta = null;
       if (!v) return;
+      if (v.canje) { v.canje.then((r) => { this._vuelta = r; this.cuentaAlAbrir(); }); return; }   // PKCE: primero se canjea el ?code=
       const p = v.clave && Object.values(Estado.todos()).find((x) => x.creado === v.clave);
       if (v.error && p && v.modo === 'vincular') {
         // Google a veces vuelve dos veces: la primera vincula y la segunda trae el error. Se pregunta antes de avisar.
