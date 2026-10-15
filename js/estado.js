@@ -1,11 +1,16 @@
 /**
  * Word Wizard — estado persistente (perfiles en localStorage).
- * Varios perfiles por dispositivo (como el juego original), uno activo.
+ * Desde la v2.40 el juego usa un solo mago por dispositivo (app.js); el almacenamiento sigue aceptando varios,
+ * que es como quedaron los dispositivos de antes hasta que el jugador elige con cuál sigue.
  */
 (function () {
   'use strict';
   const CLAVE = 'ww.perfiles.v1';
   const CLAVE_ACTUAL = 'ww.actual.v1';
+  // los magos que salen del dispositivo sin estar en una cuenta quedan acá 30 días, sin pantalla: solo por si alguien
+  // escribe a soporte porque eligió mal (docs/AUDITORIA-CUENTAS.md)
+  const CLAVE_RESPALDO = 'ww.perfiles.respaldo';
+  const DIAS_RESPALDO = 30;
 
   function perfilNuevo(nombre) {
     return {
@@ -153,6 +158,23 @@
       delete todos[nombre];
       guardarTodos(todos);
       if (this.perfil && this.perfil.nombre === nombre) { this.perfil = null; try { localStorage.removeItem(CLAVE_ACTUAL); } catch (e) { /* nada */ } }
+    },
+
+    /** Saca ese mago del dispositivo y deja una copia escondida por 30 días (respaldo()). */
+    apartar(nombre) {
+      const p = leerTodos()[nombre];
+      if (!p) return;
+      const r = this.respaldo();
+      r[p.creado || nombre] = { t: Date.now(), perfil: p };
+      try { localStorage.setItem(CLAVE_RESPALDO, JSON.stringify(r)); } catch (e) { /* sin espacio: se borra igual */ }
+      this.borrar(nombre);
+    },
+    /** Los magos apartados en los últimos 30 días: {clave: {t, perfil}}. Para soporte (se trae con importar). */
+    respaldo() {
+      let r = {};
+      try { r = JSON.parse(localStorage.getItem(CLAVE_RESPALDO) || '{}') || {}; } catch (e) { r = {}; }
+      for (const k of Object.keys(r)) if (!(r[k] && Date.now() - r[k].t < DIAS_RESPALDO * 864e5)) delete r[k];
+      return r;
     },
 
     salir() { this.perfil = null; try { localStorage.removeItem(CLAVE_ACTUAL); } catch (e) { /* nada */ } },

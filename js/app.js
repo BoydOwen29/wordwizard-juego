@@ -59,7 +59,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.39.9',
+    version: '2.40.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -191,9 +191,6 @@
         $('titulo-cargando').classList.add('oculto');
         this.renderPerfiles();
         $('titulo-perfiles').classList.remove('oculto');
-        const p = Estado.cargar();
-        if (p) { const b = $('btn-jugar'); b.textContent = '▶ Jugar como ' + p.nombre; b.classList.remove('oculto'); b.onclick = () => { Audio.despertar(); Audio.click(); this.entrar(p.nombre); }; }
-        this.pintarCuentaTitulo();
         this.cuentaAlAbrir();
         if (window.WWDiag) WWDiag.etapa('titulo');
       }, 60);
@@ -386,19 +383,96 @@
       const sc = document.createElement('script'); sc.src = 'js/qr.js?v=' + CONFIG.version; sc.onload = pintarQR; document.head.appendChild(sc);
     },
 
+    /**
+     * El inicio (v2.40, lab/mago-unico.html, opción A elegida por Owen el 15/10): un solo mago por dispositivo, en una
+     * tarjeta con su cuenta a la vista, y "Jugar". Antes había una lista de magos y "Ya tengo cuenta" siempre a la
+     * vista, y parecía que la sesión se perdía (docs/AUDITORIA-CUENTAS.md). Sin mago: el nombre o "Entrar con mi
+     * cuenta". Con varios (dispositivos de antes de la v2.40): se elige uno.
+     */
     renderPerfiles() {
-      const cont = $('titulo-lista-perfiles');
-      cont.innerHTML = '';
-      const todos = Estado.todos();
-      for (const n of Object.keys(todos).sort()) {
-        const p = todos[n];
-        const b = document.createElement('button');
-        b.className = 'perfil-btn';
-        b.innerHTML = `🧙 <span>${esc(n)}</span><small>NV ${p.nivel || 1}</small>`;
-        b.addEventListener('click', () => { Audio.despertar(); this.entrar(n); });
-        cont.appendChild(b);
+      const nombres = Object.keys(Estado.todos());
+      const p = nombres.length === 1 ? (Estado.perfil && Estado.perfil.nombre === nombres[0] ? Estado.perfil : Estado.cargar(nombres[0])) : null;
+      const jugar = $('btn-jugar');
+      $('titulo-mago').classList.toggle('oculto', !p);
+      jugar.classList.toggle('oculto', !p);
+      $('form-nombre').classList.toggle('oculto', nombres.length > 0);
+      if (p) {
+        this.pintarTarjetaTitulo(p);
+        jugar.onclick = () => { Audio.despertar(); Audio.click(); this.entrar(p.nombre); };
       }
       this.pintarCuentaTitulo();
+      // después de la entrada del logo y de Silabo (si no, el cartel tapa la intro a medio dibujar)
+      if (nombres.length > 1) setTimeout(() => this.elegirMago(), $('p-titulo').classList.contains('con-intro') ? 3300 : 300);
+    },
+    /** La tarjeta del mago en el inicio: nivel, nombre y dónde está guardado (o el botón para guardarlo). */
+    pintarTarjetaTitulo(p) {
+      const clave = p.creado || p.nombre, cuentas = !!(window.WWCuenta && WWCuenta.activo());
+      const c = cuentas ? WWCuenta.de(clave) : null;
+      const nube = '<svg class="tm-nube" viewBox="0 0 18 12" aria-hidden="true"><path d="M5 11h9a3.4 3.4 0 0 0 .6-6.7A4.6 4.6 0 0 0 5.8 3.2 3.9 3.9 0 0 0 5 11z"/></svg>';
+      let linea, boton = '';
+      if (c && c.perdida) { linea = `<small class="vencida">${nube}<span>Volvé a entrar para guardar</span></small>`; boton = '☁ Entrar'; }
+      else if (c && c.email) linea = `<small class="con">${nube}<span>Guardado en </span><span data-no-t>${esc(c.email)}</span></small>`;
+      else if (c) linea = `<small class="con">${nube}<span>Guardado en tu cuenta</span></small>`;
+      else if (cuentas) { linea = '<small><span>Tu progreso no está guardado</span></small>'; boton = '☁ Guardar'; }
+      else linea = `<small><span>${WW.tituloNivel(p.nivel)}</span></small>`;
+      const t = $('titulo-mago');
+      t.innerHTML = `<span class="tm-nivel">${p.nivel || 1}</span><span class="tm-datos"><b data-no-t>${esc(p.nombre)}</b>${linea}</span>${boton ? `<button class="tm-boton">${boton}</button>` : ''}`;
+      const b = t.querySelector('.tm-boton');
+      if (b) b.addEventListener('click', () => { Audio.despertar(); this.entrarCuenta(clave); });
+    },
+
+    /**
+     * Dispositivos de antes de la v2.40 con varios magos: se elige uno, una sola vez (lab/mago-unico.html, opción Y).
+     * Los que no se eligen salen del dispositivo: los que tienen cuenta siguen en su cuenta (se guarda lo último y se
+     * cierra su sesión acá); los que no, se pierden (el cartel lo avisa). Todos dejan una copia escondida por 30 días
+     * (Estado.apartar), solo para soporte.
+     */
+    elegirMago() {
+      const todos = Estado.todos(), nombres = Object.keys(todos);
+      if (nombres.length < 2 || this._vuelta || this.pantalla !== 'p-titulo' || !$('modal').classList.contains('oculto')) return;
+      const cuentaDe = (n) => (window.WWCuenta ? WWCuenta.de(todos[n].creado || n) : null);
+      // primero el último que se usó; si no, el de más nivel
+      const ultimo = Estado.cargar();
+      nombres.sort((a, b) => (todos[b].nivel || 1) - (todos[a].nivel || 1) || a.localeCompare(b));
+      let sel = ultimo && todos[ultimo.nombre] ? ultimo.nombre : nombres[0];
+      this.modal(`<h3>ELEGÍ TU MAGO</h3><p>Ahora cada dispositivo tiene un solo mago. ¿Con cuál seguís?</p>
+        <div class="elegir-mago">${nombres.map((n) => {
+          const c = cuentaDe(n);
+          return `<button data-i="${nombres.indexOf(n)}"><span class="tm-nivel">${todos[n].nivel || 1}</span><span class="tm-datos"><b data-no-t>${esc(n)}</b>${c ? `<small class="con"><span data-no-t>☁ ${esc(c.email || '')}</span></small>` : '<small>Sin cuenta</small>'}</span></button>`;
+        }).join('')}</div><p class="elegir-nota" data-no-t></p>`, [
+        { texto: 'Seguir', clase: 'btn-primario', accion: () => this.quedarseCon(sel) },
+      ]);
+      const caja = $('modal-caja');
+      // "Kensi y Prueba" / "Kensi and Prueba"
+      const lista = (l) => { try { return new Intl.ListFormat(WWI18n.idioma, { type: 'conjunction' }).format(l); } catch (e) { return l.join(', '); } };
+      const pintar = () => {
+        caja.querySelectorAll('.elegir-mago button').forEach((b) => b.classList.toggle('on', nombres[b.dataset.i] === sel));
+        const sin = nombres.filter((n) => n !== sel && !cuentaDe(n));
+        const nota = caja.querySelector('.elegir-nota');
+        nota.classList.toggle('aviso', sin.length > 0);
+        nota.textContent = sin.length ? WWI18n.t(sin.length > 1 ? 'Se borran {n}: no tienen cuenta.' : 'Se borra {n}: no tiene cuenta.', { n: lista(sin) }) : WWI18n.t('Los otros siguen en su cuenta.');
+        const b = caja.querySelector('.fila .btn');
+        b.dataset.noT = '1'; b.textContent = WWI18n.t('Seguir con {n}', { n: sel });   // ya traducidos con WWI18n.t
+      };
+      caja.querySelectorAll('.elegir-mago button').forEach((b) => b.addEventListener('click', () => { Audio.click(); sel = nombres[b.dataset.i]; pintar(); }));
+      pintar();
+    },
+    quedarseCon(elegido) {
+      const todos = Estado.todos();
+      for (const n of Object.keys(todos)) {
+        if (n === elegido) continue;
+        const p = todos[n], clave = p.creado || n;
+        if (window.WWCuenta && WWCuenta.de(clave)) {
+          // con cuenta: se sube lo último y se cierra su sesión acá (el mago queda en su cuenta)
+          const copia = JSON.parse(JSON.stringify(p));
+          WWCuenta.sincronizar(clave, copia).catch(() => null).then(() => WWCuenta.salir(clave));
+        }
+        Estado.apartar(n);
+      }
+      const p = Estado.cargar(elegido);
+      // las compras de la cuenta de otro mago no quedan prendidas para este (las suyas vuelven al sincronizar)
+      if (window.WWCompras && !(window.WWCuenta && WWCuenta.de(p.creado || p.nombre))) WWCompras.olvidarCuenta();
+      this.renderPerfiles();
     },
 
     entrar(nombre) {
@@ -654,7 +728,7 @@
       $('form-nombre').addEventListener('submit', (e) => {
         e.preventDefault();
         const n = $('input-nombre').value.trim();
-        if (!n) return;
+        if (!n || Object.keys(Estado.todos()).length) return;   // un solo mago por dispositivo
         Audio.despertar(); Audio.click();
         $('input-nombre').value = '';
         this.entrar(n);
@@ -775,7 +849,6 @@
       $('aj-vibracion').addEventListener('change', (e) => { Estado.perfil.ajustes.vibracion = e.target.checked; Estado.guardar(); });
       $('aj-grilla').addEventListener('change', (e) => { Estado.perfil.ajustes.grilla = e.target.checked; Estado.guardar(); });
       $('aj-nombre').addEventListener('click', () => this.cambiarNombre());
-      $('aj-cambiar').addEventListener('click', () => { Audio.click(); Estado.salir(); this.renderPerfiles(); this.mostrar('p-titulo'); });
       $('aj-tutorial').addEventListener('click', () => { Audio.click(); this.tutorial(); });
       $('aj-exportar').addEventListener('click', () => this.exportar());
       $('aj-borrar').addEventListener('click', () => {
@@ -2501,17 +2574,13 @@
     },
     tieneCuenta() { return !!(window.WWCuenta && Estado.perfil && WWCuenta.de(this.claveNube())); },
 
-    /** "Ya tengo cuenta" en el título: solo si las cuentas andan (con conexión al ranking). */
+    /**
+     * "Entrar con mi cuenta" en el título: solo en un dispositivo sin mago (la compu nueva, otro celu, después de salir
+     * de la cuenta) y si las cuentas andan. Con mago, guardarlo o volver a entrar se hace desde su tarjeta.
+     */
     pintarCuentaTitulo() {
       const b = $('btn-cuenta-entrar'); if (!b) return;
-      b.classList.toggle('oculto', !(window.WWCuenta && WWCuenta.activo()));
-      // en un dispositivo sin magos (la compu nueva, otro celu), entrar con la cuenta es lo primero que se ofrece
-      const vacio = !Object.keys(Estado.todos()).length;
-      for (const c of ['btn', 'btn-secundario', 'btn-cuenta-grande']) b.classList.toggle(c, vacio);
-      b.classList.toggle('btn-link-cuenta', !vacio);
-      b.textContent = vacio ? '☁️ Entrar con mi cuenta' : '☁️ Ya tengo cuenta';
-      const form = $('form-nombre');
-      if (form && vacio) form.before(b); else if (form) form.after(b);
+      b.classList.toggle('oculto', !(window.WWCuenta && WWCuenta.activo() && !Object.keys(Estado.todos()).length));
     },
     /** Al abrir el título: si volvió de Google, termina de entrar. */
     cuentaAlAbrir() {
@@ -2663,11 +2732,11 @@
         else if (this.pantalla === 'p-ajustes') this.verAjustes();
         this.sincronizarCuenta();
       };
-      // nunca se borra un mago: si se trae el de la cuenta, el de acá queda en el dispositivo (sin cuenta)
+      // un solo mago por dispositivo (v2.40): si se trae el de la cuenta, el de acá sale (con su copia de 30 días)
       const canjear = () => WWCuenta.canjear(sesion, secreto);
       const traer = (soltarLocal) => {
         canjear();
-        if (soltarLocal && local) Ranking.olvidar(clave);
+        if (soltarLocal && local) { Ranking.olvidar(clave); if (local.creado !== nube.datos.creado) Estado.apartar(local.nombre); }
         // si ese mismo mago ya está en este dispositivo (volvió a entrar desde el título), se junta: lo jugado acá no se pierde
         const todos = Estado.todos(), mismo = Object.values(todos).find((m) => m && m.creado && m.creado === nube.datos.creado);
         const datos = mismo ? Object.assign(Estado.fusionar(WWCuenta.baseDe(mismo.creado), mismo, nube.datos), { creado: mismo.creado }) : nube.datos;
@@ -2689,7 +2758,7 @@
         const n = nube.datos;
         this.modal(`<h3>TU CUENTA YA TIENE UN MAGO</h3><div class="modal-silabo"></div>
           <p>En la cuenta está <b>${esc(n.nombre)}</b> (nivel ${Number(n.nivel) || 1}). Acá tenés a <b>${esc(local.nombre)}</b> (nivel ${local.nivel}).</p>
-          <p>¿Cuál queda en la cuenta? Ninguno se borra: el otro sigue en este dispositivo y la cuenta guarda una copia del anterior.</p>`, [
+          <p>¿Con cuál seguís? Si traés el de la cuenta, el de acá sale de este dispositivo. Si guardás el de acá, la cuenta guarda una copia del otro.</p>`, [
           { texto: `Traer a ${n.nombre}`, clase: 'btn-primario', accion: () => traer(true) },
           { texto: `Guardar a ${local.nombre}`, clase: 'btn-secundario', accion: () => guardarLocal(nube.rev) },
           { texto: 'Cancelar', clase: 'btn-secundario', atras: true, accion: () => this.cerrarSesionSuelta(sesion) },
@@ -2699,7 +2768,7 @@
       if (nube) return traer(false);
       // la cuenta está vacía y acá no hay mago: lo más probable es que el mago esté en otro dispositivo sin guardar
       this.modal(`<h3>TU CUENTA ESTÁ VACÍA</h3><div class="modal-silabo"></div><p>Todavía no guardaste ningún mago en esta cuenta.</p>
-        <p>Si ya jugás en otro dispositivo (el celu, por ejemplo), entrá ahí primero: <b>Ajustes → Guardar mi progreso</b>. Después volvé acá y tocá "Ya tengo cuenta".</p>`, [
+        <p>Si ya jugás en otro dispositivo (el celu, por ejemplo), entrá ahí primero: <b>Ajustes → Guardar mi progreso</b>. Después volvé acá y tocá "Entrar con mi cuenta".</p>`, [
         { texto: 'Entendido', clase: 'btn-primario', accion: () => this.cerrarSesionSuelta(sesion) },
         { texto: 'Empezar uno nuevo', clase: 'btn-secundario', accion: () => { canjear(); this.crearEnCuenta(sesion, cuenta, listo); } },
       ]);
