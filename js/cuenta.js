@@ -290,7 +290,10 @@
         }
         if (opc.soloSubir) return {};
         const junto = window.WWEstado.fusionar(baseDe(clave), foto, nube.datos);
-        junto.nombre = foto.nombre; junto.creado = foto.creado;
+        // el nombre se junta como lo demás (gana el dispositivo que lo cambió): con un solo mago por dispositivo, renombrar
+        // en el celu llega a la compu (v2.41.2). Antes cada dispositivo se quedaba con el suyo.
+        junto.creado = foto.creado;
+        if (!String(junto.nombre || '').trim()) junto.nombre = foto.nombre;
         if (igual(junto, nube.datos)) { anotarJunto(nube.rev, junto); return { perfil: junto }; }
         if (await subir(s.token, junto, nube.rev)) { anotarJunto(nube.rev + 1, junto); subio = true; return { perfil: junto }; }
       }

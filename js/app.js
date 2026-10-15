@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.41.1',
+    version: '2.41.2',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -2658,8 +2658,12 @@
     aplicarPerfil(nuevo) {
       const p = Estado.perfil, nombre = p.nombre;
       for (const k of Object.keys(p)) delete p[k];
-      Object.assign(p, nuevo, { nombre });   // el nombre es de cada dispositivo (es la clave del mago acá)
+      // el nombre es la clave del mago en este dispositivo: si cambió en otro, se renombra acá (v2.41.2; antes no viajaba)
+      Object.assign(p, nuevo, { nombre });
+      const otro = String(nuevo.nombre || '').trim().slice(0, 16);
+      if (otro && otro !== nombre) Estado.renombrar(otro);
       Estado.guardar();
+      if (this.pantalla === 'p-titulo') this.renderPerfiles();
       for (const k of ['titulo', 'menu', 'juego', 'resultado', 'mapa']) { this.magos[k].setPaleta(Estado.perfil.sombrero); this.magos[k].setNivel(Estado.perfil.nivel); }
       if (this.pantalla === 'p-menu') this.pintarPerfil();
       if (this.pantalla === 'p-ajustes') this.verAjustes();

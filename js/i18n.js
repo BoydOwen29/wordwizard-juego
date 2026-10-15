@@ -101,9 +101,11 @@
   function atributos(el) {
     for (const a of ['title', 'placeholder', 'aria-label']) {
       const v = el.getAttribute(a);
-      if (!v || el.dataset['t' + a] === v) continue;
+      // la marca va sin guion: dataset['taria-label'] tiraba error y cortaba la traducción del resto (15/10)
+      const marca = 't' + a.replace(/-/g, '');
+      if (!v || el.dataset[marca] === v) continue;
       const tr = traducir(v.trim());
-      if (tr != null) { el.setAttribute(a, tr); el.dataset['t' + a] = tr; }
+      if (tr != null) { el.setAttribute(a, tr); el.dataset[marca] = tr; }
     }
   }
 
