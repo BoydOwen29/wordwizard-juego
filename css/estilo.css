@@ -1118,6 +1118,20 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .ficha.sugerida { animation: fichaSugerida .85s ease-in-out 3; }
 @keyframes fichaSugerida { 50% { transform: translateY(-5px) scale(1.08); box-shadow: 0 0 0 4px rgba(242,198,109,.75), 0 0 18px rgba(242,198,109,.7); } }
 
+/* ---------- la primera partida guiada (v2.41, lab/primera-partida.html, opción A) ---------- */
+/* sin reloj, sin rango, sin poderes ni "Terminar": solo letras, Enviar y lo encontrado */
+#p-juego.en-guia .hud-tiempo, #p-juego.en-guia .barra-tiempo, #p-juego.en-guia .progreso, #p-juego.en-guia .poderes { display: none; }
+.btn-saltar-guia { display: none; margin-left: auto; background: none; border: 0; color: var(--texto-suave); font: 800 calc(13px * var(--letra, 1)) var(--texto-f); text-decoration: underline; text-underline-offset: 3px; padding: 8px 6px; cursor: pointer; }
+#p-juego.en-guia .btn-saltar-guia { display: block; }
+.ficha.guia { animation: fichaGuia 1s ease-in-out infinite; }
+.ficha.guia::after { opacity: 1; border-color: var(--oro); }
+@keyframes fichaGuia { 50% { transform: translateY(-5px); box-shadow: 0 8px 0 #8fae9f, 0 0 18px rgba(242,198,109,.7); } }
+.btn.guia { animation: botonGuia 1s ease-in-out infinite; }
+@keyframes botonGuia { 50% { transform: scale(1.06); box-shadow: 0 0 0 3px rgba(242,198,109,.7), 0 0 20px rgba(242,198,109,.7); } }
+/* la primera vez en la Torre, Silabo señala los poderes */
+.poderes.senalar .poder { animation: botonGuia .85s ease-in-out 3; }
+@media (prefers-reduced-motion: reduce) { .ficha.guia, .btn.guia, .poderes.senalar .poder { animation: none; } .ficha.guia { box-shadow: 0 0 0 3px rgba(242,198,109,.85); } }
+
 /* v2.18 tienda: especiales y Pase de Mago */
 .tienda-item.especial button { min-width: 84px; font-size: calc(13px * var(--letra, 1)); }
 .tienda-item.apoyo { border-color: rgba(242,198,109,.55) !important; background: rgba(242,198,109,.1) !important; }

@@ -39,14 +39,21 @@
   Letra.aplicar();
   window.WWLetra = Letra;
 
-  /** Lo que cambia con el idioma y no es una traducción: ejemplos del tutorial, letras del fondo, texto para compartir. */
+  /**
+   * Lo que cambia con el idioma y no es una traducción: ejemplos del tutorial, letras del fondo, texto para compartir.
+   * guia / guiaPrimera: la palabra de la partida guiada de la primera vez y la que Silabo marca letra por letra
+   * (5 letras y pocas palabras, todas conocidas; elegidas a mano contra cada diccionario el 15/10).
+   */
   const LOCAL = {
     es: { base: 'CAMINAR', arma: 'CAMA', ejemplos: ['cama', 'mina', 'rima'], y: 'y', letras: 'ABCDEFGHIJLMNÑOPRSTUV',
-      torre: 'Torre Arcana', piso: 'Piso', palabras: 'palabras', jefe: (n) => `${n} jefe${n > 1 ? 's' : ''}`, reto: '¿Me superás?', racha: 'racha' },
+      torre: 'Torre Arcana', piso: 'Piso', palabras: 'palabras', jefe: (n) => `${n} jefe${n > 1 ? 's' : ''}`, reto: '¿Me superás?', racha: 'racha',
+      guia: 'plato', guiaPrimera: 'palo' },
     en: { base: 'PLANETS', arma: 'PLAN', ejemplos: ['plan', 'lane', 'slant'], y: 'and', letras: 'ABCDEFGHIKLMNOPRSTUWY',
-      torre: 'Arcane Tower', piso: 'Floor', palabras: 'words', jefe: (n) => `${n} boss${n > 1 ? 'es' : ''}`, reto: 'Can you beat me?', racha: 'streak' },
+      torre: 'Arcane Tower', piso: 'Floor', palabras: 'words', jefe: (n) => `${n} boss${n > 1 ? 'es' : ''}`, reto: 'Can you beat me?', racha: 'streak',
+      guia: 'tiger', guiaPrimera: 'tire' },
     pt: { base: 'PLANETA', arma: 'PENA', ejemplos: ['pena', 'tela', 'planta'], y: 'e', letras: 'ABCDEFGHIJLMNOPRSTUVÇ',
-      torre: 'Torre Arcana', piso: 'Andar', palabras: 'palavras', jefe: (n) => `${n} chef${n > 1 ? 'ões' : 'ão'}`, reto: 'Consegue me superar?', racha: 'sequência' },
+      torre: 'Torre Arcana', piso: 'Andar', palabras: 'palavras', jefe: (n) => `${n} chef${n > 1 ? 'ões' : 'ão'}`, reto: 'Consegue me superar?', racha: 'sequência',
+      guia: 'pedra', guiaPrimera: 'pera' },
   }[window.WWI18n.idioma] || {};
   /** Clave del desafío diario en el perfil: cada idioma tiene el suyo (en español, solo la fecha, como siempre). */
   const K = (fecha) => (IDIOMA_DATOS === 'es' ? fecha : `${IDIOMA_DATOS}:${fecha}`);
@@ -59,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.40.0',
+    version: '2.41.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -812,6 +819,7 @@
       $('btn-mezclar').addEventListener('click', () => this.mezclar());
       $('btn-enviar').addEventListener('click', () => this.enviar());
       $('btn-salir').addEventListener('click', () => this.pedirSalir());
+      $('btn-saltar-guia').addEventListener('click', () => { Audio.click(); this.terminarGuia(true); });
       $('btn-terminar').addEventListener('click', () => this.pedirTerminar());
       document.querySelectorAll('.poder').forEach((b) => b.addEventListener('click', () => this.usarPoder(b.dataset.poder)));
       document.addEventListener('keydown', (e) => this.tecla(e));
@@ -1032,6 +1040,7 @@
         const { numero, desafio } = WW.palabraDelDia(this.pool, opts.fecha);
         return { base: desafio.p, numero };
       }
+      if (opts.guia) return { base: LOCAL.guia };
       const deHoy = WW.palabraDelDia(this.pool).desafio.p;
       if (modo === 'practica') {
         const cands = this.pool.filter((c) => c.l === (opts.largo || 7) && c.p !== deHoy);
@@ -1065,7 +1074,11 @@
       opts = opts || {};
       const p = Estado.perfil;
       if (!opts.continuar) this.nivelSesion = p.nivel;
-      if (!p.tutorial) { return this.tutorial(() => { p.tutorial = true; Estado.guardar(); this.nuevaPartida(modo, opts); }); }
+      if (!p.tutorial && !opts.guia) {
+        // la primera vez se aprende jugando (v2.41, lab/primera-partida.html, opción A); el carrusel queda en "Cómo jugar"
+        if (LOCAL.guia) return this.empezarGuia(modo, opts);
+        return this.tutorial(() => { p.tutorial = true; Estado.guardar(); this.nuevaPartida(modo, opts); });
+      }
       if (modo === 'practica' && !opts.tutorial) {
         if (this.practicasQuedan() <= 0) { this.mostrar('p-practica'); return this.avisoPracticas(); }
         this.practicasHoy().n += 1; Estado.guardar();
@@ -1132,6 +1145,7 @@
         Audio.setTempo(false);
         this.globo(modo === 'arcade' ? `Piso ${piso}: llegá a ${objetivo} pts` : modo === 'diario' ? (opts.reanudar ? '¡Seguimos! Dale que queda poco' : `Desafío #${numero}. ¡Suerte!`) : modo === 'archivo' ? `Desafío #${numero} del archivo. ¡Suerte!` : 'Sin apuro. ¡A buscar!');
         this.magos.juego.animar('happy', 600);
+        if (opts.guia) this.pasoGuia('inicio'); else this.consejoAlEmpezar(pa);
       }
       if (modo === 'arcade' && piso === 1) this.mision('piso', 1);
       if (modo === 'diario') this.guardarEnCurso();
@@ -1141,7 +1155,8 @@
 
     renderJuego() {
       const pa = this.partida, p = Estado.perfil;
-      $('hud-modo').textContent = pa.modo === 'diario' ? `DESAFÍO #${pa.numero}` : pa.modo === 'archivo' ? `ARCHIVO #${pa.numero}` : pa.modo === 'arcade' ? (pa.jefe ? `JEFE · PISO ${pa.arcade.piso}` : `TORRE · PISO ${pa.arcade.piso}`) : 'PRÁCTICA';
+      $('p-juego').classList.toggle('en-guia', !!pa.opts.guia);
+      $('hud-modo').textContent = pa.opts.guia ? 'PRIMERA PARTIDA' : pa.modo === 'diario' ? `DESAFÍO #${pa.numero}` : pa.modo === 'archivo' ? `ARCHIVO #${pa.numero}` : pa.modo === 'arcade' ? (pa.jefe ? `JEFE · PISO ${pa.arcade.piso}` : `TORRE · PISO ${pa.arcade.piso}`) : 'PRÁCTICA';
       $('hud-modo').classList.toggle('jefe', !!pa.jefe);
       $('hud-vidas').innerHTML = pa.arcade ? WWIconos.html('corazon').repeat(pa.arcade.vidas) + WWIconos.html('corazonVacio').repeat(CONFIG.arcade.vidas - pa.arcade.vidas) : '';
       $('hud-tiempo').classList.toggle('infinito', !pa.tiempoTotal);
@@ -1178,6 +1193,7 @@
         d.textContent = f.l.toUpperCase();
         cont.appendChild(d);
       }
+      this.pintarGuia();
     },
 
     renderSeleccion() {
@@ -1317,6 +1333,7 @@
       this.magos.juego.flick();
       this.renderSeleccion();
       this.volarFicha(idx);
+      this.pintarGuia();
     },
 
     quitarLetra(pos) {
@@ -1329,6 +1346,7 @@
       const el = $('fichas').querySelector(`[data-idx="${idx}"]`);
       if (el) el.classList.remove('usada');
       this.renderSeleccion();
+      this.pintarGuia();
     },
 
     /** Saca todas las letras de la palabra que se está armando (pedido de los testers, 14/10). */
@@ -1468,6 +1486,7 @@
         this.anunciarLogros(Logros.evaluar(p, { tipo: 'palabra', palabra: w, segundos: (ahora - pa.inicio) / 1000, restante: pa.deadline ? (pa.deadline - ahora) / 1000 : null }));
       }
 
+      if (pa.opts.guia) return this.pasoGuia('acierto', w);
       if (pa.modo === 'diario') this.guardarEnCurso();
 
       // Torre: al llegar al objetivo no se corta; el reloj sigue y lo que venga suma como extra
@@ -1595,6 +1614,7 @@
         return this.irMenu();
       }
       if (pa.congelado) return;
+      if (pa.opts.guia) return this.terminarGuia(true);
       if (pa.superado) return this.pisoSuperado('subir');
       const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'archivo' ? 'Si salís, este desafío del archivo no se guarda.' : pa.modo === 'arcade' ? 'Tu subida queda guardada, pero este piso cuenta como intento: perdés una vida (si es la última, te la guardo).' : 'La práctica no se guarda.';
       this.modal(`<h3>¿SALIR?</h3><p>${aviso}</p>`, [
@@ -2276,6 +2296,11 @@
       if (r.modo === 'diario' || r.motivo === 'completo') Audio.rango();
       if (r.esRecord || r.motivo === 'completo' || (r.rango && WW.RANGOS.indexOf(r.rango) >= 4)) setTimeout(() => this.confeti(80), 300);
       if (r.nivel && r.nivel.subio) setTimeout(() => { if (this.pantalla === 'p-resultado') this.anunciarNivel(r.nivel.despues); else this.nivelPendiente = r.nivel.despues; }, 900);
+      // el primer desafío: qué es la racha (antes lo explicaba el carrusel; v2.41). Un aviso largo: se cierra tocándolo
+      if (r.modo === 'diario' && !(p.vistos && p.vistos.consejoRacha) && Object.keys(p.diarios).length <= 1) {
+        p.vistos = Object.assign({}, p.vistos, { consejoRacha: true }); Estado.guardar();
+        setTimeout(() => { if (this.pantalla === 'p-resultado') this.toast(`${WWIconos.html('llama')} ${T('Volvé mañana: hay una palabra nueva para todos. Si venís todos los días, armás racha.')}`, null, () => {}); }, 2600);
+      }
     },
 
     renderResPalabras(r) { $('res-palabras').innerHTML = this.htmlPalabras(r); },
@@ -3327,6 +3352,7 @@
         if (!m) return;
         if ((this.pantalla === 'p-titulo' || this.pantalla === 'p-menu') && quieto > 30000 && m.estado === 'idle') { m.dormir(); Audio.ronquido(); }
         const pa = this.partida;
+        if (this.pantalla === 'p-juego' && pa && !pa.terminada && pa.opts.guia) { this.ayudaGuia(pa, quieto, m); return; }
         // primer minuto: a quien todavía no encontró 3 palabras, Silabo le sugiere una corta si se traba (gratis)
         const novato = Estado.perfil && Estado.perfil.stats.palabras < 3;
         if (this.pantalla === 'p-juego' && pa && !pa.terminada && !pa.jefe && novato && quieto > 10000 && !this._ayudaNovato) {
@@ -3357,6 +3383,108 @@
         usadas.add(i);
         const el = $('fichas').querySelector(`[data-idx="${i}"]`);
         if (el) { el.classList.remove('sugerida'); void el.offsetWidth; el.classList.add('sugerida'); setTimeout(() => el.classList.remove('sugerida'), 2600); }
+      }
+    },
+
+    // ============================================================ la primera partida (v2.41)
+    /**
+     * La primera vez, en lugar del carrusel, Silabo guía una partida corta y sin reloj (lab/primera-partida.html,
+     * opción A elegida por Owen el 15/10): marca letra por letra una palabra de 4 (LOCAL.guiaPrimera), después pide
+     * 2 más sin ayuda y al final la entera. Termina en "¡Ya sabés jugar!" y sigue con lo que el jugador había tocado.
+     * Lo que explicaba el resto del carrusel aparece cuando importa (consejoAlEmpezar, y la racha en el resultado).
+     */
+    empezarGuia(modo, opts) {
+      this._despuesGuia = { modo, opts };
+      this.nuevaPartida('practica', { guia: true, tutorial: true });
+    },
+    letrasGuia() { return LOCAL.guiaPrimera.toUpperCase().split('').join(' · '); },   // sin cortar el renglón
+    pasoGuia(evento, w) {
+      const pa = this.partida;
+      if (!pa || !pa.opts.guia) return;
+      if (evento === 'inicio') {
+        pa.guia = { fase: 'guiada', libres: 0, dicho: '' };
+        this.globo(T('¡Hola! Te enseño jugando. Tocá {w}', { w: this.letrasGuia() }));
+        return this.pintarGuia();
+      }
+      const g = pa.guia;
+      if (w === pa.base) { g.fase = 'fin'; this.pintarGuia(); setTimeout(() => { if (this.partida === pa) this.terminarGuia(false); }, 1800); return; }
+      if (g.fase === 'guiada') { g.fase = 'libre'; this.globo(T('¡{w}! Tu primera palabra. Ahora buscá 2 más, vos solo', { w: w.toUpperCase() }), 'wow'); }
+      else if (g.fase === 'libre' && ++g.libres >= 2) {
+        g.fase = 'entera';
+        setTimeout(() => { if (this.partida === pa && g.fase === 'entera') this.globo(T('¿Y si usás todas las letras? La palabra entera vale mucho más')); }, 1100);
+      } else if (g.fase === 'libre') this.globo(T('¡{w}! Te falta una', { w: w.toUpperCase() }), 'wow');
+      this.pintarGuia();
+    },
+    /** Lo que brilla: en la parte guiada, la próxima letra (o Enviar, o Borrar si se desvió); al pedir la entera, todas. */
+    pintarGuia() {
+      const pa = this.partida, fichas = $('fichas').querySelectorAll('.ficha');
+      fichas.forEach((f) => f.classList.remove('guia'));
+      $('btn-enviar').classList.remove('guia'); $('btn-borrar').classList.remove('guia');
+      if (!pa || !pa.opts.guia || !pa.guia || pa.terminada) return;
+      const g = pa.guia, sel = pa.seleccion.map((i) => pa.fichas[i].l).join('');
+      if (g.fase === 'entera' && !sel) fichas.forEach((f) => f.classList.add('guia'));
+      if (g.fase !== 'guiada') return;
+      const obj = LOCAL.guiaPrimera;
+      if (sel === obj) {
+        $('btn-enviar').classList.add('guia');
+        if (g.dicho !== 'enviar') { g.dicho = 'enviar'; this.globo(T('¡Eso! Ahora tocá Enviar')); }
+      } else if (!obj.startsWith(sel)) {
+        $('btn-borrar').classList.add('guia');
+        if (g.dicho !== 'desvio') { g.dicho = 'desvio'; this.globo(T('Esa no va. Tocá Borrar y seguí las que brillan'), 'mal'); }
+      } else {
+        if (g.dicho) { g.dicho = ''; this.globo(T('Tocá las letras {w}', { w: this.letrasGuia() })); }
+        const i = pa.fichas.findIndex((f) => f.l === obj[sel.length] && !f.usada);
+        const el = i >= 0 && $('fichas').querySelector(`[data-idx="${i}"]`);
+        if (el) el.classList.add('guia');
+      }
+    },
+    /** Si se traba: en la parte guiada repite qué tocar; después, la ayudita de siempre; con la entera, cómo empieza. */
+    ayudaGuia(pa, quieto, m) {
+      const g = pa.guia;
+      if (!g || g.fase === 'fin') return;
+      if (quieto < 9000) { g.ayudado = false; return; }
+      if (g.ayudado) return;
+      g.ayudado = true; m.animar('saludo', 900);
+      if (g.fase === 'guiada') this.globo(T('Tocá las letras que brillan: {w}', { w: this.letrasGuia() }));
+      else if (g.fase === 'libre') this.ayudaNovato(pa);
+      else { g.pistas = (g.pistas || 0) + 1; this.globo(T('La entera empieza con {w}', { w: pa.base.slice(0, Math.min(pa.base.length - 1, 1 + g.pistas)).toUpperCase() + '…' }), 'ok'); }
+    },
+    /** Fin de la partida guiada (saltada: tocó "Saltar" o la ✕): queda hecha y sigue con lo que había tocado el jugador. */
+    terminarGuia(saltada) {
+      const pa = this.partida, p = Estado.perfil, sig = this._despuesGuia || { modo: 'diario', opts: {} };
+      this._despuesGuia = null;
+      p.tutorial = true; Estado.guardar();
+      if (pa && !pa.terminada) { pa.terminada = true; clearInterval(pa.timer); this.limpiarEfectos(); }
+      this.pintarGuia();
+      const seguir = () => this.nuevaPartida(sig.modo, sig.opts || {});
+      if (saltada) return seguir();
+      const que = {
+        diario: ['Ahora va el desafío de hoy: la misma palabra para todos, 3 minutos, una vez por día.', 'Jugar el desafío'],
+        arcade: ['Ahora, la Torre: cada piso pide un puntaje y tenés 3 vidas.', 'Subir a la Torre'],
+        practica: ['Ahora, a practicar: sin reloj y con pistas gratis.', 'A practicar'],
+      }[sig.modo] || ['¡A jugar!', 'Seguir'];
+      this.modal(`<h3>¡YA SABÉS JUGAR!</h3><div class="modal-silabo" data-pose="happy"></div>
+        <p>${T('Encontraste {n} palabras, con la entera. Eso es todo el juego.', { n: pa ? pa.encontradas.length : 0 })}</p><p>${que[0]}</p>`, [
+        { texto: que[1], clase: 'btn-primario', accion: seguir },
+      ]);
+    },
+
+    /** Lo que antes explicaba el carrusel, la primera vez que importa: un globo, una sola vez por mago. */
+    consejoAlEmpezar(pa) {
+      const p = Estado.perfil, v = p.vistos || {};
+      const marcar = (k) => { p.vistos = Object.assign({}, p.vistos, { [k]: true }); Estado.guardar(); };
+      if (pa.modo === 'practica' && !v.consejoPractica && !(p.practica.partidas > 0)) {
+        marcar('consejoPractica');
+        this.globo('Acá no hay reloj y las pistas son gratis');
+      } else if (pa.modo === 'arcade' && !pa.jefe && !v.consejoTorre && !(p.arcade.partidas > 0)) {
+        marcar('consejoTorre');
+        this.globo(T('Cada piso pide un puntaje: llegá a {n}. Si no llegás, perdés una vida', { n: pa.objetivo }));
+        setTimeout(() => {
+          if (this.partida !== pa || pa.terminada) return;
+          this.globo('Abajo tenés poderes: se pagan con monedas');
+          const po = $('poderes'); po.classList.remove('senalar'); void po.offsetWidth; po.classList.add('senalar');
+          setTimeout(() => po.classList.remove('senalar'), 2600);
+        }, 4500);
       }
     },
 
