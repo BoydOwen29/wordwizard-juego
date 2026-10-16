@@ -58,7 +58,7 @@
   // ------------------------------------------------------------ diagnóstico de arranques (app de Android, 14/10)
   // En un celu la app de Play se abría y se cerraba sola. Cada arranque anota hasta dónde llegó (html → app → título)
   // y lo que pasó (oculta, popstate, back, salida). Si el arranque anterior se cortó antes del título, o se cerró en
-  // menos de 8 s, el siguiente lo manda como reporte. Solo en la app de Play; no guarda nada personal.
+  // menos de 3 s (el rebote de Motorola dura menos de 1 s; cerrar a los 6 u 8 s es un jugador que salió), el siguiente lo manda como reporte. Solo en la app de Play; no guarda nada personal.
   const TWA = (document.referrer || '').indexOf('android-app://') === 0 || 'getDigitalGoodsService' in window;
   if (TWA) {
     const T0 = Date.now(), LSD = 'ww.diag';
@@ -77,7 +77,7 @@
     const atras = history.back.bind(history);
     history.back = function () { ev('back'); return atras(); };
     if (prev && T0 - prev.t < 864e5) {
-      const motivo = prev.etapa !== 'titulo' ? `se cortó en "${prev.etapa}"` : prev.oculta != null && prev.oculta < 8000 ? `se cerró a los ${Math.round(prev.oculta / 100) / 10} s` : null;
+      const motivo = prev.etapa !== 'titulo' ? `se cortó en "${prev.etapa}"` : prev.oculta != null && prev.oculta < 3000 ? `se cerró a los ${Math.round(prev.oculta / 100) / 10} s` : null;
       if (motivo) setTimeout(() => encolar('error', 'Diagnóstico: el arranque anterior de la app ' + motivo, prev), 4000);
     }
   }
