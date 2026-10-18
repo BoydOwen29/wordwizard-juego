@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.44.0',
+    version: '2.44.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -643,7 +643,7 @@
       const pasos = [
         { t: '¡LA TORRE CAMBIÓ!', h: `${ilu('torre')}<p>${T('Ahora tiene <b>20 pisos</b>, con <b>las mismas palabras para todos</b>, de la más fácil a la más difícil. Arriba de todo está la cima: ahí termina.')}</p>` },
         { t: 'CUENTA LA PRIMERA VEZ', h: `<div class="modal-silabo" data-pose="happy"></div><p>${T('El ranking de la Torre arranca de cero y cuenta lo que hacés <b>la primera vez</b> en cada piso. Podés volver a jugarla, pero ya no da monedas.')}</p><p>${T('Tu nivel, tus trajes y tus monedas quedan como estaban.')}</p>` },
-        { t: 'NUEVO: CAMPAÑAS', h: `${ilu('pradera')}<p>${T('La Torre ahora está en <b>Campañas</b>, en la barra de abajo. Es el capítulo gratis; después vienen nuevas regiones con Tomillo, Doña Lenta, Don Hornero y más.')}</p>` },
+        { t: 'NUEVO: AVENTURA', h: `${ilu('pradera')}<p>${T('La Torre ahora está en <b>Aventura</b>, en la barra de abajo. Es el capítulo gratis; después vienen nuevas regiones con Tomillo, Doña Lenta, Don Hornero y más.')}</p>` },
         { t: 'Y ADEMÁS', h: `<div class="modal-silabo" data-pose="happy"></div><p>${T('Valen los verbos con pronombre: <b>cuidala, decime, sentate</b>.')}</p><p>${T('Para borrar todas las letras, tocá la ✕ de la palabra o mantené apretado Borrar.')}</p>` },
       ];
       const paso = (i) => {
@@ -3729,7 +3729,7 @@
       // fin del capítulo (v2.43): la Torre termina en la cima del piso 20
       if (hecho >= CAP) {
         this.confeti(120); Audio.victoria();
-        const cartel = this.cartelCapitulo('¡CAPÍTULO 1 COMPLETO!', 'Liberaste las palabras', 'Pero Nocturnia no estaba sola: el Archimago espera en otras tierras. Muy pronto, nuevas campañas.', 'capitulo', 5200);
+        const cartel = this.cartelCapitulo('¡CAPÍTULO 1 COMPLETO!', 'Liberaste las palabras', 'Pero Nocturnia no estaba sola: el Archimago espera en otras tierras. Muy pronto, nuevas aventuras.', 'capitulo', 5200);
         cartel.alCerrar = () => { if (pa && !pa.arcade.cerrada) this.cerrarArcade(pa); };
         return;
       }

@@ -389,4 +389,9 @@ window.WWI18n && WWI18n.registrar('pt', {   // si i18n.js no llegó, index.html 
   "Y ADEMÁS": "E MAIS",
   "Valen los verbos con pronombre: <b>cuidala, decime, sentate</b>.": "Valem os verbos com pronome (em espanhol): <b>cuidala, decime, sentate</b>.",
   "Para borrar todas las letras, tocá la ✕ de la palabra o mantené apretado Borrar.": "Para apagar todas as letras, toque no ✕ da palavra ou segure Apagar.",
+  "Aventura": "Aventura",
+  "AVENTURA": "AVENTURA",
+  "NUEVO: AVENTURA": "NOVO: AVENTURA",
+  "La Torre ahora está en <b>Aventura</b>, en la barra de abajo. Es el capítulo gratis; después vienen nuevas regiones con Tomillo, Doña Lenta, Don Hornero y más.": "A Torre agora está em <b>Aventura</b>, na barra de baixo. É o capítulo grátis; depois vêm novas regiões com Tomilho, Dona Lenta, Seu João-de-barro e mais.",
+  "Pero Nocturnia no estaba sola: el Archimago espera en otras tierras. Muy pronto, nuevas aventuras.": "Mas Nocturnia não estava sozinha: o Arquimago espera em outras terras. Em breve, novas aventuras.",
 });
