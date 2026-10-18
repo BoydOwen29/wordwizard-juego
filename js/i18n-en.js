@@ -318,4 +318,13 @@ window.WWI18n && WWI18n.registrar('en', {   // si i18n.js no llegó, index.html 
   "Cada piso pide un puntaje: llegá a {n}. Si no llegás, perdés una vida": "Each floor asks for a score: reach {n}. If you don't, you lose a life",
   "Abajo tenés poderes: se pagan con monedas": "Down below are powers: you pay for them with coins",
   "Volvé mañana: hay una palabra nueva para todos. Si venís todos los días, armás racha.": "Come back tomorrow: there's a new word for everyone. Play every day to build a streak.",
+  "La Torre Arcana: 20 pisos": "The Arcane Tower: 20 floors",
+  "Las mismas palabras para todos, de la más fácil a la más difícil. Tenés 3 vidas y cada 5 pisos hay un jefe.": "The same words for everyone, from easiest to hardest. You have 3 lives, and every 5 floors there's a boss.",
+  "Las mismas palabras para todos, de la más fácil a la más difícil. Tenés 3 vidas y cada 5 pisos hay un jefe. Llegaste al piso {n}.": "The same words for everyone, from easiest to hardest. You have 3 lives, and every 5 floors there's a boss. You reached floor {n}.",
+  "Pero Nocturnia no estaba sola: el Archimago espera en otras tierras. Muy pronto, nuevas campañas.": "But Nocturnia was not alone: the Archmage waits in other lands. New campaigns coming soon.",
+  "Ya lo habías pasado": "You had cleared it before",
+  "no suma monedas ni ranking": "no coins or ranking",
+  "Llegar a la cima": "Reach the top",
+  "piso de la Torre": "Tower floor",
+  "puntaje de la Torre": "Tower score",
 });

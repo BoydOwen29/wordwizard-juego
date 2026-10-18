@@ -97,7 +97,7 @@
 
     pintar(cont, o) {
       this.cont = cont; this.opts = o; this.actual = o.actual;
-      const tope = Math.max(o.actual + 4, PISOS_CAPITULO + 1);
+      const tope = PISOS_CAPITULO + 1;   // v2.43: la Torre termina en el 20 (la cima)
       this.W = Math.min(cont.clientWidth || 360, 460);
       this.H = (tope + 1) * PASO + 160;
       const f = F(), rnd = f ? f.azarCon(20261009) : Math.random;

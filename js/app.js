@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.42.1',
+    version: '2.43.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -494,13 +494,9 @@
       this.irMenu();
       this.revisarEnCurso();
       this.sincronizarCuenta();
-      // v2.30: hasta la v2.29 la Torre solo se mandaba al cerrar la subida; quien la dejó a la mitad no figuraba.
-      // Una vez por mago se manda lo que ya tiene (la base no deja bajar un récord, así que repetir no hace daño).
-      const sub = p.subida && p.subida.puntajeTotal || 0;
-      if (Ranking.activo() && !p.arcade.torreEnviada && (p.arcade.mejorPuntaje > 0 || sub > 0)) {
-        Ranking.enviarTorre({ clave: this.claveNube(), nombre: p.nombre, puntaje: Math.max(p.arcade.mejorPuntaje, sub), piso: p.arcade.mejorPiso, jefes: Math.floor(p.arcade.mejorPiso / 5) });
-        p.arcade.torreEnviada = true; Estado.guardar();
-      }
+      // la Torre Arcana (v2.43): una vez por mago se manda lo que ya tiene (la base no deja bajar un récord)
+      const t = this.torre(), m = this.marcaTorre(p);
+      if (Ranking.activo() && !t.enviada && m.puntaje > 0) { this.enviarTorre(); t.enviada = true; Estado.guardar(); }
     },
 
     // ============================================================ navegación
@@ -1046,8 +1042,10 @@
         const cands = this.pool.filter((c) => c.l === (opts.largo || 7) && c.p !== deHoy);
         return { base: azar(cands.length ? cands : this.pool).p };
       }
-      // arcade: la dificultad sube con el piso
+      // arcade: las 20 palabras fijas de la Torre Arcana (tools/build-torre.js), las mismas para todos
       const piso = opts.piso || 1;
+      const FIJAS = window.WW_TORRE;
+      if (FIJAS && FIJAS.length) return { base: FIJAS[Math.min(piso, FIJAS.length) - 1] };
       let cands;
       if (opts.jefe) cands = this.pool.filter((c) => c.l >= 8 && c.n >= 60);
       else if (piso <= 3) cands = this.pool.filter((c) => c.l === 7 && c.n >= 50);
@@ -1985,9 +1983,14 @@
       const rest = motivo === 'tiempo' || !pa.deadline ? 0 : Math.max(0, Math.round((pa.deadline - Date.now()) / 1000));
       const extra = Math.max(0, pa.puntosPiso - pa.objetivo);
       let bonusMonedas = 2 + Math.floor(rest / 15) + Math.floor(extra / 12);
-      const bonusPiso = pa.arcade.piso * 10, bonusTiempo = Math.floor(rest / 3);
+      // v2.43: bonus fijo por piso (antes era piso × 10 y arriba del 20 valía más que el piso mismo)
+      const bonusPiso = 20, bonusTiempo = Math.floor(rest / 3);
       let bonusPts = bonusPiso + bonusTiempo;
-      if (pa.jefe) { bonusMonedas += 10; bonusPts += 40; pa.arcade.jefes += 1; p.arcade.jefes = (p.arcade.jefes || 0) + 1; p.arcade.checkpoint = Math.max(p.arcade.checkpoint || 0, pa.arcade.piso); }
+      const t = this.torre(), nuevo = !(pa.arcade.piso in t.primera);
+      if (pa.jefe) { bonusMonedas += 10; bonusPts += 40; pa.arcade.jefes += 1; p.arcade.jefes = (p.arcade.jefes || 0) + 1; t.checkpoint = Math.max(t.checkpoint || 0, pa.arcade.piso); }
+      // repetir un piso ya pasado no da monedas ni cambia el ranking: cuenta lo que hiciste la primera vez
+      if (!nuevo) bonusMonedas = 0;
+      else { t.primera[pa.arcade.piso] = pa.puntos + bonusPts; pa.arcade.puntosNuevos = (pa.arcade.puntosNuevos || 0) + pa.puntos + bonusPts; pa.arcade.pisosNuevos = (pa.arcade.pisosNuevos || 0) + 1; }
       // tope diario de monedas de la Torre
       const hoyTorre = this.torreHoy();
       const ganadas = bonusMonedas;
@@ -1998,8 +2001,8 @@
       pa.arcade.puntajeTotal += pa.puntos + bonusPts;
       pa.arcade.palabrasTotal += pa.encontradas.length;
       p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, pa.arcade.piso);
-      // al ranking en cada piso pasado (antes solo al terminar la subida: quien la dejaba guardada a la mitad no aparecía)
-      if (Ranking.activo()) Ranking.enviarTorre({ clave: this.claveNube(), nombre: p.nombre, puntaje: Math.max(p.arcade.mejorPuntaje, pa.arcade.puntajeTotal), piso: p.arcade.mejorPiso, jefes: Math.floor(p.arcade.mejorPiso / 5) });
+      // al ranking en cada piso nuevo (quien deja la subida a la mitad también figura)
+      if (nuevo) this.enviarTorre();
       this.anotarTiempo(pa);
       this.guardarSubida(pa.arcade);
       this.limpiarEfectos();
@@ -2009,7 +2012,7 @@
       const sig = pa.arcade.piso + 1;
       this.mision('piso', sig);
       this.anunciarLogros(Logros.evaluar(p, { tipo: 'piso' }));
-      const info = { pa, bonusPts, bonusMonedas, rest, extra, bonusPiso, bonusTiempo, topeAlcanzado };
+      const info = { pa, bonusPts, bonusMonedas, rest, extra, bonusPiso, bonusTiempo, topeAlcanzado, repetido: !nuevo };
       this._tModalPiso = setTimeout(() => this.resumenPiso(info), motivo === 'subir' ? 350 : 1100);
     },
 
@@ -2024,7 +2027,7 @@
         fila('Palabras', pa.encontradas.length),
         fila('Bonus del piso', '+' + (info.bonusPiso + (pa.jefe ? 40 : 0))),
         info.bonusTiempo ? fila('Tiempo sobrante', `+${info.bonusTiempo} (${info.rest} s)`) : '',
-        fila(info.topeAlcanzado ? 'Monedas (tope del día)' : 'Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`),
+        info.repetido ? fila('Ya lo habías pasado', 'no suma monedas ni ranking', 'extra') : fila(info.topeAlcanzado ? 'Monedas (tope del día)' : 'Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`),
         fila('Total de la subida', pa.arcade.puntajeTotal + ' pts', 'total'),
       ].filter(Boolean).join('');
       const titulo = pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`;
@@ -2032,7 +2035,7 @@
       this.modal(`<h3>${titulo}</h3><div class="modal-silabo" data-pose="happy"></div><ul class="resumen-piso">${filas}</ul>
         <button class="btn-link-cuenta" id="piso-ver">Ver las palabras del piso</button>
         <div id="piso-palabras" class="res-palabras piso-palabras oculto">${this.htmlPalabras({ base: pa.base, encontradas: pa.encontradas, nucleo: pa.nucleo })}</div>`, [
-        { texto: `Seguir al piso ${pa.arcade.piso + 1}`, clase: 'btn-primario', accion: () => this.verTorre(info) },
+        { texto: pa.arcade.piso >= WWMapa.PISOS_CAPITULO ? 'Llegar a la cima' : `Seguir al piso ${pa.arcade.piso + 1}`, clase: 'btn-primario', accion: () => this.verTorre(info) },
       ]);
       $('piso-ver').addEventListener('click', () => {
         Audio.click(); const l = $('piso-palabras'); l.classList.toggle('oculto');
@@ -2241,13 +2244,12 @@
       a.cerrada = true; clearTimeout(this._tModalPiso);
       if (window.WWMetricas) WWMetricas.marcar(WW.claveDia(), CONFIG.version, 'torre');
       p.subida = null;
-      // 0,45 (era 0,8): desde la v2.16 se sube más alto en la Torre; así el nivel no se acelera (docs/ECONOMIA.md)
-      const xp = Math.round(a.puntajeTotal * 0.45 + a.piso * 8);
-      const esRecord = a.puntajeTotal > p.arcade.mejorPuntaje;
+      // v2.43: la XP sale de los pisos nuevos (0,45 de sus puntos + 8 por piso); repetir pisos ya pasados da muy poco
+      const nuevos0 = a.puntosNuevos || 0;
+      const xp = Math.round(nuevos0 * 0.45 + (a.pisosNuevos || 0) * 8 + Math.max(0, a.puntajeTotal - nuevos0) * 0.05);
+      const esRecord = nuevos0 > 0;
       p.arcade.mejorPuntaje = Math.max(p.arcade.mejorPuntaje, a.puntajeTotal);
-      // el mejor piso es el último SUPERADO (lo anota pisoSuperado): el piso donde se perdió no cuenta, ni su jefe
       p.arcade.partidas += 1;
-      if (Ranking.activo()) Ranking.enviarTorre({ clave: this.claveNube(), nombre: p.nombre, puntaje: p.arcade.mejorPuntaje, piso: p.arcade.mejorPiso, jefes: Math.floor(p.arcade.mejorPiso / 5) });
       p.arcade.historial.unshift({ fecha: this.hoy, puntos: a.puntajeTotal, piso: a.piso, jefes: a.jefes });
       p.arcade.historial = p.arcade.historial.slice(0, 20);
       p.stats.partidas += 1;
@@ -2430,7 +2432,7 @@
       const yo = Estado.perfil.nombre, cont = $('ranking-contenido');
       let filas;
       if (tab === 'torre') {
-        filas = Object.values(todos).filter((p) => p.arcade && p.arcade.mejorPuntaje > 0).map((p) => ({ nombre: p.nombre, valor: p.arcade.mejorPuntaje, sub: `piso ${p.arcade.mejorPiso} · ${p.arcade.jefes || 0} ${(p.arcade.jefes || 0) === 1 ? 'jefe' : 'jefes'}`, unidad: 'PTS', yo: p.nombre === yo }));
+        filas = Object.values(todos).map((p) => ({ p, m: this.marcaTorre(p) })).filter((x) => x.m.puntaje > 0).map(({ p, m }) => ({ nombre: p.nombre, valor: m.puntaje, sub: `piso ${m.piso} · ${m.jefes} ${m.jefes === 1 ? 'jefe' : 'jefes'}`, unidad: 'PTS', yo: p.nombre === yo }));
       } else {
         filas = Object.values(todos).filter((p) => p.diarios && p.diarios[K(this.hoy)]).map((p) => ({ nombre: p.nombre, valor: p.diarios[K(this.hoy)].puntos, sub: `${p.diarios[K(this.hoy)].rango} · ${p.diarios[K(this.hoy)].encontradas.length} palabras`, unidad: 'PTS', yo: p.nombre === yo }));
       }
@@ -2534,7 +2536,7 @@
           ${(s.mejoresPalabras || []).length ? `<h3 style="margin-top:10px">Mejores palabras</h3><div class="stats-palabras">${s.mejoresPalabras.map((x) => `<span class="chip-palabra ${x.p.length >= 6 ? 'larga' : ''}">${x.p} · ${x.n}</span>`).join('')}</div>` : ''}
         </div>
         <div class="stats-panel"><h3>🗼 Torre Arcana</h3>
-          <div class="stats-grilla">${num(p.arcade.mejorPiso, 'mejor piso')}${num(p.arcade.mejorPuntaje, 'mejor puntaje')}${num(p.arcade.partidas, 'subidas')}${num(p.arcade.jefes || 0, 'jefes vencidos')}</div>
+          <div class="stats-grilla">${num(this.marcaTorre(p).piso + ' / 20', 'piso de la Torre')}${num(this.marcaTorre(p).puntaje, 'puntaje de la Torre')}${num(p.arcade.partidas, 'subidas')}${num(this.marcaTorre(p).jefes + ' / 4', 'jefes vencidos')}</div>
         </div>${this.panelRitmo(num)}`;
       if (diarios.length) {
         html += `<div class="stats-panel"><h3>📜 Últimos desafíos</h3><div class="hist">${diarios.slice(-14).reverse().map((d) => `<div class="hist-fila"><span class="hist-fecha">${(d.fecha || '').slice(5).replace('-', '/')}</span><span class="hist-palabra">${d.palabra.toUpperCase()}</span><span class="hist-rango">${(WW.RANGOS.find((r) => r.nombre === d.rango) || {}).icono || ''} ${d.rango}</span><span class="hist-pts">${d.puntos} pts</span></div>`).join('')}</div></div>`;
@@ -3516,10 +3518,26 @@
      * Con { pa, bonusPts, bonusMonedas, rest }: después de ganar un piso, camina al siguiente,
      * con cartel si entra a una zona nueva, aparición si lo espera un jefe y cierre al terminar el capítulo.
      */
+    /** La Torre Arcana de 20 pisos (v2.43) en el perfil: lo hecho la primera vez en cada piso y el último jefe vencido. */
+    torre(p) {
+      p = p || Estado.perfil;
+      if (!p.torre || typeof p.torre !== 'object') p.torre = {};
+      if (!p.torre.primera || typeof p.torre.primera !== 'object') p.torre.primera = {};
+      return p.torre;
+    },
+    /** La marca de la Torre para el ranking: puntos de la primera vez en cada piso, piso más alto y jefes. */
+    marcaTorre(p) {
+      const pr = (p && p.torre && p.torre.primera) || {}, pisos = Object.keys(pr).map(Number);
+      return { puntaje: pisos.reduce((s, k) => s + (Number(pr[k]) || 0), 0), piso: pisos.length ? Math.max(...pisos) : 0, jefes: pisos.filter((k) => WW.esPisoJefe(k)).length };
+    },
+    enviarTorre() {
+      const p = Estado.perfil, m = this.marcaTorre(p);
+      if (Ranking.activo() && m.puntaje > 0) Ranking.enviarTorre({ clave: this.claveNube(), nombre: p.nombre, puntaje: m.puntaje, piso: m.piso, jefes: m.jefes });
+    },
     /** Foto de la subida en el perfil, para seguirla otro día. enPiso: el piso que se está jugando ahora. */
     guardarSubida(a, enPiso) {
       const p = Estado.perfil;
-      p.subida = { piso: a.piso, vidas: a.vidas, puntajeTotal: a.puntajeTotal, palabrasTotal: a.palabrasTotal, usadas: a.usadas.slice(-60), monedas: a.monedas, jefes: a.jefes, desde: a.desde || 1, enPiso: enPiso || null, fecha: this.hoy };
+      p.subida = { v: 2, piso: a.piso, vidas: a.vidas, puntajeTotal: a.puntajeTotal, palabrasTotal: a.palabrasTotal, usadas: a.usadas.slice(-60), monedas: a.monedas, jefes: a.jefes, desde: a.desde || 1, enPiso: enPiso || null, fecha: this.hoy };
       Estado.guardar();
     },
 
@@ -3534,7 +3552,10 @@
 
     /** Botón de la Torre: retoma la subida guardada, ofrece el último checkpoint o arranca de cero. */
     entrarTorre() {
-      const p = Estado.perfil, s = p.subida;
+      const p = Estado.perfil;
+      // las subidas guardadas de la Torre infinita (antes de la v2.43) no sirven: palabras al azar y pisos de más
+      if (p.subida && p.subida.v !== 2) { p.subida = null; Estado.guardar(); }
+      const s = p.subida;
       if (s && s.vidas > 0) {
         const arcade = { piso: s.piso, vidas: s.vidas, puntajeTotal: s.puntajeTotal, palabrasTotal: s.palabrasTotal, usadas: s.usadas || [], monedas: s.monedas || 0, jefes: s.jefes || 0, desde: s.desde || 1 };
         let aviso = '';
@@ -3548,8 +3569,7 @@
         this.guardarSubida(arcade);
         return this.verTorre({ pa });
       }
-      // quien venció jefes antes de la v2.19 no tiene checkpoint anotado: sale de su mejor piso
-      const cp = p.arcade.checkpoint || (p.arcade.mejorPiso > 5 ? Math.floor((p.arcade.mejorPiso - 1) / 5) * 5 : 0);
+      const cp = Math.min(this.torre().checkpoint || 0, WWMapa.PISOS_CAPITULO - 5);
       if (!cp) return this.verTorre();
       this.modal(`<h3>LA TORRE ARCANA</h3><div class="modal-silabo" data-pose="happy"></div><p>¿Desde dónde subís?</p><p>Último jefe vencido: <b>${esc(WW.nombreJefe(cp))}</b></p><p class="modal-nota">El puntaje de la subida cuenta desde donde arranques.</p>`, [
         { texto: `Desde el piso ${cp + 1}`, clase: 'btn-primario', accion: () => {
@@ -3589,7 +3609,7 @@
         ? `<b>${pa.retomada === 'checkpoint' ? `Arrancás después de ${esc(WW.nombreJefe(hecho))}` : 'Seguís tu subida'}</b><small>${pa.retomada === 'checkpoint' ? 'Vidas llenas y puntaje desde cero.' : `Llevás ${pa.arcade.puntajeTotal} pts en esta subida`}</small>${pa.avisoVida ? `<small>${pa.avisoVida}</small>` : ''}${jefeSig}`
         : pa
         ? `<b>${pa.jefe ? `¡${esc(pa.nombreJefe)} vencido!` : `¡Piso ${hecho} superado!`}</b><small>Llevás ${pa.arcade.puntajeTotal} pts en esta subida</small>${jefeSig}`
-        : `<b>Subí lo más alto que puedas</b><small>Cada piso es una palabra con un objetivo de puntos. Tenés 3 vidas y cada 5 pisos hay un jefe.${p.arcade.mejorPiso ? ` Tu mejor marca: piso ${p.arcade.mejorPiso}.` : ''}</small>`;
+        : `<b>La Torre Arcana: 20 pisos</b><small>Las mismas palabras para todos, de la más fácil a la más difícil. Tenés 3 vidas y cada 5 pisos hay un jefe.${this.marcaTorre(p).piso ? ` Llegaste al piso ${this.marcaTorre(p).piso}.` : ''}</small>`;
       const hoyT = this.torreHoy();
       $('mapa-info').insertAdjacentHTML('beforeend', `<small class="mapa-tope">${WWIconos.html('moneda')} La Torre te dio ${hoyT.monedas} de ${CONFIG.topeTorre} monedas hoy${hoyT.monedas >= CONFIG.topeTorre ? ' · mañana hay más' : ''}</small>`);
       const btn = $('mapa-jugar');
@@ -3623,11 +3643,11 @@
         cartel.alTocar = () => WWMapa.cortarRecorrido();
         return;
       }
-      // fin del capítulo: cartel y sigue la subida, más allá de la torre
-      if (hecho === CAP && !pa.retomada) {
+      // fin del capítulo (v2.43): la Torre termina en la cima del piso 20
+      if (hecho >= CAP) {
         this.confeti(120); Audio.victoria();
-        const cartel = this.cartelCapitulo('¡CAPÍTULO 1 COMPLETO!', 'Liberaste las palabras', 'Pero Nocturnia no estaba sola: el Archimago Gris espera más arriba. La subida sigue…', 'capitulo', 4200);
-        cartel.alCerrar = () => caminar();
+        const cartel = this.cartelCapitulo('¡CAPÍTULO 1 COMPLETO!', 'Liberaste las palabras', 'Pero Nocturnia no estaba sola: el Archimago espera en otras tierras. Muy pronto, nuevas campañas.', 'capitulo', 5200);
+        cartel.alCerrar = () => { if (pa && !pa.arcade.cerrada) this.cerrarArcade(pa); };
         return;
       }
       setTimeout(caminar, 450);

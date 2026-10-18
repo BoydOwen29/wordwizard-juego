@@ -111,12 +111,14 @@
 
   // ------------------------------------------------------------ envíos (con cola si no hay señal)
   async function mandar(item) {
+    // envíos de la Torre infinita que quedaron en la cola de antes de la v2.43: ya no van a ningún lado
+    if (item.tipo === 'torre' && !(item.datos && item.datos.v === 2)) return true;
     const s = await sesion(item.clave);
     await asegurarNombre(item.clave, s, item.nombre);
     const d = item.datos;
     const res = item.tipo === 'diario'
       ? await rest('partidas_diario', { method: 'POST', body: JSON.stringify({ fecha: d.fecha, numero: d.numero, puntos: d.puntos, palabras: d.palabras, rango: d.rango, idioma: d.idioma || 'es' }) }, s)
-      : await rest('torre?on_conflict=usuario,idioma', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ mejor_puntaje: d.puntaje, mejor_piso: d.piso, jefes: Math.min(d.jefes || 0, 100), idioma: d.idioma || 'es' }) }, s);
+      : await rest('torre_arcana?on_conflict=usuario,idioma', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ puntaje: d.puntaje, piso: Math.min(d.piso, 20), jefes: Math.min(d.jefes || 0, 4), idioma: d.idioma || 'es' }) }, s);
     // 409 = ya estaba cargada; otros 4xx = la base la rechaza (no tiene sentido reintentar)
     return res.ok || (res.status >= 400 && res.status < 500);
   }
@@ -149,7 +151,8 @@
   /** r: {clave, nombre, fecha, numero, puntos, palabras, rango} */
   function enviarDiario(r) { return encolar('diario', r.clave, r.nombre, Object.assign({ idioma: idioma() }, r)); }
   /** r: {clave, nombre, puntaje, piso, jefes} — el mejor resultado de la Torre de ese mago */
-  function enviarTorre(r) { return encolar('torre', r.clave, r.nombre, Object.assign({ idioma: idioma() }, r)); }
+  // la Torre Arcana de 20 pisos (v2.43): puntaje = lo que hizo la primera vez en cada piso (tabla torre_arcana)
+  function enviarTorre(r) { return encolar('torre', r.clave, r.nombre, Object.assign({ idioma: idioma(), v: 2 }, r)); }
 
   // ------------------------------------------------------------ lecturas (públicas)
   async function leerVista(ruta) {
@@ -158,7 +161,7 @@
   }
   const topDiario = (fecha, n) => leerVista(`ranking_diario?idioma=eq.${idioma()}&fecha=eq.${fecha}&select=usuario,nombre,puntos,palabras,rango&order=puntos.desc&limit=${n || 50}`);
   const topSemanal = (lunes, n) => leerVista(`ranking_semanal?idioma=eq.${idioma()}&semana=eq.${lunes}&select=usuario,nombre,puntos,dias&order=puntos.desc&limit=${n || 50}`);
-  const topTorre = (n) => leerVista(`ranking_torre?idioma=eq.${idioma()}&select=usuario,nombre,mejor_puntaje,mejor_piso,jefes&order=mejor_puntaje.desc&limit=${n || 50}`);
+  const topTorre = (n) => leerVista(`ranking_torre_arcana?idioma=eq.${idioma()}&select=usuario,nombre,mejor_puntaje:puntaje,mejor_piso:piso,jefes&order=puntaje.desc,piso.desc&limit=${n || 50}`);
 
   function miId(clave) { const s = leer(LS_SESIONES, {})[clave]; return s ? s.id : null; }
 

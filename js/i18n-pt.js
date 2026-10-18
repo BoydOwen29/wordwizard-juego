@@ -318,4 +318,13 @@ window.WWI18n && WWI18n.registrar('pt', {   // si i18n.js no llegó, index.html 
   "Cada piso pide un puntaje: llegá a {n}. Si no llegás, perdés una vida": "Cada andar pede uma pontuação: chegue a {n}. Se não chegar, perde uma vida",
   "Abajo tenés poderes: se pagan con monedas": "Embaixo você tem poderes: são pagos com moedas",
   "Volvé mañana: hay una palabra nueva para todos. Si venís todos los días, armás racha.": "Volte amanhã: tem uma palavra nova para todos. Vindo todo dia, você monta uma sequência.",
+  "La Torre Arcana: 20 pisos": "A Torre Arcana: 20 andares",
+  "Las mismas palabras para todos, de la más fácil a la más difícil. Tenés 3 vidas y cada 5 pisos hay un jefe.": "As mesmas palavras para todos, da mais fácil à mais difícil. Você tem 3 vidas e a cada 5 andares há um chefe.",
+  "Las mismas palabras para todos, de la más fácil a la más difícil. Tenés 3 vidas y cada 5 pisos hay un jefe. Llegaste al piso {n}.": "As mesmas palavras para todos, da mais fácil à mais difícil. Você tem 3 vidas e a cada 5 andares há um chefe. Você chegou ao andar {n}.",
+  "Pero Nocturnia no estaba sola: el Archimago espera en otras tierras. Muy pronto, nuevas campañas.": "Mas Nocturnia não estava sozinha: o Arquimago espera em outras terras. Em breve, novas campanhas.",
+  "Ya lo habías pasado": "Você já tinha passado",
+  "no suma monedas ni ranking": "não soma moedas nem ranking",
+  "Llegar a la cima": "Chegar ao topo",
+  "piso de la Torre": "andar da Torre",
+  "puntaje de la Torre": "pontuação da Torre",
 });

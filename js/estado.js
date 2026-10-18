@@ -22,6 +22,7 @@
       misiones: null,       // {fecha, lista:[...], bonus}
       arcade: { mejorPuntaje: 0, mejorPiso: 0, partidas: 0, jefes: 0, historial: [], checkpoint: 0 },
       subida: null,         // subida a la Torre guardada para seguirla otro día (piso, vidas, puntaje…)
+      torre: { primera: {}, checkpoint: 0 },   // Torre Arcana de 20 pisos (v2.43): puntos de la primera vez en cada piso
       practica: { partidas: 0 },
       logros: {},
       stats: { palabras: 0, partidas: 0, completas: 0, mejorLargo: 0, mejorCombo: 0, monedasTotales: 20, porLargo: {}, mejorPalabra: '', puntos: 0, misiones: 0, segundos: 0, mejoresPalabras: [] },
@@ -116,7 +117,7 @@
       const base = perfilNuevo(n);
       this.perfil = Object.assign(base, todos[n]);
       // completar campos nuevos de versiones viejas
-      for (const k of ['arcade', 'practica', 'stats', 'inventario', 'ajustes']) {
+      for (const k of ['arcade', 'torre', 'practica', 'stats', 'inventario', 'ajustes']) {
         this.perfil[k] = Object.assign(perfilNuevo(n)[k], this.perfil[k] || {});
       }
       actualMem = n;
