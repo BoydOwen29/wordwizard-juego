@@ -1107,11 +1107,21 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .archivo-titulo { margin: 18px 0 2px; font: 600 calc(18px * var(--letra, 1)) var(--display); color: var(--texto); }
 .archivo-texto { margin: 0 0 8px; font-size: calc(13px * var(--letra, 1)); }
 .archivo { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-bottom: 8px; }
-.archivo-fila { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 12px; background: var(--vidrio); border: 1px solid var(--vidrio-borde); color: var(--texto); font: 600 calc(14px * var(--letra, 1)) var(--display); text-align: left; }
+/* v2.44.2: tarjetas sólidas (sobre la biblioteca no se leían), y las sin jugar con el borde dorado */
+.archivo-fila { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 12px; background: rgba(16,26,30,.9); border: 2px solid var(--borde-m, #0d1418); color: #f3f6ee; font: 600 calc(14px * var(--letra, 1)) var(--display); text-align: left; box-shadow: 0 3px 0 rgba(0,0,0,.35); }
 .archivo-fila b { color: var(--oro); font-variant-numeric: tabular-nums; }
-.archivo-fila span { color: var(--texto-suave); font-size: calc(12px * var(--letra, 1)); }
-.archivo-fila em { margin-left: auto; font-style: normal; font-size: calc(13px * var(--letra, 1)); }
-.archivo-fila.bloqueado { opacity: .62; }
+.archivo-fila span { color: #c9d8cf; font-size: calc(12px * var(--letra, 1)); }
+.archivo-fila span small { display: block; color: #e9dcbc; }
+.archivo-fila em { margin-left: auto; font-style: normal; font-size: calc(13px * var(--letra, 1)); color: #f3f6ee; }
+.archivo-fila.pendiente { border-color: var(--oro); }
+.archivo-fila.pendiente em { color: var(--oro); }
+.archivo-fila.bloqueado { background: rgba(16,26,30,.78); }
+.archivo-fila.bloqueado span, .archivo-fila.bloqueado b { opacity: .75; }
+.archivo-filtros { display: flex; gap: 6px; margin: 2px 0 8px; }
+.archivo-filtros button { flex: 1; border: 2px solid var(--borde-m, #0d1418); border-radius: 999px; padding: 5px 8px; background: rgba(16,26,30,.85); color: #c9d8cf; font: 600 calc(12.5px * var(--letra, 1)) var(--display); }
+.archivo-filtros button.on { background: var(--oro); color: #2a2412; }
+.archivo-sig { width: 100%; margin: 0 0 8px; flex: none; }
+.archivo-filtros, .archivo { flex: none; }
 .archivo-fila:active { transform: translateY(1px); }
 
 /* v2.17 primer minuto: fichas sugeridas a quien recién empieza */
@@ -1413,7 +1423,7 @@ body.con-pase .pase-brillo { display: block; }
 .mis-cosas-tienda .ic { width: 20px; height: 20px; }
 
 /* ============================================================ libro de campañas (v2.44, lab/libro-capitulos.html) */
-#p-campanas { display: flex; flex-direction: column; }
+/* (sin display: lo maneja .pantalla.activa; con display propio la pantalla quedaba siempre visible debajo de las otras) */
 .campanas-libro { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 18px; scrollbar-width: none; }
 .campanas-libro::-webkit-scrollbar { display: none; }
 .campana-pag { position: relative; display: flex; gap: 10px; align-items: center; background: #efe3c8; color: #2b231a; border: 3px solid var(--borde-m, #0d1418); border-radius: 14px 18px 18px 14px; padding: 9px; box-shadow: inset 6px 0 0 #d8c7a2, 0 4px 0 var(--borde-m, #0d1418); cursor: pointer; text-align: left; font: inherit; width: 100%; }

@@ -394,4 +394,12 @@ window.WWI18n && WWI18n.registrar('en', {   // si i18n.js no llegó, index.html 
   "NUEVO: AVENTURA": "NEW: ADVENTURE",
   "La Torre ahora está en <b>Aventura</b>, en la barra de abajo. Es el capítulo gratis; después vienen nuevas regiones con Tomillo, Doña Lenta, Don Hornero y más.": "The Tower now lives in <b>Adventure</b>, in the bottom bar. It's the free chapter; new regions with Thyme, Mrs. Slow, Mr. Ovenbird and more come next.",
   "Pero Nocturnia no estaba sola: el Archimago espera en otras tierras. Muy pronto, nuevas aventuras.": "But Nocturnia was not alone: the Archmage waits in other lands. New adventures coming soon.",
+  "Todos": "All",
+  "Sin jugar": "Not played",
+  "Jugados": "Played",
+  "¡Los jugaste todos!": "You played them all!",
+  "Todavía no jugaste ninguno del archivo.": "You haven't played any from the archive yet.",
+  "Jugar el próximo sin jugar (#{n})": "Play the next unplayed one (#{n})",
+  "Muy pronto · incluido en tu Pase": "Coming soon · included in your Pass",
+  "Este capítulo se está escribiendo. Con tu Pase lo vas a tener apenas salga: te aviso.": "This chapter is being written. With your Pass you'll get it as soon as it's out: I'll let you know.",
 });

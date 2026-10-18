@@ -394,4 +394,12 @@ window.WWI18n && WWI18n.registrar('pt', {   // si i18n.js no llegó, index.html 
   "NUEVO: AVENTURA": "NOVO: AVENTURA",
   "La Torre ahora está en <b>Aventura</b>, en la barra de abajo. Es el capítulo gratis; después vienen nuevas regiones con Tomillo, Doña Lenta, Don Hornero y más.": "A Torre agora está em <b>Aventura</b>, na barra de baixo. É o capítulo grátis; depois vêm novas regiões com Tomilho, Dona Lenta, Seu João-de-barro e mais.",
   "Pero Nocturnia no estaba sola: el Archimago espera en otras tierras. Muy pronto, nuevas aventuras.": "Mas Nocturnia não estava sozinha: o Arquimago espera em outras terras. Em breve, novas aventuras.",
+  "Todos": "Todos",
+  "Sin jugar": "Não jogados",
+  "Jugados": "Jogados",
+  "¡Los jugaste todos!": "Você jogou todos!",
+  "Todavía no jugaste ninguno del archivo.": "Você ainda não jogou nenhum do arquivo.",
+  "Jugar el próximo sin jugar (#{n})": "Jogar o próximo não jogado (#{n})",
+  "Muy pronto · incluido en tu Pase": "Em breve · incluído no seu Passe",
+  "Este capítulo se está escribiendo. Con tu Pase lo vas a tener apenas salga: te aviso.": "Este capítulo está sendo escrito. Com o seu Passe você vai tê-lo assim que sair: eu te aviso.",
 });

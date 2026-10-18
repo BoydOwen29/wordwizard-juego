@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.44.1',
+    version: '2.44.2',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -1708,16 +1708,32 @@
     pintarArchivo() {
       const cont = $('archivo'); if (!cont || !Estado.perfil) return;
       const p = Estado.perfil, hoyN = WW.numeroDia();
-      const filas = [];
+      // v2.44.2: filtro (todos, sin jugar, jugados) y un botón para ir directo al próximo sin jugar
+      const filtro = this._archivoFiltro || 'todos';
+      const dias = [];
       for (let n = hoyN - 1, i = 0; n >= 1 && i < CONFIG.archivoDias; n--, i++) {
         const fecha = new Date(); fecha.setDate(fecha.getDate() - (hoyN - n));
         const libre = i < CONFIG.archivoGratis || this.tienePase();
         const jugado = (p.archivo && p.archivo[n]) || p.diarios[K(WW.claveDia(fecha))];
+        dias.push({ n, fecha, libre, jugado });
+      }
+      const filas = dias.filter((x) => filtro === 'todos' || (filtro === 'pendientes' ? !x.jugado : !!x.jugado)).map(({ n, fecha, libre, jugado }) => {
         const r = jugado && WW.RANGOS.find((x) => x.nombre === jugado.rango);
         const dia = `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-        filas.push(`<button class="archivo-fila${libre ? '' : ' bloqueado'}" data-n="${n}" data-dias="${hoyN - n}"><b>#${n}</b><span>${dia}${libre ? '' : '<small>guardado para el Pase de Mago</small>'}</span><em>${jugado ? `${r ? r.icono : ''} ${jugado.puntos} pts` : libre ? 'Jugar' : '<i class="sello-pase"></i>'}</em></button>`);
+        return `<button class="archivo-fila${libre ? '' : ' bloqueado'}${libre && !jugado ? ' pendiente' : ''}" data-n="${n}" data-dias="${hoyN - n}"><b>#${n}</b><span>${dia}${libre ? '' : `<small>${T('guardado para el Pase de Mago')}</small>`}</span><em>${jugado ? `${r ? r.icono : ''} ${jugado.puntos} pts` : libre ? T('Jugar') : '<i class="sello-pase"></i>'}</em></button>`;
+      });
+      const vacio = !dias.length ? T('Todavía no hay días anteriores: el archivo empieza mañana.') : filtro === 'pendientes' ? T('¡Los jugaste todos!') : T('Todavía no jugaste ninguno del archivo.');
+      cont.innerHTML = filas.join('') || `<p class="texto">${vacio}</p>`;
+      const fs = $('archivo-filtros');
+      if (fs) {
+        fs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.f === filtro));
+        fs.onclick = (e) => { const b = e.target.closest('button[data-f]'); if (!b) return; Audio.click(); this._archivoFiltro = b.dataset.f; this.pintarArchivo(); };
       }
-      cont.innerHTML = filas.join('') || '<p class="texto">Todavía no hay días anteriores: el archivo empieza mañana.</p>';
+      const sig = dias.find((x) => x.libre && !x.jugado), bs = $('archivo-sig');
+      if (bs) {
+        bs.classList.toggle('oculto', !sig);
+        if (sig) { bs.textContent = T('Jugar el próximo sin jugar (#{n})', { n: sig.n }); bs.onclick = () => { Audio.click(); this.nuevaPartida('archivo', { fecha: sig.fecha }); }; }
+      }
       cont.onclick = (e) => {
         const b = e.target.closest('.archivo-fila'); if (!b) return;
         Audio.click();
@@ -3568,13 +3584,13 @@
           if (sub) return { tipo: 'jugando', txt: T('Vas por el piso {n}', { n: sub.piso + 1 }), pct: m.piso / WWMapa.PISOS_CAPITULO * 100 };
           return m.piso ? { tipo: 'jugando', txt: T('Piso {n} de 20', { n: m.piso }), pct: m.piso / WWMapa.PISOS_CAPITULO * 100 } : { tipo: 'nuevo', txt: T('Para empezar'), pct: 0 };
         }
-        return pase ? { tipo: 'pronto', txt: T('Muy pronto') } : { tipo: 'pase', txt: T('Con el Pase de Mago') };
+        return pase ? { tipo: 'pronto', txt: T('Muy pronto · incluido en tu Pase') } : { tipo: 'pase', txt: T('Con el Pase de Mago') };
       };
       const sello = `<svg class="sello" viewBox="-24 -24 48 48" aria-hidden="true"><circle r="20" fill="#b8473a" stroke="#16262c" stroke-width="2.5"/><circle r="13" fill="none" stroke="#e7a08f" stroke-width="2"/><path d="M0 -8 L2.4 -2.4 L8 -2 L3.6 1.8 L5 8 L0 4.6 L-5 8 L-3.6 1.8 L-8 -2 L-2.4 -2.4Z" fill="#fbe3d9"/></svg>`;
       const libro = $('campanas-libro');
       libro.innerHTML = C.CAPITULOS.map((c, i) => {
         const s = estado(c), tapado = !c.libre;
-        return `<button class="campana-pag" data-i="${i}"><span class="ilu">${C.escena(c.id)}${tapado ? '<span class="campana-velo"></span>' : ''}</span>
+        return `<button class="campana-pag" data-i="${i}"><span class="ilu">${C.escena(c.id)}${tapado && !pase ? '<span class="campana-velo"></span>' : ''}</span>
           <span class="datos"><b>${c.libre ? '' : esc(T(c.ante)) + ' · '}${esc(T(c.n))}</b><small>${esc(T(c.sub))} · ${esc(s.txt)}</small>${c.libre ? `<span class="barra"><i style="width:${Math.round(s.pct)}%"></i></span>` : ''}</span>
           ${tapado && !pase ? sello : ''}</button>`;
       }).join('');
@@ -3584,8 +3600,9 @@
         const chip = s.tipo === 'hecho' ? `<span class="campana-chip hecho">✓ ${T('Terminada')}</span>` : s.tipo === 'pase' ? `<span class="campana-chip pase">🔒 ${T('Con el Pase de Mago')}</span>` : s.tipo === 'pronto' ? `<span class="campana-chip pronto">${T('Muy pronto')}</span>` : `<span class="campana-chip gratis">${T('Gratis')}</span>`;
         const boton = c.libre ? (s.tipo === 'hecho' ? T('Jugar de nuevo (no suma al ranking)') : sub ? T('Seguir subiendo') : m.piso ? T('Seguir la Torre') : T('Subir a la Torre'))
           : s.tipo === 'pase' ? T('Conocé el Pase de Mago') : T('Llega muy pronto');
-        a.innerHTML = `<div class="escena">${C.escena(c.id)}${c.libre ? '' : '<span class="campana-velo"></span>'}<button class="volver" aria-label="${T('Volver')}">‹</button></div>
+        a.innerHTML = `<div class="escena">${C.escena(c.id)}${c.libre || pase ? '' : '<span class="campana-velo"></span>'}<button class="volver" aria-label="${T('Volver')}">‹</button></div>
           <div class="txt"><span class="ante">${esc(T(c.ante))}</span><h3>${esc(T(c.n))}</h3>${chip}<p>${esc(T(c.p))}</p><div class="ayuda">${esc(T(c.ayuda))}</div>
+          ${s.tipo === 'pronto' ? `<p>${T('Este capítulo se está escribiendo. Con tu Pase lo vas a tener apenas salga: te aviso.')}</p>` : ''}
           <button class="btn ${s.tipo === 'pronto' ? 'btn-secundario' : 'btn-primario'}" id="campana-ir" ${s.tipo === 'pronto' ? 'disabled' : ''}>${boton}</button></div>`;
         a.classList.add('ve'); a.setAttribute('aria-hidden', 'false');
         const cerrar = () => { a.classList.remove('ve'); a.setAttribute('aria-hidden', 'true'); };
