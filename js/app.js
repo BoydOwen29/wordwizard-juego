@@ -60,13 +60,13 @@
   /** El desafío empezado, si es de este idioma (uno empezado en otro idioma espera a que se vuelva a ese). */
   // fondo propio de algunas pantallas (el resto, el bosque)
   const FONDOS = { 'p-practica': 'biblioteca', 'p-rankings': 'cumbre' };
-  const FONDOS_BOSQUE = ['p-menu', 'p-mago', 'p-titulo', 'p-stats', 'p-logros', 'p-ayuda', 'p-ajustes'];
+  const FONDOS_BOSQUE = ['p-menu', 'p-mago', 'p-titulo', 'p-stats', 'p-logros', 'p-ayuda', 'p-ajustes', 'p-campanas'];
   const enCursoAca = (p) => (p.enCurso && (p.enCurso.idioma || 'es') === IDIOMA_DATOS ? p.enCurso : null);
   const WW = window.WW, Estado = window.WWEstado, Audio = window.WWAudio, Logros = window.WWLogros, Magos = window.WWMago, Ranking = window.WWRanking;
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.43.0',
+    version: '2.44.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -517,6 +517,7 @@
     },
 
     mostrar(id) {
+      if (id !== 'p-campanas' && this._cerrarCampana) this._cerrarCampana();
       document.querySelectorAll('.pantalla').forEach((s) => s.classList.toggle('activa', s.id === id));
       this.pantalla = id;
       if (id === 'p-practica') { this.pintarArchivo(); this.pintarPracticas(); }
@@ -575,6 +576,9 @@
     },
     /** Hace lo que haría "volver" en la pantalla actual. false = ya estamos en el inicio (salir). */
     volver() {
+      // la página abierta de un capítulo (Campañas) se cierra primero
+      const ca = $('campana-abierta');
+      if (ca && ca.classList.contains('ve') && this._cerrarCampana) { this._cerrarCampana(); return true; }
       const m = $('modal');
       if (m && !m.classList.contains('oculto') && this.cerrarTraje()) return true;
       if (m && !m.classList.contains('oculto')) {
@@ -597,10 +601,11 @@
     /** La barra de pestañas va en las pantallas principales; en la Torre, solo si no hay una subida en curso. */
     pintarTabs(id) {
       const subida = id === 'p-mapa' && this._torre && this._torre.pa && !this._torre.pa.arcade.cerrada;
-      const con = ['p-menu', 'p-practica', 'p-rankings', 'p-mago', 'p-mapa'].includes(id) && !subida;
+      const con = ['p-menu', 'p-practica', 'p-rankings', 'p-mago', 'p-mapa', 'p-campanas'].includes(id) && !subida;
       $('tabbar').classList.toggle('oculto', !con);
       document.body.classList.toggle('con-tabbar', con);
-      document.querySelectorAll('#tabbar [data-tab]').forEach((b) => b.classList.toggle('activa', b.dataset.tab === id));
+      // la Torre (p-mapa) es parte de Campañas: se marca esa pestaña
+      document.querySelectorAll('#tabbar [data-tab]').forEach((b) => b.classList.toggle('activa', b.dataset.tab === id || (id === 'p-mapa' && b.dataset.tab === 'p-campanas')));
     },
 
     verMisiones() {
@@ -620,8 +625,38 @@
       if (this.nivelPendiente) { const n = this.nivelPendiente; this.nivelPendiente = 0; setTimeout(() => this.anunciarNivel(n), 600); }
       this.pintarPerfil();
       this.mostrar('p-menu');
-      this.momentosPase();
-      this.momentoCuenta();
+      // las novedades van solas: ese día no se ofrece el Pase ni la cuenta encima
+      if (!this.novedades()) { this.momentosPase(); this.momentoCuenta(); }
+    },
+
+    /**
+     * Novedades de la v2.44 (pedido de Owen, 18/10): para los que ya jugaban antes del cambio de la Torre, unas pantallas
+     * que se pasan con "Siguiente" (sin cruz ni salteo), una sola vez. Los magos nuevos no la ven.
+     */
+    novedades() {
+      const p = Estado.perfil;
+      if (!p || (p.vistos && p.vistos.nov244)) return false;
+      const jugo = (p.stats && p.stats.partidas > 0) || (p.arcade && p.arcade.partidas > 0);
+      if (!jugo || String(p.creado) > '2026-10-18T20:00:00') return false;
+      const C = window.WWCampanas;
+      const ilu = (id) => (C ? `<div class="novedad-ilu">${C.escena(id)}</div>` : '');
+      const pasos = [
+        { t: '¡LA TORRE CAMBIÓ!', h: `${ilu('torre')}<p>${T('Ahora tiene <b>20 pisos</b>, con <b>las mismas palabras para todos</b>, de la más fácil a la más difícil. Arriba de todo está la cima: ahí termina.')}</p>` },
+        { t: 'CUENTA LA PRIMERA VEZ', h: `<div class="modal-silabo" data-pose="happy"></div><p>${T('El ranking de la Torre arranca de cero y cuenta lo que hacés <b>la primera vez</b> en cada piso. Podés volver a jugarla, pero ya no da monedas.')}</p><p>${T('Tu nivel, tus trajes y tus monedas quedan como estaban.')}</p>` },
+        { t: 'NUEVO: CAMPAÑAS', h: `${ilu('pradera')}<p>${T('La Torre ahora está en <b>Campañas</b>, en la barra de abajo. Es el capítulo gratis; después vienen nuevas regiones con Tomillo, Doña Lenta, Don Hornero y más.')}</p>` },
+        { t: 'Y ADEMÁS', h: `<div class="modal-silabo" data-pose="happy"></div><p>${T('Valen los verbos con pronombre: <b>cuidala, decime, sentate</b>.')}</p><p>${T('Para borrar todas las letras, tocá la ✕ de la palabra o mantené apretado Borrar.')}</p>` },
+      ];
+      const paso = (i) => {
+        const s = pasos[i], ultimo = i === pasos.length - 1;
+        this.modal(`<h3>${T(s.t)}</h3>${s.h}<p class="modal-nota">${i + 1} / ${pasos.length}</p>`, [
+          { texto: ultimo ? T('¡A jugar!') : T('Siguiente'), clase: 'btn-primario', accion: () => {
+            if (ultimo) { p.vistos = Object.assign({}, p.vistos, { nov244: true }); Estado.guardar(); }
+            else setTimeout(() => paso(i + 1), 120);
+          } },
+        ]);
+      };
+      setTimeout(() => { if (this.pantalla === 'p-menu' && $('modal').classList.contains('oculto')) paso(0); }, 450);
+      return true;
     },
 
     verMago() {
@@ -738,7 +773,7 @@
       });
 
       $('btn-diario').addEventListener('click', () => { Audio.click(); this.jugarDiario(); });
-      $('btn-arcade').addEventListener('click', () => { Audio.click(); this.entrarTorre(); });
+      $('btn-arcade').addEventListener('click', () => { Audio.click(); this.verCampanas(); });
       $('mapa-jugar').addEventListener('click', () => {
         const t = this._torre; if (!t || $('mapa-jugar').disabled) return;
         Audio.click();
@@ -753,7 +788,7 @@
       $('mapa-salir').addEventListener('click', () => {
         Audio.click();
         const t = this._torre;
-        if (!t || !t.pa || t.pa.arcade.cerrada) return this.irMenu();
+        if (!t || !t.pa || t.pa.arcade.cerrada) return this.verCampanas();
         this.modal(`<h3>¿BAJAR DE LA TORRE?</h3><p>Tu subida queda guardada en el piso ${t.pa.arcade.piso}: la seguís cuando quieras.</p>`, [
           { texto: 'Guardar y salir', clase: 'btn-primario', accion: () => { this.guardarSubida(t.pa.arcade); this.irMenu(); } },
           { texto: 'Seguir subiendo', clase: 'btn-secundario' },
@@ -3518,6 +3553,54 @@
      * Con { pa, bonusPts, bonusMonedas, rest }: después de ganar un piso, camina al siguiente,
      * con cartel si entra a una zona nueva, aparición si lo espera un jefe y cierre al terminar el capítulo.
      */
+    /**
+     * Campañas (v2.44, lab/libro-capitulos.html): el libro de capítulos. La Torre Arcana es el capítulo gratis;
+     * los de la Campaña del Archimago se ven, con su escena animada, pero se abren con el Pase (y todavía están en camino).
+     */
+    verCampanas() {
+      const p = Estado.perfil, C = window.WWCampanas;
+      if (!C) return this.entrarTorre();
+      const pase = this.tienePase(), m = this.marcaTorre(p);
+      const sub = p.subida && p.subida.v === 2 && p.subida.vidas > 0 ? p.subida : null;
+      const estado = (c) => {
+        if (c.libre) {
+          if (m.piso >= WWMapa.PISOS_CAPITULO) return { tipo: 'hecho', txt: T('Terminada · {n} pts', { n: m.puntaje }), pct: 100 };
+          if (sub) return { tipo: 'jugando', txt: T('Vas por el piso {n}', { n: sub.piso + 1 }), pct: m.piso / WWMapa.PISOS_CAPITULO * 100 };
+          return m.piso ? { tipo: 'jugando', txt: T('Piso {n} de 20', { n: m.piso }), pct: m.piso / WWMapa.PISOS_CAPITULO * 100 } : { tipo: 'nuevo', txt: T('Para empezar'), pct: 0 };
+        }
+        return pase ? { tipo: 'pronto', txt: T('Muy pronto') } : { tipo: 'pase', txt: T('Con el Pase de Mago') };
+      };
+      const sello = `<svg class="sello" viewBox="-24 -24 48 48" aria-hidden="true"><circle r="20" fill="#b8473a" stroke="#16262c" stroke-width="2.5"/><circle r="13" fill="none" stroke="#e7a08f" stroke-width="2"/><path d="M0 -8 L2.4 -2.4 L8 -2 L3.6 1.8 L5 8 L0 4.6 L-5 8 L-3.6 1.8 L-8 -2 L-2.4 -2.4Z" fill="#fbe3d9"/></svg>`;
+      const libro = $('campanas-libro');
+      libro.innerHTML = C.CAPITULOS.map((c, i) => {
+        const s = estado(c), tapado = !c.libre;
+        return `<button class="campana-pag" data-i="${i}"><span class="ilu">${C.escena(c.id)}${tapado ? '<span class="campana-velo"></span>' : ''}</span>
+          <span class="datos"><b>${c.libre ? '' : esc(T(c.ante)) + ' · '}${esc(T(c.n))}</b><small>${esc(T(c.sub))} · ${esc(s.txt)}</small>${c.libre ? `<span class="barra"><i style="width:${Math.round(s.pct)}%"></i></span>` : ''}</span>
+          ${tapado && !pase ? sello : ''}</button>`;
+      }).join('');
+      libro.querySelectorAll('.campana-pag').forEach((b) => b.addEventListener('click', () => { Audio.click(); abrir(Number(b.dataset.i)); }));
+      const abrir = (i) => {
+        const c = C.CAPITULOS[i], s = estado(c), a = $('campana-abierta');
+        const chip = s.tipo === 'hecho' ? `<span class="campana-chip hecho">✓ ${T('Terminada')}</span>` : s.tipo === 'pase' ? `<span class="campana-chip pase">🔒 ${T('Con el Pase de Mago')}</span>` : s.tipo === 'pronto' ? `<span class="campana-chip pronto">${T('Muy pronto')}</span>` : `<span class="campana-chip gratis">${T('Gratis')}</span>`;
+        const boton = c.libre ? (s.tipo === 'hecho' ? T('Jugar de nuevo (no suma al ranking)') : sub ? T('Seguir subiendo') : m.piso ? T('Seguir la Torre') : T('Subir a la Torre'))
+          : s.tipo === 'pase' ? T('Conocé el Pase de Mago') : T('Llega muy pronto');
+        a.innerHTML = `<div class="escena">${C.escena(c.id)}${c.libre ? '' : '<span class="campana-velo"></span>'}<button class="volver" aria-label="${T('Volver')}">‹</button></div>
+          <div class="txt"><span class="ante">${esc(T(c.ante))}</span><h3>${esc(T(c.n))}</h3>${chip}<p>${esc(T(c.p))}</p><div class="ayuda">${esc(T(c.ayuda))}</div>
+          <button class="btn ${s.tipo === 'pronto' ? 'btn-secundario' : 'btn-primario'}" id="campana-ir" ${s.tipo === 'pronto' ? 'disabled' : ''}>${boton}</button></div>`;
+        a.classList.add('ve'); a.setAttribute('aria-hidden', 'false');
+        const cerrar = () => { a.classList.remove('ve'); a.setAttribute('aria-hidden', 'true'); };
+        this._cerrarCampana = cerrar;
+        a.querySelector('.volver').addEventListener('click', () => { Audio.click(); cerrar(); });
+        $('campana-ir').addEventListener('click', () => {
+          Audio.click(); cerrar();
+          if (c.libre) this.entrarTorre();
+          else if (s.tipo === 'pase') this.avisoPase();
+        });
+      };
+      if (this._cerrarCampana) this._cerrarCampana();
+      this.mostrar('p-campanas');
+    },
+
     /** La Torre Arcana de 20 pisos (v2.43) en el perfil: lo hecho la primera vez en cada piso y el último jefe vencido. */
     torre(p) {
       p = p || Estado.perfil;

@@ -1411,3 +1411,74 @@ body.con-pase .pase-brillo { display: block; }
 .mis-pociones .ic { width: 28px; height: 28px; }
 .mis-cosas-tienda { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .mis-cosas-tienda .ic { width: 20px; height: 20px; }
+
+/* ============================================================ libro de campañas (v2.44, lab/libro-capitulos.html) */
+#p-campanas { display: flex; flex-direction: column; }
+.campanas-libro { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 18px; scrollbar-width: none; }
+.campanas-libro::-webkit-scrollbar { display: none; }
+.campana-pag { position: relative; display: flex; gap: 10px; align-items: center; background: #efe3c8; color: #2b231a; border: 3px solid var(--borde-m, #0d1418); border-radius: 14px 18px 18px 14px; padding: 9px; box-shadow: inset 6px 0 0 #d8c7a2, 0 4px 0 var(--borde-m, #0d1418); cursor: pointer; text-align: left; font: inherit; width: 100%; }
+.campana-pag:active { transform: translateY(2px); box-shadow: inset 6px 0 0 #d8c7a2, 0 2px 0 var(--borde-m, #0d1418); }
+.campana-pag .ilu { flex: none; width: 104px; height: 74px; border-radius: 10px; border: 2px solid var(--borde-m, #0d1418); overflow: hidden; position: relative; background: #1c2f38; }
+.campana-pag .ilu svg, .campana-abierta .escena svg { display: block; width: 100%; height: 100%; }
+.campana-pag .datos { flex: 1; min-width: 0; }
+.campana-pag b { display: block; font: 600 calc(15.5px * var(--letra, 1))/1.15 var(--display); }
+.campana-pag small { display: block; margin-top: 2px; font: 700 calc(11.5px * var(--letra, 1))/1.3 var(--texto-f); color: #5a4a36; }
+.campana-pag .barra { display: block; height: 8px; border-radius: 6px; background: #d8c7a2; border: 2px solid var(--borde-m, #0d1418); margin-top: 6px; overflow: hidden; }
+.campana-pag .barra i { display: block; height: 100%; background: #67948f; }
+.campana-velo { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(187,208,185,.25), rgba(187,208,185,.7)); pointer-events: none; }
+.campana-pag .sello { position: absolute; right: -6px; top: -8px; width: 44px; height: 44px; }
+.campana-abierta { position: fixed; inset: 0; z-index: 40; background: #efe3c8; color: #2b231a; display: flex; flex-direction: column; transform: translateX(105%); transition: transform .38s var(--spring, cubic-bezier(.3,1.15,.5,1)); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.campana-abierta.ve { transform: translateX(0); }
+.campana-abierta .escena { position: relative; flex: none; height: min(42vh, 66vw); border-bottom: 3px solid var(--borde-m, #0d1418); overflow: hidden; background: #1c2f38; }
+.campana-abierta .volver { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; border: 3px solid var(--borde-m, #0d1418); background: #efe3c8; color: #2b231a; font: 600 22px var(--display); cursor: pointer; box-shadow: 0 3px 0 var(--borde-m, #0d1418); }
+.campana-abierta .txt { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 9px; }
+.campana-abierta .ante { font: 800 calc(11px * var(--letra, 1)) var(--texto-f); letter-spacing: .08em; text-transform: uppercase; color: #8a6b48; }
+.campana-abierta h3 { margin: 0; font: 600 calc(24px * var(--letra, 1)) var(--display); }
+.campana-abierta p { margin: 0; font: 700 calc(14px * var(--letra, 1))/1.45 var(--texto-f); color: #4a3d2c; }
+.campana-abierta .ayuda { background: #e3d4b1; border: 2px solid var(--borde-m, #0d1418); border-radius: 12px; padding: 8px 10px; font: 700 calc(13px * var(--letra, 1))/1.4 var(--texto-f); color: #3b3326; }
+.campana-abierta .btn { margin-top: auto; }
+.campana-chip { align-self: flex-start; display: inline-flex; gap: 4px; font: 800 calc(10.5px * var(--letra, 1)) var(--texto-f); letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 2px solid var(--borde-m, #0d1418); color: #1c2f38; }
+.campana-chip.gratis { background: #92afa1; } .campana-chip.pase { background: #f2c66d; } .campana-chip.hecho { background: #dfebd6; } .campana-chip.pronto { background: #d8c7a2; }
+/* las animaciones de las escenas (game/js/campanas.js); sin filter en lo que se anima (iPhone) */
+.c-tit { animation: cTit 2.4s ease-in-out infinite; }
+@keyframes cTit { 50% { opacity: .2; } }
+.c-flota { animation: cFlota 3.2s ease-in-out infinite; }
+@keyframes cFlota { 50% { transform: translateY(-5px); } }
+.c-late { animation: cLate 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes cLate { 50% { opacity: .55; transform: scale(1.18); } }
+.c-sube { animation: cSube 3.6s linear infinite; }
+@keyframes cSube { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-120px); opacity: 0; } }
+.c-pasto { animation: cPasto 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes cPasto { 50% { transform: rotate(9deg); } }
+.c-viento { animation: cViento 3s linear infinite; }
+@keyframes cViento { 0% { transform: translateX(-80px); opacity: 0; } 20%, 80% { opacity: .9; } 100% { transform: translateX(340px); opacity: 0; } }
+.c-vuela { animation: cVuela 4s ease-in infinite; }
+@keyframes cVuela { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate(190px, -70px) rotate(220deg); opacity: 0; } }
+.c-salta { animation: cSalta 1.6s ease-in-out infinite; }
+@keyframes cSalta { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-12px); } }
+.c-onda { animation: cOnda 3s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes cOnda { 0% { transform: scale(.3); opacity: .9; } 100% { transform: scale(1.6); opacity: 0; } }
+.c-cae { animation: cCae 5s linear infinite; }
+@keyframes cCae { 0% { transform: translate(0, -30px) rotate(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate(-40px, 230px) rotate(300deg); opacity: 0; } }
+.c-niebla { animation: cNiebla 10s ease-in-out infinite alternate; }
+@keyframes cNiebla { to { transform: translateX(40px); } }
+.c-repta { animation: cRepta 14s ease-in-out infinite alternate; }
+@keyframes cRepta { to { transform: translateX(46px); } }
+.c-humo { animation: cHumo 3.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes cHumo { 0% { transform: translate(0, 0) scale(.4); opacity: 0; } 15% { opacity: .9; } 100% { transform: translate(14px, -70px) scale(1.6); opacity: 0; } }
+.c-cabecea { animation: cCabecea 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 90%; }
+@keyframes cCabecea { 0%, 70%, 100% { transform: rotate(0); } 80% { transform: rotate(-8deg); } 90% { transform: rotate(4deg); } }
+.c-luciernaga { animation: cLuciernaga 6s ease-in-out infinite; }
+@keyframes cLuciernaga { 0%, 100% { transform: translate(0, 0); opacity: .2; } 25%, 75% { opacity: 1; } 50% { transform: translate(24px, -18px); opacity: .4; } }
+.c-nieve { animation: cNieve 6s linear infinite; }
+@keyframes cNieve { 0% { transform: translate(0, -20px); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate(-20px, 240px); opacity: .2; } }
+.c-gira { animation: cGira 12s linear infinite; transform-box: view-box; }
+@keyframes cGira { to { transform: rotate(360deg); } }
+.c-rayo { animation: cRayo 5s infinite; opacity: 0; }
+@keyframes cRayo { 0%, 86%, 92%, 100% { opacity: 0; } 88%, 90% { opacity: .85; } }
+.c-hamaca { animation: cHamaca 3.4s ease-in-out infinite; transform-box: view-box; }
+@keyframes cHamaca { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) { [class^="c-"], [class*=" c-"] { animation: none !important; } }
+/* novedades de la v2.44: la escena del capítulo arriba del texto */
+.novedad-ilu { height: 130px; border-radius: 14px; overflow: hidden; border: 3px solid var(--borde-m, #0d1418); margin: 6px 0 10px; background: #1c2f38; }
+.novedad-ilu svg { display: block; width: 100%; height: 100%; }
