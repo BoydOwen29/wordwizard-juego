@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.44.2',
+    version: '2.45.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -3590,22 +3590,24 @@
       const libro = $('campanas-libro');
       libro.innerHTML = C.CAPITULOS.map((c, i) => {
         const s = estado(c), tapado = !c.libre;
-        return `<button class="campana-pag" data-i="${i}"><span class="ilu">${C.escena(c.id)}${tapado && !pase ? '<span class="campana-velo"></span>' : ''}</span>
+        return `<button class="campana-pag" data-i="${i}"><span class="ilu">${C.escena(c.id, s.tipo === 'hecho')}${tapado && !pase ? '<span class="campana-velo"></span>' : ''}</span>
           <span class="datos"><b>${c.libre ? '' : esc(T(c.ante)) + ' · '}${esc(T(c.n))}</b><small>${esc(T(c.sub))} · ${esc(s.txt)}</small>${c.libre ? `<span class="barra"><i style="width:${Math.round(s.pct)}%"></i></span>` : ''}</span>
           ${tapado && !pase ? sello : ''}</button>`;
       }).join('');
       libro.querySelectorAll('.campana-pag').forEach((b) => b.addEventListener('click', () => { Audio.click(); abrir(Number(b.dataset.i)); }));
+      if (C.vigilar) C.vigilar(libro);
       const abrir = (i) => {
         const c = C.CAPITULOS[i], s = estado(c), a = $('campana-abierta');
         const chip = s.tipo === 'hecho' ? `<span class="campana-chip hecho">✓ ${T('Terminada')}</span>` : s.tipo === 'pase' ? `<span class="campana-chip pase">🔒 ${T('Con el Pase de Mago')}</span>` : s.tipo === 'pronto' ? `<span class="campana-chip pronto">${T('Muy pronto')}</span>` : `<span class="campana-chip gratis">${T('Gratis')}</span>`;
         const boton = c.libre ? (s.tipo === 'hecho' ? T('Jugar de nuevo (no suma al ranking)') : sub ? T('Seguir subiendo') : m.piso ? T('Seguir la Torre') : T('Subir a la Torre'))
           : s.tipo === 'pase' ? T('Conocé el Pase de Mago') : T('Llega muy pronto');
-        a.innerHTML = `<div class="escena">${C.escena(c.id)}${c.libre || pase ? '' : '<span class="campana-velo"></span>'}<button class="volver" aria-label="${T('Volver')}">‹</button></div>
+        a.innerHTML = `<div class="escena">${C.escena(c.id, s.tipo === 'hecho')}${c.libre || pase ? '' : '<span class="campana-velo"></span>'}<button class="volver" aria-label="${T('Volver')}">‹</button></div>
           <div class="txt"><span class="ante">${esc(T(c.ante))}</span><h3>${esc(T(c.n))}</h3>${chip}<p>${esc(T(c.p))}</p><div class="ayuda">${esc(T(c.ayuda))}</div>
           ${s.tipo === 'pronto' ? `<p>${T('Este capítulo se está escribiendo. Con tu Pase lo vas a tener apenas salga: te aviso.')}</p>` : ''}
           <button class="btn ${s.tipo === 'pronto' ? 'btn-secundario' : 'btn-primario'}" id="campana-ir" ${s.tipo === 'pronto' ? 'disabled' : ''}>${boton}</button></div>`;
-        a.classList.add('ve'); a.setAttribute('aria-hidden', 'false');
-        const cerrar = () => { a.classList.remove('ve'); a.setAttribute('aria-hidden', 'true'); };
+        a.classList.add('ve'); a.setAttribute('aria-hidden', 'false'); a.classList.remove('c-quieta');
+        // cerrada, su escena queda quieta (sigue en el DOM, fuera de la pantalla)
+        const cerrar = () => { a.classList.remove('ve'); a.setAttribute('aria-hidden', 'true'); a.classList.add('c-quieta'); };
         this._cerrarCampana = cerrar;
         a.querySelector('.volver').addEventListener('click', () => { Audio.click(); cerrar(); });
         $('campana-ir').addEventListener('click', () => {
