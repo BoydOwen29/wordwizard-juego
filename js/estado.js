@@ -64,7 +64,30 @@
   const MAXIMO = /^(mejor|nivel$|checkpoint$|totalPuntos$|total$|pct$)/;
   // cosas que valen enteras (una partida a medias, las misiones del día, un día del diario): si las dos cambiaron, la de acá
   const ENTERO = /^(enCurso|subida|misiones|ajustes|torreHoy|practicasHoy|ventas|\d)/;
+  /**
+   * Las cosas "del día" (misiones, prácticas y monedas de la Torre de hoy): si los dos lados son del mismo día se suman
+   * lo hecho en cada uno; si no, queda el día más nuevo. Antes valía entera la de acá y un dispositivo que abría el
+   * juego con las misiones de hoy en cero borraba lo que el otro ya había cumplido (19/10/2026, le pasó a Owen).
+   */
+  function delDia(l, n, k) {
+    if (!esObj(l) || !esObj(n) || !l.fecha || !n.fecha) return null;
+    if (l.fecha !== n.fecha) return copia(String(l.fecha) > String(n.fecha) ? l : n);
+    if (k === 'misiones') {
+      const out = copia(l), deNube = new Map((n.lista || []).map((x) => [x.id + '|' + (x.temporada || ''), x]));
+      for (const x of out.lista || []) {
+        const y = deNube.get(x.id + '|' + (x.temporada || ''));
+        if (y) { x.progreso = Math.max(x.progreso || 0, y.progreso || 0); x.hecha = !!(x.hecha || y.hecha); }
+      }
+      out.bonus = !!(l.bonus || n.bonus);
+      return out;
+    }
+    const out = copia(l);
+    for (const c of Object.keys(n)) if (typeof n[c] === 'number' && typeof l[c] === 'number') out[c] = Math.max(l[c], n[c]); else if (!(c in out)) out[c] = copia(n[c]);
+    return out;
+  }
+  const DEL_DIA = /^(misiones|torreHoy|practicasHoy)$/;
   function juntar(b, l, n, k) {
+    if (DEL_DIA.test(k) && !igual(l, n)) { const d = delDia(l, n, k); if (d) return d; }
     if (l === undefined) return b === undefined ? copia(n) : undefined;   // lo borró este dispositivo (o nunca lo tuvo)
     if (n === undefined) return b === undefined ? copia(l) : undefined;
     if (igual(l, b)) return copia(n);

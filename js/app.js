@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.47.1',
+    version: '2.47.2',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -638,6 +638,7 @@
       this.hoy = WW.claveDia();
       if (enCursoAca(p) && p.enCurso.fecha !== this.hoy && !p.diarios[K(p.enCurso.fecha)]) this.cerrarDiarioGuardado(p.enCurso);
       if (this.nivelPendiente) { const n = this.nivelPendiente; this.nivelPendiente = 0; setTimeout(() => this.anunciarNivel(n), 600); }
+      this.repararMisionDiario();
       this.pintarPerfil();
       this.mostrar('p-menu');
       // las novedades van solas: ese día no se ofrece el Pase ni la cuenta encima
@@ -648,6 +649,14 @@
      * Novedades de la v2.44 (pedido de Owen, 18/10): para los que ya jugaban antes del cambio de la Torre, unas pantallas
      * que se pasan con "Siguiente" (sin cruz ni salteo), una sola vez. Los magos nuevos no la ven.
      */
+    /** Si el desafío de hoy ya está jugado (quizás en otro dispositivo) y la misión no lo marcó, se marca ahora. */
+    repararMisionDiario() {
+      const p = Estado.perfil;
+      if (!p || !p.diarios || !p.diarios[K(this.hoy)]) return;
+      const m = Estado.misionesHoy(this.hoy), x = m.lista.find((y) => y.evento === 'diario' && !y.temporada);
+      if (x && !x.hecha) this.mision('diario', 1);
+    },
+
     /** El libro prometía "te aviso": a los que tienen el Pase, una vez, que llegó el capítulo 1 (v2.47). */
     avisoCapitulo() {
       const p = Estado.perfil, C = window.WWCampanas;
