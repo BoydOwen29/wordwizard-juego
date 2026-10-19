@@ -56,7 +56,11 @@
   }
   function tienePase() { return PASE.some(tiene); }
   /** Lo que dijo el servidor de una suscripción: hasta cuándo va y si el jugador la canceló (sigue hasta vencer). */
-  function anotar(d, r) { if (r.expira) d.expira = r.expira; d.cancelada = r.estado === 'SUBSCRIPTION_STATE_CANCELED'; }
+  function anotar(d, r) {
+    if (r.expira) d.expira = r.expira; d.cancelada = r.estado === 'SUBSCRIPTION_STATE_CANCELED';
+    // compra de prueba (testers): el servidor la da por 30 días aunque Google la venza a la media hora
+    if (r.prueba && r.expira) { d.prueba = true; d.vence = Math.max(d.vence || 0, Date.parse(r.expira)); }
+  }
   /** {sku, expira, cancelada} del Pase activo, o null. */
   function estadoPase() {
     const d = leer(), k = PASE.find(tiene);
@@ -86,12 +90,14 @@
     for (const p of lista) {
       d[p.itemId] = { token: p.purchaseToken, vence: PASE.includes(p.itemId) ? Date.now() + SIN_SENAL : 0 };
     }
+    // un Pase de prueba sigue sus 30 días aunque Play ya no lo liste (Google vence las de prueba a la media hora)
+    for (const k of PASE) if (!d[k] && antes[k] && antes[k].prueba && antes[k].vence > Date.now()) d[k] = antes[k];
     escribir(d);
     for (const p of lista) {
       const r = await validar(p.itemId, p.purchaseToken, usuario);
       const x = leer();
       if (r && r.valido === false) delete x[p.itemId];
-      else if (r && x[p.itemId]) anotar(x[p.itemId], r);
+      else if (r && x[p.itemId]) { if (r.prueba) x[p.itemId].vence = 0; anotar(x[p.itemId], r); }
       escribir(x);
     }
     return JSON.stringify(Object.keys(antes).sort()) !== JSON.stringify(Object.keys(d).sort());
