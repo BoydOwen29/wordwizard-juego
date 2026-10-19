@@ -484,6 +484,15 @@
       P(k, 'M14.8 18.4 C19.4 14.6 23.2 10.6 23.6 5.8 C19.2 7.6 15.8 12 14.8 18.4Z', k.coralSh) +
       P(k, 'M14.8 18.4 C12 19.4 9.4 22 8.6 25 C12 24.4 14.2 21.8 14.8 18.4Z', k.coral),
 
+    // La Pradera tiene camino: el cartel de dos flechas sobre el pasto
+    pradera: (k) =>
+      T(k, 'M15 28.5 V9', k.madera, 1.6) +
+      P(k, 'M6 7 H22 L26 11 L22 15 H6Z', k.menta) +
+      P(k, 'M9 11 H19', null, 1.6) +
+      P(k, 'M24 17.5 H9 L5.5 21 L9 24.5 H24Z', k.oro) +
+      P(k, 'M12 21 H21', null, 1.4) +
+      P(k, 'M5 28.5 C7 25.5 9 25 10.5 27 C12 24.6 15 24.6 16.4 27 C18 25 21 25 22.4 27.4 C24 25.6 26 26 27 28.5Z', k.salvia),
+
     // Cumplidor: carpetas con el sello de hecho
     misiones25: (k) =>
       P(k, 'M5.5 7.6 C5.5 6.7 6.2 6 7.1 6 H12 L14 8.4 H25.4 C26.3 8.4 27 9.1 27 10 V22 H5.5Z', k.salvia) +

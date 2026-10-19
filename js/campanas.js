@@ -429,7 +429,8 @@
   const CAPITULOS = [
     { id: 'torre', ante: 'Capítulo gratis', n: 'La Torre Arcana', sub: '20 pisos · las mismas palabras para todos', libre: true,
       p: 'Nocturnia encerró las palabras del bosque en lo alto de la torre. Silabo sube piso por piso para liberarlas.', ayuda: 'Cada 5 pisos te espera un jefe. Arriba, la cima.' },
-    { id: 'pradera', ante: 'Capítulo 1', n: 'La Pradera', sub: 'Con Tomillo, la liebre',
+    { id: 'pradera', ante: 'Capítulo 1', n: 'La Pradera', sub: 'Con Tomillo, la liebre', jugable: true, pisos: 6, jefe: 'El Viento Ladrón', logro: 'pradera',
+      historia: 'El Viento Ladrón se llevó las letras del cartel y Tomillo no encuentra el camino. Cada piso que pasás devuelve letras al cartel; en el sexto te espera el Viento.',
       p: 'El viento borró los carteles del camino y Tomillo no puede leer su mapa.', ayuda: 'Atajo de Tomillo: una vez por piso, te muestra la primera letra de una palabra larga que te falta.' },
     { id: 'laguna', ante: 'Capítulo 2', n: 'La Laguna del Ceibo', sub: 'Con Doña Lenta',
       p: 'La niebla tapó las flores del ceibo y Doña Lenta perdió el hilo de sus definiciones.', ayuda: 'Paciencia de Doña Lenta: congela el reloj 10 segundos una vez por piso.' },
@@ -470,5 +471,18 @@
     cont.querySelectorAll('.ilu, .escena, .novedad-ilu').forEach((el) => obs.observe(el));
   }
 
-  window.WWCampanas = { CAPITULOS, escena, vigilar, ESCENAS };
+  /** El Viento Ladrón, para el piso del jefe (una nube con cachetes que sopla; ronda 3). */
+  function viento() {
+    const L = (E() && E().L) || '#16262c';
+    return `<svg viewBox="0 0 120 90" aria-hidden="true"><g class="c-sopla" style="transform-origin:60px 50px">
+      <path d="M26 70 C8 70 4 48 22 44 C20 24 46 18 56 32 C64 14 98 18 96 40 C114 42 116 68 96 70Z" fill="#f5f8f4" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M30 62 C44 66 78 66 92 62" fill="none" stroke="#d9e3de" stroke-width="4" stroke-linecap="round"/>
+      <path d="M42 46 q4 -5 8 0 M64 46 q4 -5 8 0" fill="none" stroke="${L}" stroke-width="3" stroke-linecap="round"/>
+      <path d="M40 40 l9 -3 M74 37 l9 3" stroke="${L}" stroke-width="2.6" stroke-linecap="round"/>
+      <ellipse cx="38" cy="56" rx="7" ry="4.5" fill="#e8a99a" opacity=".7"/><ellipse cx="80" cy="56" rx="7" ry="4.5" fill="#e8a99a" opacity=".7"/>
+      <circle cx="98" cy="54" r="5" fill="#f5f8f4" stroke="${L}" stroke-width="2.6"/></g>
+      ${[0, 1, 2].map((i) => `<path d="M104 ${48 + i * 7} h14" stroke="#f3f6ee" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="6 5" class="c-flujo" style="animation-delay:${i * .2}s"/>`).join('')}</svg>`;
+  }
+
+  window.WWCampanas = { CAPITULOS, escena, vigilar, ESCENAS, viento, palabra: W };
 })();

@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.46.2',
+    version: '2.47.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -641,13 +641,25 @@
       this.pintarPerfil();
       this.mostrar('p-menu');
       // las novedades van solas: ese día no se ofrece el Pase ni la cuenta encima
-      if (!this.novedades()) { this.momentosPase(); this.momentoCuenta(); }
+      if (!this.novedades() && !this.avisoCapitulo()) { this.momentosPase(); this.momentoCuenta(); }
     },
 
     /**
      * Novedades de la v2.44 (pedido de Owen, 18/10): para los que ya jugaban antes del cambio de la Torre, unas pantallas
      * que se pasan con "Siguiente" (sin cruz ni salteo), una sola vez. Los magos nuevos no la ven.
      */
+    /** El libro prometía "te aviso": a los que tienen el Pase, una vez, que llegó el capítulo 1 (v2.47). */
+    avisoCapitulo() {
+      const p = Estado.perfil, C = window.WWCampanas;
+      if (!p || !C || !this.tienePase() || (p.vistos && p.vistos.cap1pradera) || this.capitulo('pradera').visto) return false;
+      p.vistos = Object.assign({}, p.vistos, { cap1pradera: true }); Estado.guardar();
+      this.modal(`<h3>${T('¡LLEGÓ EL CAPÍTULO 1!')}</h3><div class="novedad-ilu">${C.escena('pradera')}</div><p>${T('<b>La Pradera</b>, con Tomillo, ya se juega en Aventura. Viene incluido en tu Pase.')}</p>`, [
+        { texto: T('Después'), clase: 'btn-secundario' },
+        { texto: T('Ir a la Pradera'), clase: 'btn-primario', accion: () => { this.verCampanas(); this.entrarCapitulo('pradera'); } },
+      ]);
+      return true;
+    },
+
     novedades() {
       const p = Estado.perfil;
       if (!p || (p.vistos && p.vistos.nov244)) return false;
@@ -941,7 +953,7 @@
         if (!/^[a-zñ]$/.test(l)) return;
         e.preventDefault();
         const pa = this.partida;
-        const idx = pa.orden.find((i) => !pa.fichas[i].usada && pa.fichas[i].l === l);
+        const idx = pa.orden.find((i) => !pa.fichas[i].usada && pa.fichas[i].l === l && !(pa.rafaga && pa.rafaga.idx === i));
         if (idx != null) this.elegirFicha(idx);
         else { Audio.borrar(); this.globo('Esa letra no está', 'mal'); }
       }
@@ -1102,6 +1114,8 @@
       }
       // arcade: las 20 palabras fijas de la Torre Arcana (tools/build-torre.js), las mismas para todos
       const piso = opts.piso || 1;
+      // capítulo de Aventura: sus 6 palabras fijas (tools/build-capitulos.js)
+      if (opts.cap && window.WW_CAPITULOS && WW_CAPITULOS[opts.cap]) { const L = WW_CAPITULOS[opts.cap]; return { base: L[Math.min(piso, L.length) - 1] }; }
       const FIJAS = window.WW_TORRE;
       if (FIJAS && FIJAS.length) return { base: FIJAS[Math.min(piso, FIJAS.length) - 1] };
       let cands;
@@ -1141,7 +1155,8 @@
       }
       if (this.partida && this.partida.timer) clearInterval(this.partida.timer);
       const piso = modo === 'arcade' ? (opts.piso || 1) : 0;
-      const jefe = modo === 'arcade' && WW.esPisoJefe(piso);
+      const cap = modo === 'arcade' && opts.cap ? this.datosCap(opts.cap) : null;
+      const jefe = modo === 'arcade' && (cap ? piso === cap.pisos : WW.esPisoJefe(piso));
       let base, numero, ref;
       if (opts.reanudar) { base = opts.reanudar.base; numero = opts.reanudar.numero; }
       else ({ base, numero, ref } = this.elegirBase(modo, Object.assign({}, opts, { piso, jefe })));
@@ -1154,12 +1169,14 @@
       else if (modo === 'arcade') tiempo = jefe ? CONFIG.arcade.tiempoJefe : CONFIG.arcade.tiempo;
       else if (opts.reloj) tiempo = CONFIG.practica.tiempo;
 
-      const anterior = this.partida && this.partida.modo === 'arcade' && modo === 'arcade' && opts.continuar ? this.partida.arcade : null;
+      const anterior = this.partida && this.partida.modo === 'arcade' && modo === 'arcade' && opts.continuar && (this.partida.arcade.cap || null) === (opts.cap || null) ? this.partida.arcade : null;
       let objetivo = 0;
       if (modo === 'arcade') {
         // el objetivo sale del total típico del tramo, no del de la palabra que tocó
         // crece más despacio y con techo: más arriba la dificultad la ponen las palabras (docs/ECONOMIA.md)
-        objetivo = Math.round((ref || totalPuntos) * Math.min(0.27, 0.085 + 0.0095 * piso));
+        // un capítulo de Aventura arranca como el medio de la Torre (piso 6 del capítulo ≈ piso 13)
+        const pisoEq = cap ? 4 + piso * 1.5 : piso;
+        objetivo = Math.round((ref || totalPuntos) * Math.min(0.27, 0.085 + 0.0095 * pisoEq));
         if (jefe) objetivo += 8;
         objetivo = Math.max(12, Math.min(Math.round(totalPuntos * 0.5), objetivo));
       }
@@ -1172,15 +1189,18 @@
         tiempoTotal: tiempo, deadline: tiempo ? Date.now() + tiempo * 1000 : null, restante: tiempo, timer: null,
         inicio: Date.now(), terminada: false, pistas: [], ojos: new Set(), escudo: false,
         rangoIdx: 0, monedasGanadas: 0, mejorPalabra: '',
-        arcade: modo === 'arcade' ? (anterior || { piso: 1, vidas: CONFIG.arcade.vidas, puntajeTotal: 0, palabrasTotal: 0, usadas: [], monedas: 0, jefes: 0 }) : null,
-        objetivo, jefe, nombreJefe: jefe ? WW.nombreJefe(piso) : '',
+        arcade: modo === 'arcade' ? (anterior || { piso: 1, vidas: CONFIG.arcade.vidas, puntajeTotal: 0, palabrasTotal: 0, usadas: [], monedas: 0, jefes: 0, cap: opts.cap || null }) : null,
+        objetivo, jefe, nombreJefe: jefe ? (cap ? T(cap.jefe) : WW.nombreJefe(piso)) : '',
+        // el Viento Ladrón (jefe de la Pradera): cada 20 s tapa una letra de las fichas durante 6 s
+        rafaga: jefe && cap && cap.id === 'pradera' ? { prox: Date.now() + 14000, idx: null, fin: 0, aviso: false } : null,
       };
       const pa = this.partida;
-      if (pa.arcade) { pa.arcade.piso = piso; pa.arcade.usadas.push(base); this.guardarSubida(pa.arcade, piso); }
-      const lugar = modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' || modo === 'archivo' ? { id: FONDOS['p-practica'] } : null;
+      if (pa.arcade) { pa.arcade.piso = piso; pa.arcade.usadas.push(base); if (!cap) this.guardarSubida(pa.arcade, piso); }
+      const lugar = cap ? null : modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' || modo === 'archivo' ? { id: FONDOS['p-practica'] } : null;
       const lugarNuevo = lugar && (piso === 1 || WW_LUGARES.dePiso(piso - 1).id !== lugar.id) && !opts.reintento;
       this.ponerLugar(lugar);
       if (lugarNuevo && !jefe && modo === 'arcade') setTimeout(() => this.banner(lugar.icono, lugar.nombre, 'Pisos ' + lugar.rango), 250);
+      if (cap && !jefe && !opts.reintento) setTimeout(() => this.banner('🌾', T(cap.n).toUpperCase(), T('Piso {n} de {t}', { n: piso, t: cap.pisos })), 250);
       this.magos.jefe.setEtapa(2);
       if (opts.reanudar) {
         const r = opts.reanudar;
@@ -1195,7 +1215,7 @@
       if (jefe) {
         this.globo(`${pa.nombreJefe}: "${azar(MENSAJES.jefeBurla)}"`, 'mal');
         Audio.jefe(); Audio.tema('jefe');
-        this.sacudir(true); this.vineta('flash-rojo'); this.banner('💀', pa.nombreJefe.toUpperCase(), 'Jefe del piso ' + piso, 'rojo');
+        this.sacudir(true); this.vineta('flash-rojo'); this.banner(cap ? '🌪️' : '💀', pa.nombreJefe.toUpperCase(), cap ? T('Cuidado: cada tanto te tapa una letra') : 'Jefe del piso ' + piso, 'rojo');
         this.magos.jefe.animar('cast', 1200);
       } else {
         Audio.setTempo(false);
@@ -1203,7 +1223,7 @@
         this.magos.juego.animar('happy', 600);
         if (opts.guia) this.pasoGuia('inicio'); else this.consejoAlEmpezar(pa);
       }
-      if (modo === 'arcade' && piso === 1) this.mision('piso', 1);
+      if (modo === 'arcade' && piso === 1 && !cap) this.mision('piso', 1);
       if (modo === 'diario') this.guardarEnCurso();
       if (tiempo) pa.timer = setInterval(() => this.tic(), 250);
       this.tic();
@@ -1212,12 +1232,20 @@
     renderJuego() {
       const pa = this.partida, p = Estado.perfil;
       $('p-juego').classList.toggle('en-guia', !!pa.opts.guia);
-      $('hud-modo').textContent = pa.opts.guia ? 'PRIMERA PARTIDA' : pa.modo === 'diario' ? `DESAFÍO #${pa.numero}` : pa.modo === 'archivo' ? `ARCHIVO #${pa.numero}` : pa.modo === 'arcade' ? (pa.jefe ? `JEFE · PISO ${pa.arcade.piso}` : `TORRE · PISO ${pa.arcade.piso}`) : 'PRÁCTICA';
+      $('hud-modo').textContent = pa.opts.guia ? 'PRIMERA PARTIDA' : pa.modo === 'diario' ? `DESAFÍO #${pa.numero}` : pa.modo === 'archivo' ? `ARCHIVO #${pa.numero}` : pa.modo === 'arcade' && pa.arcade.cap ? `${T(this.datosCap(pa.arcade.cap).n).toUpperCase()} · ${pa.arcade.piso}/${this.datosCap(pa.arcade.cap).pisos}` : pa.modo === 'arcade' ? (pa.jefe ? `JEFE · PISO ${pa.arcade.piso}` : `TORRE · PISO ${pa.arcade.piso}`) : 'PRÁCTICA';
       $('hud-modo').classList.toggle('jefe', !!pa.jefe);
       $('hud-vidas').innerHTML = pa.arcade ? WWIconos.html('corazon').repeat(pa.arcade.vidas) + WWIconos.html('corazonVacio').repeat(CONFIG.arcade.vidas - pa.arcade.vidas) : '';
       $('hud-tiempo').classList.toggle('infinito', !pa.tiempoTotal);
       $('escenario').classList.toggle('con-jefe', !!pa.jefe);
-      $('mago-jefe').classList.toggle('oculto', !pa.jefe);
+      const viento = !!(pa.jefe && pa.rafaga);
+      $('mago-jefe').classList.toggle('oculto', !pa.jefe || viento);
+      $('jefe-viento').classList.toggle('oculto', !viento); $('jefe-viento').classList.remove('vencido');
+      if (viento && window.WWCampanas && WWCampanas.viento && !$('jefe-viento').firstChild) $('jefe-viento').innerHTML = WWCampanas.viento();
+      const atajo = document.querySelector('.poder-atajo');
+      if (atajo) {
+        atajo.classList.toggle('oculto', !(pa.arcade && pa.arcade.cap));
+        if (!$('atajo-cara').firstChild && window.WWElenco) $('atajo-cara').innerHTML = WWElenco.tomillo({ pelo: '#b99a76', bufanda: WWElenco.CEIBO });
+      }
       $('barra-rango').classList.toggle('hp', !!pa.jefe);
       this.renderFichas();
       this.renderSeleccion();
@@ -1243,7 +1271,8 @@
       for (const i of pa.orden) {
         const f = pa.fichas[i];
         const d = document.createElement('button');
-        d.className = 'ficha' + (f.usada ? ' usada' : '');
+        const tapada = pa.rafaga && pa.rafaga.idx === i;
+        d.className = 'ficha' + (f.usada ? ' usada' : '') + (tapada ? ' tapada' : '') + (pa.atajo && pa.atajo.idx === i && !pa.encontradasSet.has(pa.atajo.w) ? ' atajo' : '');
         d.dataset.idx = i;
         d.setAttribute('aria-label', 'letra ' + f.l);
         d.textContent = f.l.toUpperCase();
@@ -1337,6 +1366,7 @@
         const k = b.dataset.poder;
         const n = $(`poder-${k}-n`);
         let hab = true, txt = '';
+        if (k === 'atajo') { hab = !!(pa.arcade && pa.arcade.cap) && !pa.atajo; b.disabled = !hab || pa.terminada; n.innerHTML = pa.atajo ? 'USADO' : '1'; continue; }
         if (pa.modo === 'diario' || pa.modo === 'archivo') { hab = false; txt = '—'; }
         else if (pa.modo === 'practica') {
           if (k === 'pista' || k === 'ojo') txt = 'LIBRE';
@@ -1357,6 +1387,7 @@
     tic() {
       const pa = this.partida;
       if (!pa || pa.terminada || pa.congelado || pa.pausaDesde) return;
+      if (pa.rafaga) this.rafaga(pa);
       if (!pa.deadline) { $('hud-tiempo').textContent = '∞'; $('barra-tiempo-fill').style.width = '100%'; return; }
       const rest = Math.max(0, (pa.deadline - Date.now()) / 1000);
       const seg = Math.ceil(rest);
@@ -1381,6 +1412,7 @@
     elegirFicha(idx) {
       const pa = this.partida;
       if (!pa || pa.terminada || pa.bloqueo || pa.congelado || pa.fichas[idx].usada) return;
+      if (pa.rafaga && pa.rafaga.idx === idx) { Audio.borrar(); this.globo(T('Esa se la llevó el viento: esperá un toque'), 'mal'); return; }
       pa.fichas[idx].usada = true;
       pa.seleccion.push(idx);
       Audio.tecla();
@@ -1501,9 +1533,9 @@
       const colorRayo = w === pa.base ? '#f2c66d' : w.length >= 6 ? '#c9b6ff' : '#dfebd6';
       if (pa.jefe && !pa.superado) {
         this.magos.juego.animar('cast', 700);
-        this.rayo(this.magos.juego.puntaVarita(), this.centro($('mago-jefe')), colorRayo, () => {
+        this.rayo(this.magos.juego.puntaVarita(), this.centro(this.elJefe()), colorRayo, () => {
           Audio.golpe(); this.sacudir(w.length >= 6); this.vineta('flash-rojo'); this.magos.jefe.animar('sad', 700);
-          this.particulas($('mago-jefe'), colorRayo, 12);
+          this.particulas(this.elJefe(), colorRayo, 12);
         });
         this.globo(`${azar(MENSAJES.jefeGolpe)} −${pts} HP`, w.length >= 6 ? 'wow' : 'ok');
       } else if (w === pa.base) { Audio.completa(); this.vineta('flash-oro'); this.banner('💎', 'PALABRA COMPLETA', '+' + pts + ' puntos', 'oro'); this.globo('¡PALABRA COMPLETA! +' + pts, 'wow'); this.magos.juego.animar('happy', 1200); }
@@ -1559,7 +1591,7 @@
       this.globo(azar(MENSAJES[codigo] || MENSAJES.desconocida), 'mal');
       this.magos.juego.animar('sad', 600);
       const pv = this.magos.juego.puntaVarita(); this.humo(pv.x, pv.y);
-      if (pa.jefe) { this.magos.jefe.animar('cast', 600); this.rayo(this.magos.jefe.puntaVarita(), this.centro($('mago-juego')), '#ff5c7a', () => this.particulas($('mago-juego'), '#ff5c7a', 8)); }
+      if (pa.jefe) { this.magos.jefe.animar('cast', 600); this.rayo(pa.rafaga ? this.centro($('jefe-viento')) : this.magos.jefe.puntaVarita(), this.centro($('mago-juego')), '#ff5c7a', () => this.particulas($('mago-juego'), '#ff5c7a', 8)); }
       if (!pa.escudo) { pa.combo = 0; $('combo').textContent = ''; $('combo').classList.remove('fuego'); this.magos.juego.setCombo(0); }
       pa.bloqueo = true; setTimeout(() => { pa.bloqueo = false; if (this.partida === pa && !pa.terminada) this.limpiarSeleccion(); }, 260);
     },
@@ -1616,6 +1648,7 @@
     usarPoder(k) {
       const pa = this.partida, p = Estado.perfil;
       if (!pa || pa.terminada || pa.modo === 'diario' || pa.modo === 'archivo') return;
+      if (k === 'atajo') return this.atajoTomillo();
       if (pa.modo === 'arcade') {
         if (k === 'escudo' && pa.escudo) return;
         pa.usados = pa.usados || {};
@@ -1672,7 +1705,7 @@
       if (pa.congelado) return;
       if (pa.opts.guia) return this.terminarGuia(true);
       if (pa.superado) return this.pisoSuperado('subir');
-      const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'archivo' ? 'Si salís, este desafío del archivo no se guarda.' : pa.modo === 'arcade' ? 'Tu subida queda guardada, pero este piso cuenta como intento: perdés una vida (si es la última, te la guardo).' : 'La práctica no se guarda.';
+      const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'archivo' ? 'Si salís, este desafío del archivo no se guarda.' : pa.arcade && pa.arcade.cap ? T('Los pisos que pasaste quedan: seguís desde el próximo cuando vuelvas.') : pa.modo === 'arcade' ? 'Tu subida queda guardada, pero este piso cuenta como intento: perdés una vida (si es la última, te la guardo).' : 'La práctica no se guarda.';
       this.modal(`<h3>¿SALIR?</h3><p>${aviso}</p>`, [
         { texto: 'Seguir jugando', clase: 'btn-secundario' },
         { texto: 'Salir', clase: 'btn-peligro', accion: () => { if (pa.modo === 'practica' || pa.modo === 'archivo') this.abandonarPractica(); else if (pa.modo === 'diario') this.salirDiario(); else this.dejarPiso(pa); } },
@@ -2033,7 +2066,8 @@
         Audio.victoria(); this.sacudir(true); this.vineta('flash-oro');
         this.banner('⚔️', pa.nombreJefe.toUpperCase(), 'Jefe vencido', 'oro');
         this.magos.jefe.animar('sad', 2500);
-        setTimeout(() => $('mago-jefe').classList.add('vencido'), 1200);
+        setTimeout(() => this.elJefe().classList.add('vencido'), 1200);
+        if (pa.rafaga) { pa.rafaga.idx = null; pa.rafaga.prox = Infinity; $('fichas').classList.remove('viento-aviso'); this.renderFichas(); }
         this.confeti(80);
       } else {
         Audio.nivel(); this.vineta('flash-oro');
@@ -2060,8 +2094,9 @@
       // v2.43: bonus fijo por piso (antes era piso × 10 y arriba del 20 valía más que el piso mismo)
       const bonusPiso = 20, bonusTiempo = Math.floor(rest / 3);
       let bonusPts = bonusPiso + bonusTiempo;
-      const t = this.torre(), nuevo = !(pa.arcade.piso in t.primera);
-      if (pa.jefe) { bonusMonedas += 10; bonusPts += 40; pa.arcade.jefes += 1; p.arcade.jefes = (p.arcade.jefes || 0) + 1; t.checkpoint = Math.max(t.checkpoint || 0, pa.arcade.piso); }
+      const cap = pa.arcade.cap, t = cap ? this.capitulo(cap) : this.torre(), nuevo = !(pa.arcade.piso in t.primera);
+      if (pa.jefe) { bonusMonedas += 10; bonusPts += 40; pa.arcade.jefes += 1; if (!cap) { p.arcade.jefes = (p.arcade.jefes || 0) + 1; t.checkpoint = Math.max(t.checkpoint || 0, pa.arcade.piso); } }
+      if (cap) { t.mejorPiso = Math.max(t.mejorPiso || 0, pa.arcade.piso); if (pa.arcade.piso >= this.datosCap(cap).pisos) t.terminado = true; }
       // repetir un piso ya pasado no da monedas ni cambia el ranking: cuenta lo que hiciste la primera vez
       if (!nuevo) bonusMonedas = 0;
       else { t.primera[pa.arcade.piso] = pa.puntos + bonusPts; pa.arcade.puntosNuevos = (pa.arcade.puntosNuevos || 0) + pa.puntos + bonusPts; pa.arcade.pisosNuevos = (pa.arcade.pisosNuevos || 0) + 1; }
@@ -2074,17 +2109,17 @@
       Estado.sumarMonedas(bonusMonedas); pa.arcade.monedas += bonusMonedas; pa.monedasGanadas += bonusMonedas;
       pa.arcade.puntajeTotal += pa.puntos + bonusPts;
       pa.arcade.palabrasTotal += pa.encontradas.length;
-      p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, pa.arcade.piso);
-      // al ranking en cada piso nuevo (quien deja la subida a la mitad también figura)
-      if (nuevo) this.enviarTorre();
+      if (!cap) p.arcade.mejorPiso = Math.max(p.arcade.mejorPiso, pa.arcade.piso);
+      // al ranking en cada piso nuevo (quien deja la subida a la mitad también figura); los capítulos no tienen ranking
+      if (nuevo && !cap) this.enviarTorre();
       this.anotarTiempo(pa);
-      this.guardarSubida(pa.arcade);
+      if (cap) Estado.guardar(); else this.guardarSubida(pa.arcade);
       this.limpiarEfectos();
       if (motivo === 'tiempo') { Audio.campana(); this.globo('¡Tiempo! Piso cerrado', 'wow'); }
       else if (motivo === 'completa') { Audio.victoria(); this.confeti(60); }
       this.magos.juego.animar('happy', 1500);
       const sig = pa.arcade.piso + 1;
-      this.mision('piso', sig);
+      if (!cap) this.mision('piso', sig);
       this.anunciarLogros(Logros.evaluar(p, { tipo: 'piso' }));
       const info = { pa, bonusPts, bonusMonedas, rest, extra, bonusPiso, bonusTiempo, topeAlcanzado, repetido: !nuevo };
       this._tModalPiso = setTimeout(() => this.resumenPiso(info), motivo === 'subir' ? 350 : 1100);
@@ -2101,15 +2136,17 @@
         fila('Palabras', pa.encontradas.length),
         fila('Bonus del piso', '+' + (info.bonusPiso + (pa.jefe ? 40 : 0))),
         info.bonusTiempo ? fila('Tiempo sobrante', `+${info.bonusTiempo} (${info.rest} s)`) : '',
-        info.repetido ? fila('Ya lo habías pasado', 'no suma monedas ni ranking', 'extra') : fila(info.topeAlcanzado ? 'Monedas (tope del día)' : 'Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`),
-        fila('Total de la subida', pa.arcade.puntajeTotal + ' pts', 'total'),
+        info.repetido ? fila('Ya lo habías pasado', pa.arcade.cap ? 'no suma monedas' : 'no suma monedas ni ranking', 'extra') : fila(info.topeAlcanzado ? 'Monedas (tope del día)' : 'Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`),
+        fila(pa.arcade.cap ? 'Total del capítulo' : 'Total de la subida', pa.arcade.puntajeTotal + ' pts', 'total'),
       ].filter(Boolean).join('');
       const titulo = pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`;
       // las palabras del piso: las que hiciste y las que te faltaron (pedido de los testers, 14/10)
       this.modal(`<h3>${titulo}</h3><div class="modal-silabo" data-pose="happy"></div><ul class="resumen-piso">${filas}</ul>
         <button class="btn-link-cuenta" id="piso-ver">Ver las palabras del piso</button>
         <div id="piso-palabras" class="res-palabras piso-palabras oculto">${this.htmlPalabras({ base: pa.base, encontradas: pa.encontradas, nucleo: pa.nucleo })}</div>`, [
-        { texto: pa.arcade.piso >= WWMapa.PISOS_CAPITULO ? 'Llegar a la cima' : `Seguir al piso ${pa.arcade.piso + 1}`, clase: 'btn-primario', accion: () => this.verTorre(info) },
+        pa.arcade.cap
+          ? { texto: pa.arcade.piso >= this.datosCap(pa.arcade.cap).pisos ? T('Ver cómo quedó') : T('Seguir al piso {n}', { n: pa.arcade.piso + 1 }), clase: 'btn-primario', accion: () => this.siguienteCap(pa) }
+          : { texto: pa.arcade.piso >= WWMapa.PISOS_CAPITULO ? 'Llegar a la cima' : `Seguir al piso ${pa.arcade.piso + 1}`, clase: 'btn-primario', accion: () => this.verTorre(info) },
       ]);
       $('piso-ver').addEventListener('click', () => {
         Audio.click(); const l = $('piso-palabras'); l.classList.toggle('oculto');
@@ -2259,7 +2296,7 @@
           this.magos.juego.animar('sad', 1500);
           if (pa.jefe) this.magos.jefe.animar('happy', 1500);
           this.modal(`<h3>${pa.jefe ? `${esc(pa.nombreJefe.toUpperCase())} RESISTIÓ` : '¡SE ACABÓ EL TIEMPO!'}</h3><div class="modal-silabo" data-pose="sad"></div><p>${pa.jefe ? `Le quedaban ${pa.objetivo - pa.puntosPiso} HP.` : `Te faltaron ${pa.objetivo - pa.puntosPiso} pts para el objetivo.`} Te quedan ${WWIconos.html('corazon').repeat(pa.arcade.vidas)}.</p><p>Otra palabra, mismo piso.</p>`, [
-            { texto: 'Reintentar piso ' + pa.arcade.piso, clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { piso: pa.arcade.piso, continuar: true, usadas: pa.arcade.usadas, reintento: true }) },
+            { texto: 'Reintentar piso ' + pa.arcade.piso, clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { piso: pa.arcade.piso, continuar: true, usadas: pa.arcade.usadas, reintento: true, cap: pa.arcade.cap || undefined }) },
             { texto: 'Rendirse', clase: 'btn-secundario', accion: () => this.cerrarArcade(pa) },
           ]);
           return;
@@ -2315,6 +2352,7 @@
       const p = Estado.perfil;
       const a = pa.arcade;
       if (a.cerrada) return;
+      if (a.cap) return this.cerrarCap(pa);
       a.cerrada = true; clearTimeout(this._tModalPiso);
       if (window.WWMetricas) WWMetricas.marcar(WW.claveDia(), CONFIG.version, 'torre');
       p.subida = null;
@@ -3607,6 +3645,12 @@
           if (sub) return { tipo: 'jugando', txt: T('Vas por el piso {n}', { n: sub.piso + 1 }), pct: m.piso / WWMapa.PISOS_CAPITULO * 100 };
           return m.piso ? { tipo: 'jugando', txt: T('Piso {n} de 20', { n: m.piso }), pct: m.piso / WWMapa.PISOS_CAPITULO * 100 } : { tipo: 'nuevo', txt: T('Para empezar'), pct: 0 };
         }
+        if (c.jugable && pase) {
+          const k = this.capitulo(c.id);
+          if (k.terminado) return { tipo: 'hecho', txt: T('Terminado'), pct: 100 };
+          if (k.mejorPiso) return { tipo: 'jugando', txt: T('Piso {n} de {t}', { n: k.mejorPiso, t: c.pisos }), pct: k.mejorPiso / c.pisos * 100 };
+          return { tipo: 'nuevo', txt: T('Incluido en tu Pase'), pct: 0 };
+        }
         return pase ? { tipo: 'pronto', txt: T('Muy pronto · incluido en tu Pase') } : { tipo: 'pase', txt: T('Con el Pase de Mago') };
       };
       const sello = `<svg class="sello" viewBox="-24 -24 48 48" aria-hidden="true"><circle r="20" fill="#b8473a" stroke="#16262c" stroke-width="2.5"/><circle r="13" fill="none" stroke="#e7a08f" stroke-width="2"/><path d="M0 -8 L2.4 -2.4 L8 -2 L3.6 1.8 L5 8 L0 4.6 L-5 8 L-3.6 1.8 L-8 -2 L-2.4 -2.4Z" fill="#fbe3d9"/></svg>`;
@@ -3614,15 +3658,16 @@
       libro.innerHTML = C.CAPITULOS.map((c, i) => {
         const s = estado(c), tapado = !c.libre;
         return `<button class="campana-pag" data-i="${i}"><span class="ilu">${C.escena(c.id, s.tipo === 'hecho')}${tapado && !pase ? '<span class="campana-velo"></span>' : ''}</span>
-          <span class="datos"><b>${c.libre ? '' : esc(T(c.ante)) + ' · '}${esc(T(c.n))}</b><small>${esc(T(c.sub))} · ${esc(s.txt)}</small>${c.libre ? `<span class="barra"><i style="width:${Math.round(s.pct)}%"></i></span>` : ''}</span>
+          <span class="datos"><b>${c.libre ? '' : esc(T(c.ante)) + ' · '}${esc(T(c.n))}</b><small>${esc(T(c.sub))} · ${esc(s.txt)}</small>${c.libre || (c.jugable && pase) ? `<span class="barra"><i style="width:${Math.round(s.pct)}%"></i></span>` : ''}</span>
           ${tapado && !pase ? sello : ''}</button>`;
       }).join('');
       libro.querySelectorAll('.campana-pag').forEach((b) => b.addEventListener('click', () => { Audio.click(); abrir(Number(b.dataset.i)); }));
       if (C.vigilar) C.vigilar(libro);
       const abrir = (i) => {
         const c = C.CAPITULOS[i], s = estado(c), a = $('campana-abierta');
-        const chip = s.tipo === 'hecho' ? `<span class="campana-chip hecho">✓ ${T('Terminada')}</span>` : s.tipo === 'pase' ? `<span class="campana-chip pase">🔒 ${T('Con el Pase de Mago')}</span>` : s.tipo === 'pronto' ? `<span class="campana-chip pronto">${T('Muy pronto')}</span>` : `<span class="campana-chip gratis">${T('Gratis')}</span>`;
+        const chip = s.tipo === 'hecho' ? `<span class="campana-chip hecho">✓ ${T('Terminada')}</span>` : s.tipo === 'pase' ? `<span class="campana-chip pase">🔒 ${T('Con el Pase de Mago')}</span>` : s.tipo === 'pronto' ? `<span class="campana-chip pronto">${T('Muy pronto')}</span>` : c.libre ? `<span class="campana-chip gratis">${T('Gratis')}</span>` : `<span class="campana-chip pase">✓ ${T('Incluido en tu Pase')}</span>`;
         const boton = c.libre ? (s.tipo === 'hecho' ? T('Jugar de nuevo (no suma al ranking)') : sub ? T('Seguir subiendo') : m.piso ? T('Seguir la Torre') : T('Subir a la Torre'))
+          : c.jugable && pase ? (s.tipo === 'hecho' ? T('Jugar de nuevo') : s.tipo === 'jugando' ? T('Seguir el capítulo') : T('Empezar el capítulo'))
           : s.tipo === 'pase' ? T('Conocé el Pase de Mago') : T('Llega muy pronto');
         a.innerHTML = `<div class="escena">${C.escena(c.id, s.tipo === 'hecho')}${c.libre || pase ? '' : '<span class="campana-velo"></span>'}<button class="volver" aria-label="${T('Volver')}">‹</button></div>
           <div class="txt"><span class="ante">${esc(T(c.ante))}</span><h3>${esc(T(c.n))}</h3>${chip}<p>${esc(T(c.p))}</p><div class="ayuda">${esc(T(c.ayuda))}</div>
@@ -3636,11 +3681,121 @@
         $('campana-ir').addEventListener('click', () => {
           Audio.click(); cerrar();
           if (c.libre) this.entrarTorre();
+          else if (c.jugable && pase) this.entrarCapitulo(c.id);
           else if (s.tipo === 'pase') this.avisoPase();
         });
       };
       if (this._cerrarCampana) this._cerrarCampana();
       this.mostrar('p-campanas');
+    },
+
+    // ============================================================ capítulos de Aventura (v2.47, lab/capitulo-pradera.html)
+    // Se juegan con el motor de la Torre (modo arcade con arcade.cap): 6 pisos con palabras fijas, el último es el jefe.
+    // Sin ranking; monedas y XP enteras solo la primera vez que pasás cada piso (perfil.capitulos[id].primera).
+    datosCap(id) { const c = window.WWCampanas && WWCampanas.CAPITULOS.find((x) => x.id === id); return c && c.jugable ? c : null; },
+    capitulo(id, p) {
+      p = p || Estado.perfil;
+      if (!p.capitulos || typeof p.capitulos !== 'object') p.capitulos = {};
+      const c = p.capitulos[id] || (p.capitulos[id] = {});
+      if (!c.primera || typeof c.primera !== 'object') c.primera = {};
+      return c;
+    },
+    /** El jefe que se ve: el Viento Ladrón en la Pradera, el mago oscuro en la Torre. */
+    elJefe() { return this.partida && this.partida.rafaga ? $('jefe-viento') : $('mago-jefe'); },
+
+    /** El Viento Ladrón sopla cada 20 segundos: avisa un segundo antes y tapa una letra libre durante 6 segundos. */
+    rafaga(pa) {
+      const r = pa.rafaga, ahora = Date.now();
+      if (pa.superado) return;
+      if (r.idx != null && ahora >= r.fin) { r.idx = null; this.renderFichas(); }
+      if (r.idx == null && !r.aviso && ahora >= r.prox - 1200) { r.aviso = true; $('fichas').classList.add('viento-aviso'); $('jefe-viento').classList.add('sopla'); }
+      if (r.idx == null && ahora >= r.prox) {
+        r.aviso = false; $('fichas').classList.remove('viento-aviso'); $('jefe-viento').classList.remove('sopla');
+        const libres = pa.orden.filter((i) => !pa.fichas[i].usada);
+        if (libres.length) { r.idx = azar(libres); r.fin = ahora + 6000; Audio.borrar(); this.renderFichas(); this.globo(T('¡Ráfaga! El viento te tapó una letra'), 'mal'); }
+        r.prox = ahora + 20000;
+      }
+    },
+
+    /** El Atajo de Tomillo: una vez por piso, marca la primera letra de una palabra larga que te falta. */
+    atajoTomillo() {
+      const pa = this.partida;
+      if (!pa || pa.terminada || !pa.arcade || !pa.arcade.cap || pa.atajo) return;
+      // la palabra base no: sería regalar la más larga
+      let cands = this.faltantes().filter((w) => w.length >= 6 && w !== pa.base);
+      if (!cands.length) cands = this.faltantes().filter((w) => w.length >= 5 && w !== pa.base);
+      if (!cands.length) { this.globo(T('Tomillo: ¡no te falta ninguna larga!'), 'wow'); return; }
+      const w = azar(cands);
+      let idx = pa.orden.find((i) => pa.fichas[i].l === w[0] && !(pa.rafaga && pa.rafaga.idx === i));
+      if (idx == null) idx = pa.orden.find((i) => pa.fichas[i].l === w[0]);
+      pa.atajo = { w, idx };
+      Audio.poder();
+      this.renderFichas(); this.renderPoderes();
+      this.globo(T('Tomillo: hay una de {n} letras que empieza con {l}', { n: w.length, l: w[0].toUpperCase() }), 'ok');
+    },
+
+    /** El cartel del capítulo con las letras que ya volvieron (la última que volvió, con brillo). */
+    cartelCap(id, hechos, nueva) {
+      const C = this.datosCap(id), pal = window.WWCampanas && WWCampanas.palabra ? WWCampanas.palabra('camino') : 'CAMINO';
+      const n = pal.length, ve = Math.round(hechos * n / C.pisos), antes = nueva ? Math.round((hechos - 1) * n / C.pisos) : ve;
+      return `<div class="cartel-cap" data-no-t aria-label="${esc(pal)}">${pal.split('').map((l, i) => `<span class="${i < ve ? (i >= antes ? 'nueva' : '') : 'falta'}">${i < ve ? l : ''}</span>`).join('')}</div>`;
+    },
+
+    /** Entrar al capítulo desde el libro: la historia la primera vez, después dónde quedaste. */
+    entrarCapitulo(id) {
+      const C = this.datosCap(id); if (!C) return;
+      const c = this.capitulo(id), primera = !c.visto;
+      if (primera) { c.visto = true; Estado.guardar(); }
+      const sig = c.terminado ? 1 : Math.min(C.pisos, (c.mejorPiso || 0) + 1);
+      const texto = c.terminado ? T('Ya lo terminaste. Podés jugarlo de nuevo: no suma monedas.')
+        : primera ? `${T(C.historia)} ${T('Tomillo te acompaña: una vez por piso, su Atajo te muestra con qué letra empieza una palabra larga.')}`
+          : sig === C.pisos ? T('Te falta el último: el Viento Ladrón.') : T('Vas por el piso {n} de {t}.', { n: sig, t: C.pisos });
+      this.modal(`<h3>${esc(T(C.n).toUpperCase())}</h3><div class="novedad-ilu">${WWCampanas.escena(id, !!c.terminado)}</div>${this.cartelCap(id, c.terminado ? C.pisos : sig - 1)}<p>${esc(texto)}</p>`, [
+        { texto: c.terminado ? T('Jugar de nuevo') : sig === C.pisos ? T('Enfrentar al Viento Ladrón') : T('Jugar el piso {n}', { n: sig }), clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { cap: id, piso: sig }) },
+      ], { cerrar: true });
+    },
+
+    /** Después de cada piso: vuelven letras al cartel y sigue el próximo (o el final). */
+    siguienteCap(pa) {
+      const a = pa.arcade, C = this.datosCap(a.cap);
+      if (a.piso >= C.pisos) return this.finCap(pa);
+      const sig = a.piso + 1;
+      this.modal(`<h3>${T('¡VOLVIERON LETRAS AL CARTEL!')}</h3><div class="novedad-ilu">${WWCampanas.escena(a.cap, false)}</div>${this.cartelCap(a.cap, a.piso, true)}<p>${esc(sig === C.pisos ? T('Ahora sí: el Viento Ladrón te espera en el piso {n}.', { n: sig }) : T('Piso {n} de {t}.', { n: sig, t: C.pisos }))} ${WWIconos.html('corazon').repeat(a.vidas)}</p>`, [
+        { texto: sig === C.pisos ? T('Enfrentar al Viento Ladrón') : T('Jugar el piso {n}', { n: sig }), clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { cap: a.cap, piso: sig, continuar: true }) },
+        { texto: T('Seguir después'), clase: 'btn-secundario', accion: () => this.cerrarCap(pa) },
+      ]);
+    },
+
+    /** El final del capítulo: el cartel completo, el lugar liberado y Tomillo que se suma. */
+    finCap(pa) {
+      const a = pa.arcade, C = this.datosCap(a.cap), c = this.capitulo(a.cap);
+      const primeraVez = !c.festejado; c.festejado = true; Estado.guardar();
+      const pal = window.WWCampanas && WWCampanas.palabra ? WWCampanas.palabra('camino') : 'CAMINO';
+      this.confeti(120); Audio.victoria();
+      this.modal(`<h3>${esc(T('¡{c}, COMPLETO!', { c: T(C.n).toUpperCase() }))}</h3><div class="novedad-ilu">${WWCampanas.escena(a.cap, true)}</div>${this.cartelCap(a.cap, C.pisos)}<p>${esc(T('El cartel ya dice {w} otra vez: la Pradera tiene camino.', { w: pal }))}</p>${primeraVez ? `<p><b>${esc(T('Tomillo se suma a tu equipo:'))}</b> ${esc(T('su Atajo te acompaña en los capítulos que siguen.'))}</p>` : ''}`, [
+        { texto: T('Volver a Aventura'), clase: 'btn-primario', accion: () => this.cerrarCap(pa) },
+      ]);
+    },
+
+    /** Se cierra la tanda del capítulo (terminó, se quedó sin vidas o salió): XP de lo nuevo y vuelta al libro. */
+    cerrarCap(pa) {
+      const p = Estado.perfil, a = pa.arcade;
+      if (a.cerrada) return;
+      a.cerrada = true; clearTimeout(this._tModalPiso);
+      if (!pa.terminada) { pa.terminada = true; clearInterval(pa.timer); }
+      if (window.WWMetricas) WWMetricas.marcar(WW.claveDia(), CONFIG.version, 'torre');
+      const nuevos0 = a.puntosNuevos || 0;
+      const xp = Math.round(nuevos0 * 0.45 + (a.pisosNuevos || 0) * 8 + Math.max(0, a.puntajeTotal - nuevos0) * 0.05);
+      p.stats.partidas += 1;
+      Estado.sumarXp(xp);
+      const nuevos = Logros.evaluar(p, { tipo: 'capitulo', cap: a.cap });
+      if (nuevos.length) Estado.sumarMonedas(5 * nuevos.length);
+      Estado.guardar();
+      $('modal').classList.add('oculto');
+      this.verCampanas();
+      const sinVidas = a.vidas <= 0 && !this.capitulo(a.cap).terminado;
+      if (xp || sinVidas) this.toast(`<div><b>${xp ? `+${xp} XP` : esc(T(this.datosCap(a.cap).n))}</b>${sinVidas ? `<br><small>${esc(T('Se acabaron las vidas: seguís desde el piso {n}', { n: Math.min(this.datosCap(a.cap).pisos, (this.capitulo(a.cap).mejorPiso || 0) + 1) }))}</small>` : ''}</div>`);
+      this.anunciarLogros(nuevos);
     },
 
     /** La Torre Arcana de 20 pisos (v2.43) en el perfil: lo hecho la primera vez en cada piso y el último jefe vencido. */
@@ -3712,6 +3867,7 @@
       this.limpiarSeleccion(); this.limpiarEfectos();
       this.anotarTiempo(pa);
       const a = pa.arcade;
+      if (a.cap) { a.puntajeTotal += pa.puntos; return this.cerrarCap(pa); }   // el capítulo sigue desde el último piso pasado
       if (a.vidas > 1) a.vidas -= 1;
       a.puntajeTotal += pa.puntos;
       a.palabrasTotal += pa.encontradas.length;
