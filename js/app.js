@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.45.1',
+    version: '2.46.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -132,6 +132,21 @@
       const IDI = { es: [AR, 'Español'], en: [US, 'English'], pt: [BR, 'Português'] };
       const band = (k) => `<span class="bandera">${IDI[k][0]}</span>`;
       const chip = $('idioma-chip'), menu = $('idioma-menu');
+      // v2.46: también en Mi mago, con el texto en los dos idiomas (un jugador se pasó a inglés y no encontraba cómo volver)
+      const med = $('btn-idioma');
+      if (med) {
+        $('btn-idioma-bandera').innerHTML = band(I.idioma);
+        med.classList.remove('oculto');
+        med.addEventListener('click', () => {
+          Audio.click();
+          this.modal('<h3 data-no-t>IDIOMA · LANGUAGE</h3>', I.disponibles.filter((k) => IDI[k]).map((k) => ({
+            texto: IDI[k][1], clase: k === I.idioma ? 'btn-primario' : 'btn-secundario',
+            accion: () => { if (k !== I.idioma) { if (Estado.perfil) Estado.guardar(); I.cambiar(k); } },
+          })), { cerrar: true });
+          const f = document.querySelector('#modal-caja .fila:last-child');
+          if (f) { f.classList.add('fila-idiomas'); f.setAttribute('data-no-t', ''); }
+        });
+      }
       chip.innerHTML = `${band(I.idioma)} ${I.idioma.toUpperCase()} ▾`;
       menu.innerHTML = I.disponibles.filter((k) => IDI[k]).map((k) => `<button data-k="${k}" class="${k === I.idioma ? 'on' : ''}">${band(k)} ${IDI[k][1]}</button>`).join('');
       caja.classList.remove('oculto');
@@ -1075,7 +1090,15 @@
       const deHoy = WW.palabraDelDia(this.pool).desafio.p;
       if (modo === 'practica') {
         const cands = this.pool.filter((c) => c.l === (opts.largo || 7) && c.p !== deHoy);
-        return { base: azar(cands.length ? cands : this.pool).p };
+        // v2.46: no repetir las que salieron hace poco (un jugador con muchas horas veía las mismas seguido)
+        const clave = 'ww.recientes.' + ((window.WWI18n && WWI18n.idioma) || 'es');
+        let rec = [];
+        try { rec = JSON.parse(localStorage.getItem(clave) || '[]'); } catch (e) { rec = []; }
+        const tope = Math.floor(cands.length * .7), vistas = new Set(rec.slice(-tope));
+        const libres = cands.filter((c) => !vistas.has(c.p));
+        const base = azar(libres.length ? libres : cands.length ? cands : this.pool).p;
+        try { rec.push(base); localStorage.setItem(clave, JSON.stringify(rec.slice(-300))); } catch (e) { /* sin almacenamiento */ }
+        return { base };
       }
       // arcade: las 20 palabras fijas de la Torre Arcana (tools/build-torre.js), las mismas para todos
       const piso = opts.piso || 1;
