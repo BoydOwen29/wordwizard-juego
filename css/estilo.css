@@ -1488,7 +1488,15 @@ body.con-pase .pase-brillo { display: block; }
 @keyframes cRayo { 0%, 86%, 92%, 100% { opacity: 0; } 88%, 90% { opacity: .85; } }
 .c-hamaca { animation: cHamaca 3.4s ease-in-out infinite; transform-box: view-box; }
 @keyframes cHamaca { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
-@media (prefers-reduced-motion: reduce) { [class^="c-"], [class*=" c-"] { animation: none !important; } }
+/* Con "reducir movimiento" (muchos iPhone lo tienen prendido) las escenas quedan quietas, como el bosque del fondo,
+   pero se ve todo: las letras libres, las notas y el remolino quedan en su lugar en vez de desaparecer (v2.45.1). */
+@media (prefers-reduced-motion: reduce) {
+  [class^="c-"], [class*=" c-"] { animation: none !important; }
+  .c-libre { opacity: 1; transform: translate(var(--dx), 34px); }
+  .c-nota-cae, .c-nota-sube { opacity: .9; transform: translate(10px, -14px); }
+  .c-remolino { transform: translate(120px, 64px); }
+  .c-ventana { fill: #f2c66d; }
+}
 /* novedades de la v2.44: la escena del capítulo arriba del texto */
 .novedad-ilu { height: 130px; border-radius: 14px; overflow: hidden; border: 3px solid var(--borde-m, #0d1418); margin: 6px 0 10px; background: #1c2f38; }
 .novedad-ilu svg { display: block; width: 100%; height: 100%; }

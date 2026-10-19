@@ -41,11 +41,20 @@
   /** Una nube que cruza el cielo (lenta). */
   const nubeCruza = (y, k, op, demora) => `<g class="c-nube" ${d(demora || 0)}><path transform="translate(0 ${y}) scale(${k})" d="M0 0 a10 10 0 0 1 14 -10 a14 14 0 0 1 26 2 a10 10 0 0 1 8 14 Z" fill="#fff" opacity="${op}"/></g>`;
   /** Las letras del cartel de la Pradera, una por una según su ancho (para que el viento se lleve algunas). */
-  const ANCHO = { C: 7.2, A: 7.4, M: 9.4, I: 3.6, N: 7.8, O: 7.8 };
+  const ANCHO = { C: 7.2, A: 7.4, M: 9.4, I: 3.6, N: 7.8, O: 7.8, H: 7.8, P: 7, T: 6.6 };
+  /** Las palabras dibujadas en las escenas, en el idioma del jugador (v2.45.1). */
+  const PALABRAS = {
+    es: { camino: 'CAMINO', panaderia: 'PANADERIA', voz: 'VOZ' },
+    en: { camino: 'PATH', panaderia: 'BAKERY', voz: 'VOICE' },
+    pt: { camino: 'CAMINHO', panaderia: 'PADARIA', voz: 'VOZ' },
+  };
+  const idioma = () => (window.WWI18n && PALABRAS[window.WWI18n.idioma] ? window.WWI18n.idioma : 'es');
+  const W = (k) => PALABRAS[idioma()][k];
   function cartel(L, txt, clase) {
-    const total = txt.split('').reduce((s, c) => s + (ANCHO[c] || 7), 0);
+    // el cartel mide 54: una palabra larga (CAMINHO) se achica para entrar con aire
+    const bruto = txt.split('').reduce((s, c) => s + (ANCHO[c] || 7) + .6, 0) - .6, k = Math.min(1, 46 / bruto), total = bruto * k;
     let x = 201 - total / 2;
-    return txt.split('').map((c, i) => { const w = ANCHO[c] || 7, t = `<text x="${n1(x + w / 2)}" y="106" font-size="11" text-anchor="middle" font-family="Fredoka, sans-serif" fill="#5a4a36" class="${clase(i)}" ${d(i * .6)}>${c}</text>`; x += w + .6; return t; }).join('');
+    return txt.split('').map((c, i) => { const w = (ANCHO[c] || 7) * k, t = `<text x="${n1(x + w / 2)}" y="106" font-size="${n1(11 * k)}" text-anchor="middle" font-family="Fredoka, sans-serif" fill="#5a4a36" class="${clase(i)}" ${d(i * .6)}>${c}</text>`; x += w + .6 * k; return t; }).join('');
   }
   /** Letras que caen libres (el "después" de cada capítulo). */
   const letrasLibres = (L, txt, x, y, abanico) => txt.split('').map((c, i) => `<text x="${x}" y="${y}" font-size="11" font-family="Fredoka, sans-serif" fill="#fff1c9" stroke="${L}" stroke-width="2.5" paint-order="stroke" class="c-libre" style="--dx:${n1((i - (txt.length - 1) / 2) * abanico)}px;animation-delay:${(i * .5).toFixed(2)}s">${c}</text>`).join('');
@@ -79,10 +88,10 @@
       if (!despues) {
         // el viento: un remolino con ojitos que pasa y se lleva las letras
         s += `<g class="c-remolino"><path d="M0 0 c14 -12 34 -6 32 8 c-2 10 -16 12 -20 4 c-3 -6 4 -10 8 -6" fill="none" stroke="#f3f6ee" stroke-width="3.5" stroke-linecap="round"/><circle cx="12" cy="-2" r="2" fill="${L}"/><circle cx="20" cy="-3" r="2" fill="${L}"/></g>`;
-        s += cartel(L, 'CAMINO', (i) => (i % 2 ? 'c-vuela' : ''));
+        s += cartel(L, W('camino'), (i) => (i % 2 ? 'c-vuela' : ''));
         s += [0, 1, 2].map((i) => `<path d="M-20 ${52 + i * 24} h60 q12 0 12 -8" fill="none" stroke="#f3f6ee" stroke-width="3" stroke-linecap="round" class="c-viento" ${d(i)}/>`).join('');
       } else {
-        s += cartel(L, 'CAMINO', () => '');
+        s += cartel(L, W('camino'), () => '');
         s += [[40, 160], [130, 150], [260, 160]].map(([x, y], i) => `<g class="c-flota" ${d(i * .7)}><circle cx="${x}" cy="${y}" r="5" fill="#f2c66d" stroke="${L}" stroke-width="2"/><circle cx="${x}" cy="${y}" r="2" fill="#e8907a"/></g>`).join('');
       }
       s += Array.from({ length: 16 }, (_, i) => `<path d="M${10 + i * 19} 196 q-2 -14 4 -26" fill="none" stroke="#5f8458" stroke-width="3" stroke-linecap="round" class="c-pasto" ${d((i % 5) * .3)}/>`).join('');
@@ -118,7 +127,8 @@
       s += P('M138 150 V116 H162 V150Z', '#7a5638', 2.2) + `<circle cx="158" cy="134" r="1.8" fill="${L}"/>`;
       s += [106, 172].map((x) => `<rect x="${x}" y="112" width="22" height="18" rx="3" stroke="${L}" stroke-width="2" fill="${despues ? '#f2c66d' : '#8b9590'}" class="${despues ? 'c-late' : ''}"/>`).join('');
       s += P('M110 96 h80 v14 h-80z', '#8a6440', 2);
-      s += 'PANADERIA'.split('').map((c, i) => { const falta = !despues && [1, 3, 5, 7].includes(i); return `<text x="${n1(116 + i * 8.6)}" y="107" font-size="9" font-family="Fredoka, sans-serif" fill="#fff1c9" class="${falta ? 'c-tit' : ''}" opacity="${falta ? '.25' : '1'}">${falta ? '_' : c}</text>`; }).join('');
+      const pan = W('panaderia');
+      s += pan.split('').map((c, i) => { const falta = !despues && i % 2 === 1; return `<text x="${n1(150 + (i - (pan.length - 1) / 2) * 8.6)}" y="107" font-size="9" text-anchor="middle" font-family="Fredoka, sans-serif" fill="#fff1c9" class="${falta ? 'c-tit' : ''}" opacity="${falta ? '.25' : '1'}">${falta ? '_' : c}</text>`; }).join('');
       s += P('M184 78 v-18 h10 v24', '#8a5a3c', 2.2);
       if (despues) s += [0, 1, 2].map((i) => `<circle cx="189" cy="56" r="6" fill="#e9e3d6" stroke="${L}" stroke-width="2" class="c-humo" ${d(i * 1.1)}/>`).join('');
       s += P('M40 160 C40 148 76 148 76 160 V172 C76 180 40 180 40 172Z', '#9aa7a4') + P('M36 128 h44 v6 h-44z', '#8a6440', 2) + `<path d="M40 134 v20 M76 134 v20" stroke="${L}" stroke-width="3"/>`;
@@ -174,7 +184,7 @@
       s += `<rect x="124" y="64" width="52" height="122" rx="4" fill="${despues ? '#6b5a9a' : '#4a3870'}" stroke="${L}" stroke-width="3"/><path d="M114 66 L150 18 L186 66Z" fill="${despues ? '#efe9dc' : '#1d1830'}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`;
       s += `<rect x="137" y="84" width="26" height="34" rx="13" fill="${despues ? '#f2c66d' : '#8a6fc9'}" stroke="${L}" stroke-width="2.5" class="c-late"/>`;
       if (!despues) s += `<g class="c-gira" style="transform-origin:150px 116px">${Array.from({ length: 6 }, (_, i) => { const a = i / 6 * Math.PI * 2; return `<text x="${(150 + Math.cos(a) * 74).toFixed(0)}" y="${(120 + Math.sin(a) * 34).toFixed(0)}" font-size="13" fill="#c9b6ff" text-anchor="middle">${'ᚱᚢᚾᛖᛋᚹ'[i]}</text>`; }).join('')}</g>`;
-      else s += letrasLibres(L, 'VOZ', 150, 70, 40);
+      else s += letrasLibres(L, W('voz'), 150, 70, W('voz').length > 3 ? 26 : 40);
       s += figura(UMBRIO(despues), 150, 120, 34, 'c-flota');
       // Hilda tejiendo al pie de la torre: teje el mapa del camino de adentro
       s += figura(e.hilda(), 236, 190, 62, '');
@@ -203,7 +213,7 @@
   const cache = {};
   /** La escena de un capítulo como SVG. despues: el lugar liberado (capítulo terminado). */
   function escena(id, despues) {
-    const k = id + (despues ? ':d' : '');
+    const k = idioma() + ':' + id + (despues ? ':d' : '');
     if (!cache[k]) {
       const e = E(), L = (e && e.L) || '#16262c';
       let cuerpo = '';
