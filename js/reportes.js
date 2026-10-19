@@ -83,7 +83,10 @@
   }
 
   // ------------------------------------------------------------ errores automáticos
+  // las extensiones del navegador (billeteras, traductores) tiran errores en la página que no son del juego
+  const DE_AFUERA = /chrome-extension:|moz-extension:|safari-(web-)?extension:/;
   function error(mensaje, detalle) {
+    if (detalle && (DE_AFUERA.test(detalle.pila || '') || DE_AFUERA.test(detalle.archivo || ''))) return;
     const clave = mensaje + '|' + (detalle && detalle.linea);
     if (vistos.has(clave) || errores >= MAX_ERRORES) return;
     vistos.add(clave); errores++;
