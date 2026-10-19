@@ -35,6 +35,13 @@
       medio: '#4f6f7d', medioSh: '#43606d', cerca: '#2c4652', cercaSh: '#233a45',
       suelo: '#e4edf2', sueloLuz: '#f4f8fa', tronco: '#3a3533', arbol: 'pinoNieve', nieve: true,
     },
+    // la Pradera (capítulo 1 de Aventura, v2.47.1): de día, lomas, árboles de copa redonda y flores en el pasto
+    pradera: {
+      cielo: ['#6f9aa0', '#7fa6a8', '#90b3b0', '#a3c0b8', '#b6cdc2'], astro: 'sol', estrellas: 0, nubeCol: '#f3f6ee', nubeSh: '#dbe6e0',
+      montes: '#a3c0b0', montesSh: '#97b6a5', lejos: '#8fb39b', niebla: '#eef4ef',
+      medio: '#6f9a6a', medioSh: '#5f8a5c', cerca: '#4f7f4a', cercaSh: '#416d3e',
+      suelo: '#5f8a54', sueloLuz: '#86b072', tronco: '#7a5a3c', arbol: 'copa', torre: true, flores: true,
+    },
     cielo: {
       cielo: ['#7d6aa6', '#9b7fb2', '#c493b0', '#e8a99a', '#f5c79a'], astro: 'sol', estrellas: 12,
       montes: '#f2d7c2', montesSh: '#e4c1aa', lejos: '#f6e2d2', niebla: '#fff1e2',
@@ -71,6 +78,17 @@
     }
     const tronco = `M${n1(x - w * .06)} ${n1(y - tr - 4)} L${n1(x + w * .06)} ${n1(y - tr - 4)} L${n1(x + w * .07)} ${n1(y)} L${n1(x - w * .07)} ${n1(y)}Z`;
     return (sw ? P(tronco, LUG.tronco, sw) + P(cuerpo, c, sw) : P(tronco, LUG.tronco) + P(cuerpo, c)) + P(sombra, sh) + (blanco ? P(blanco, '#f4f8fa') : '');
+  }
+
+  /** Árbol de copa redonda (la Pradera): tronco y tres masas; el contorno abraza a las tres juntas (como nube()). */
+  function copa(x, y, h, w, c, sh, sw, rnd) {
+    const r0 = w * (.4 + rnd() * .06), cy = y - h * .62;
+    const cs = [[x, cy, r0], [x - w * .3, cy + h * .1, r0 * .74], [x + w * .32, cy + h * .08, r0 * .78]];
+    const circ = (st, k) => cs.map(([cx, yy, r]) => `<circle cx="${n1(cx)}" cy="${n1(yy)}" r="${n1(r * (k || 1))}"${st}/>`).join('');
+    const tronco = `M${n1(x - w * .07)} ${n1(cy + r0 * .4)} L${n1(x + w * .07)} ${n1(cy + r0 * .4)} L${n1(x + w * .09)} ${n1(y)} L${n1(x - w * .09)} ${n1(y)}Z`;
+    const somb = `<circle cx="${n1(x + w * .14)}" cy="${n1(cy + r0 * .18)}" r="${n1(r0 * .62)}" fill="${sh}"/><circle cx="${n1(x + w * .36)}" cy="${n1(cy + h * .12)}" r="${n1(r0 * .5)}" fill="${sh}"/>`;
+    const luz = sw ? `<circle cx="${n1(x - w * .12)}" cy="${n1(cy - r0 * .3)}" r="${n1(r0 * .22)}" fill="#ffffff" opacity=".12"/>` : '';
+    return (sw ? P(tronco, LUG.tronco, sw) + circ(` fill="${c}" stroke="${L}" stroke-width="${sw * 2}"`) : P(tronco, LUG.tronco)) + circ(` fill="${c}"`) + somb + luz;
   }
 
   function cristal(x, y, h, w, c, sh, sw, rnd) {
@@ -167,11 +185,12 @@
     LUG = LUGARES[lugar] || LUGARES.bosque;
     const T = (lugar || 'bosque') === 'bosque' ? (temp === undefined ? Escena.temporada : temp) || {} : {};
     const C = LUG, M = 28, W = W0 + M * 2, H = H0 + M * 2;
-    const rnd = azarCon(({ bosque: 7, cueva: 11, biblioteca: 23, cumbre: 31, cielo: 43 }[lugar] || 7) * 1000 + Math.round(W0 / 50));
+    const rnd = azarCon(({ bosque: 7, cueva: 11, biblioteca: 23, cumbre: 31, cielo: 43, pradera: 53 }[lugar] || 7) * 1000 + Math.round(W0 / 50));
     const svg = (cls, inner, prof) => `<svg class="esc-capa ${cls}" data-prof="${prof}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="left:${-M}px;top:${-M}px" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
     const arbol = (x, y, h, w, c, sh, sw) => C.arbol === 'cristal' ? cristal(x, y, h, w, c, sh, sw, rnd)
       : C.arbol === 'libros' ? libros(x, y, h, w * .55, c, sh, sw, rnd)
         : C.arbol === 'nube' ? nube(x, y - h * .3, w * 1.6, c, sh, sw / 2, rnd)
+          : C.arbol === 'copa' ? copa(x, y, h * .9, w * 1.5, c, sh, sw, rnd)
           : pino(x, y, h, w, c, sh, sw, C.arbol === 'pinoNieve', rnd);
     const esc = Math.max(.75, Math.min(1.25, Math.min(W0, H0 * .7) / 420));
 
@@ -274,6 +293,12 @@
     cerca += P(cerros(W, ySuelo, H * .025, 5, rnd) + ` L${W + 10} ${H + 10} L-10 ${H + 10}Z`, C.suelo, 3);
     for (let i = 0; i < Math.round(W / 40); i++) {
       const x = rnd() * W, y = ySuelo + 6 + rnd() * H * .06;
+      // en la Pradera, flores silvestres entre el pasto
+      if (C.flores && rnd() < .4) {
+        const col = ['#f6efe2', '#f2c66d', '#e8907a', '#c9485b', '#b8acec'][Math.floor(rnd() * 5)], r = 3 + rnd() * 1.6;
+        cerca += `<path d="M${n1(x)} ${n1(y)} V${n1(y - r * 3)}" stroke="${C.sueloLuz}" stroke-width="2" stroke-linecap="round"/>` + [0, 72, 144, 216, 288].map((a) => `<circle cx="${n1(x + Math.cos(a * Math.PI / 180) * r * .8)}" cy="${n1(y - r * 3.4 + Math.sin(a * Math.PI / 180) * r * .8)}" r="${n1(r * .6)}" fill="${col}" stroke="${L}" stroke-width="1"/>`).join('') + `<circle cx="${n1(x)}" cy="${n1(y - r * 3.4)}" r="${n1(r * .42)}" fill="#f2c66d" stroke="${L}" stroke-width=".8"/>`;
+        continue;
+      }
       cerca += rnd() < .25 && C.arbol === 'pino'
         ? `${P(`M${n1(x - 1.5)} ${n1(y)} L${n1(x - 1.5)} ${n1(y - 7)} L${n1(x + 1.5)} ${n1(y - 7)} L${n1(x + 1.5)} ${n1(y)}Z`, '#e8e0cc', 1.5)}${P(`M${n1(x - 7)} ${n1(y - 6)} Q${n1(x)} ${n1(y - 16)} ${n1(x + 7)} ${n1(y - 6)}Z`, '#e8907a', 1.8)}<circle cx="${n1(x - 2)}" cy="${n1(y - 10)}" r="1.3" fill="#fff"/>`
         : `<path d="M${n1(x - 5)} ${n1(y)} Q${n1(x - 4)} ${n1(y - 7)} ${n1(x - 6)} ${n1(y - 10)} M${n1(x)} ${n1(y)} Q${n1(x + 1)} ${n1(y - 9)} ${n1(x)} ${n1(y - 13)} M${n1(x + 5)} ${n1(y)} Q${n1(x + 5)} ${n1(y - 6)} ${n1(x + 7)} ${n1(y - 9)}" stroke="${C.sueloLuz}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
@@ -446,6 +471,6 @@
   };
 
   // las formas sueltas, para que el camino de la Torre dibuje con el mismo trazo
-  const formas = { pino, cristal, libros, nube, estrella, azarCon, usarLugar: (id) => { LUG = LUGARES[id] || LUGARES.bosque; } };
+  const formas = { pino, copa, cristal, libros, nube, estrella, azarCon, usarLugar: (id) => { LUG = LUGARES[id] || LUGARES.bosque; } };
   window.WWEscena = Object.assign(Escena, { generar, LUGARES, formas });
 })();

@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.47.0',
+    version: '2.47.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -1196,7 +1196,7 @@
       };
       const pa = this.partida;
       if (pa.arcade) { pa.arcade.piso = piso; pa.arcade.usadas.push(base); if (!cap) this.guardarSubida(pa.arcade, piso); }
-      const lugar = cap ? null : modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' || modo === 'archivo' ? { id: FONDOS['p-practica'] } : null;
+      const lugar = cap ? { id: cap.id } : modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' || modo === 'archivo' ? { id: FONDOS['p-practica'] } : null;
       const lugarNuevo = lugar && (piso === 1 || WW_LUGARES.dePiso(piso - 1).id !== lugar.id) && !opts.reintento;
       this.ponerLugar(lugar);
       if (lugarNuevo && !jefe && modo === 'arcade') setTimeout(() => this.banner(lugar.icono, lugar.nombre, 'Pisos ' + lugar.rango), 250);
@@ -3173,7 +3173,7 @@
 
     /** Tiñe el bosque y cambia las partículas según el lugar de la Torre (null = el bosque de siempre). */
     ponerLugar(lugar) {
-      document.body.classList.remove('lugar-cueva', 'lugar-biblioteca', 'lugar-cumbre', 'lugar-cielo');
+      document.body.classList.remove('lugar-cueva', 'lugar-biblioteca', 'lugar-cumbre', 'lugar-cielo', 'lugar-pradera');
       if (lugar) document.body.classList.add('lugar-' + lugar.id);
       this.lugar = lugar ? lugar.id : null;
       if (window.WWEscena) WWEscena.ponerLugar(lugar ? lugar.id : 'bosque');
