@@ -542,4 +542,6 @@ window.WWI18n && WWI18n.registrar('en', {   // si i18n.js no llegó, index.html 
   "Cumbres": "Peaks",
   "Umbría": "Shadow",
   "¡{a} COMPLETO!": "{a} COMPLETE!",
+  "Girá el celular": "Turn your phone",
+  "Word Wizard se juega en vertical": "Word Wizard is played upright",
 });

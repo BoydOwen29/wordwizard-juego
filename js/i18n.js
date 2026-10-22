@@ -64,7 +64,7 @@
       const m = s.match(p.re);
       if (!m) continue;
       const vals = {};
-      p.nombres.forEach((n, i) => { const v = m[i + 1]; vals[n] = traducir(v, (prof || 0) + 1) ?? v; });
+      p.nombres.forEach((n, i) => { const v = m[i + 1]; const t = traducir(v, (prof || 0) + 1); vals[n] = t == null ? v : t; });
       return p.otro.replace(/\{(\w+)\}/g, (x, n) => (n in vals ? vals[n] : x));
     }
     return null;
@@ -73,7 +73,7 @@
   /** Traducción explícita, con variables. En español devuelve el texto tal cual. */
   I.t = function (es, vars) {
     let s = es;
-    if (I.idioma !== 'es') s = traducir(es) ?? es;
+    if (I.idioma !== 'es') { const t = traducir(es); s = t == null ? es : t; }
     if (vars) s = s.replace(/\{(\w+)\}/g, (x, n) => (n in vars ? vars[n] : x));
     return s;
   };

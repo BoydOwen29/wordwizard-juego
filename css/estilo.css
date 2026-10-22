@@ -1,3 +1,5 @@
+/* el juego tiene sus propios colores: que el modo oscuro automático del celular (Chrome, Samsung) no los invierta (23/10/2026) */
+:root { color-scheme: only light; }
 /* fuentes en pesos fijos (no variables): se ven igual en todos los motores */
 @font-face { font-family: 'Fredoka'; src: url(../assets/fonts/fredoka-400.woff2) format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Fredoka'; src: url(../assets/fonts/fredoka-600.woff2) format('woff2'); font-weight: 600; font-display: swap; }
@@ -1605,3 +1607,14 @@ body.lugar-pradera #p-juego .hud, body.lugar-pradera #p-juego .progreso, body.lu
 @keyframes robado { 0%, 100% { transform: none; color: inherit; } 30% { transform: scale(1.18); color: #ff8a7a; } }
 .hud-tiempo.robado { animation: robado .7s ease; }
 .cartel-cap.hilo-robledal { background: #3a2a20; } .cartel-cap.hilo-cumbres { background: #4a5a66; }
+/* ajustes del sistema que cambian cómo se ve el juego (23/10/2026, docs/AUDITORIA-DISPOSITIVOS.md) */
+/* Samsung Internet fuerza su modo oscuro salvo que la página diga que ya tiene uno: el juego ya es oscuro */
+@media (prefers-color-scheme: dark) { :root { --modo-oscuro-del-sistema: 1; } }
+/* iPhone con "Invertir colores": se vuelven a invertir para que el juego se vea como es */
+@media (inverted-colors: inverted) { html { filter: invert(1) hue-rotate(180deg); } }
+/* celular acostado: no entra; se pide girarlo */
+#girar { display: none; }
+@media (orientation: landscape) and (max-height: 480px) and (pointer: coarse) {
+  #girar { display: flex; position: fixed; inset: 0; z-index: 9999; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: #1c2f38; color: #e9f1ea; text-align: center; }
+  #girar b { font: 600 24px var(--display); } #girar small { font: 700 14px var(--texto-f); color: #a9bfb6; }
+}
