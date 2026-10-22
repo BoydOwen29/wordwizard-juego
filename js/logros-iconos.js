@@ -493,6 +493,14 @@
       P(k, 'M12 21 H21', null, 1.4) +
       P(k, 'M5 28.5 C7 25.5 9 25 10.5 27 C12 24.6 15 24.6 16.4 27 C18 25 21 25 22.4 27.4 C24 25.6 26 26 27 28.5Z', k.salvia),
 
+    // La laguna florece: la flor de ceibo sobre el agua, con su onda
+    laguna: (k) =>
+      P(k, 'M3.5 24 C8 21 24 21 28.5 24 C24 27.6 8 27.6 3.5 24Z', k.salviaCl) +
+      P(k, 'M9 24 C12 23 20 23 23 24', null, 1.3) +
+      P(k, 'M15.2 21 C9.4 18.8 7.4 12.8 9.6 7.4 C13.6 10 16.2 14.6 15.2 21Z', k.coral) +
+      F('M15.2 21 C13 17 11.6 12.8 11.4 9.6 C14.2 12 16 15.8 15.2 21Z', k.coralLi) +
+      P(k, 'M15.2 21 C19.6 17.6 23 13.8 23.4 9.2 C19.2 10.8 16.2 15 15.2 21Z', k.coralSh),
+
     // Cumplidor: carpetas con el sello de hecho
     misiones25: (k) =>
       P(k, 'M5.5 7.6 C5.5 6.7 6.2 6 7.1 6 H12 L14 8.4 H25.4 C26.3 8.4 27 9.1 27 10 V22 H5.5Z', k.salvia) +

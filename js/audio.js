@@ -421,7 +421,7 @@
     setTempo(rapido) { this._tempo = rapido ? 1.14 : 1; },
     /** Transpone el tema del juego según el lugar de la Torre y cambia cuánto eco tiene. */
     lugar(id) {
-      this._tono = { cueva: -2, biblioteca: 0, cumbre: 3, cielo: 5, pradera: 2 }[id] || 0;
+      this._tono = { cueva: -2, biblioteca: 0, cumbre: 3, cielo: 5, pradera: 2, laguna: -1 }[id] || 0;
       if (this._ganReverb) this._ganReverb.gain.setTargetAtTime(id === 'cueva' ? 0.55 : id === 'cielo' ? 0.42 : 0.32, this.ctx.currentTime, 0.4);
     },
 

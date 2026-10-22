@@ -42,6 +42,13 @@
       medio: '#6f9a6a', medioSh: '#5f8a5c', cerca: '#4f7f4a', cercaSh: '#416d3e',
       suelo: '#5f8a54', sueloLuz: '#86b072', tronco: '#7a5a3c', arbol: 'copa', torre: true, flores: true,
     },
+    // la Laguna del Ceibo (capítulo 2, v2.48): bruma baja, agua quieta con reflejos, juncos y ceibos en flor
+    laguna: {
+      cielo: ['#6d8f93', '#7a9b9d', '#88a7a7', '#97b3b0', '#a8c1bb'], astro: 'sol', estrellas: 0, nubeCol: '#e6eeea', nubeSh: '#cfdcd6',
+      montes: '#94aea6', montesSh: '#89a39b', lejos: '#82a096', niebla: '#f1f5f2',
+      medio: '#6a8e70', medioSh: '#5b7f61', cerca: '#4a7351', cercaSh: '#3d6244',
+      suelo: '#567a55', sueloLuz: '#7d9e70', tronco: '#7a5a3c', arbol: 'copa', floresCopa: '#c9485b', agua: '#7fa3a3', juncos: true, brumaFuerte: true,
+    },
     cielo: {
       cielo: ['#7d6aa6', '#9b7fb2', '#c493b0', '#e8a99a', '#f5c79a'], astro: 'sol', estrellas: 12,
       montes: '#f2d7c2', montesSh: '#e4c1aa', lejos: '#f6e2d2', niebla: '#fff1e2',
@@ -87,7 +94,8 @@
     const circ = (st, k) => cs.map(([cx, yy, r]) => `<circle cx="${n1(cx)}" cy="${n1(yy)}" r="${n1(r * (k || 1))}"${st}/>`).join('');
     const tronco = `M${n1(x - w * .07)} ${n1(cy + r0 * .4)} L${n1(x + w * .07)} ${n1(cy + r0 * .4)} L${n1(x + w * .09)} ${n1(y)} L${n1(x - w * .09)} ${n1(y)}Z`;
     const somb = `<circle cx="${n1(x + w * .14)}" cy="${n1(cy + r0 * .18)}" r="${n1(r0 * .62)}" fill="${sh}"/><circle cx="${n1(x + w * .36)}" cy="${n1(cy + h * .12)}" r="${n1(r0 * .5)}" fill="${sh}"/>`;
-    const luz = sw ? `<circle cx="${n1(x - w * .12)}" cy="${n1(cy - r0 * .3)}" r="${n1(r0 * .22)}" fill="#ffffff" opacity=".12"/>` : '';
+    let luz = sw ? `<circle cx="${n1(x - w * .12)}" cy="${n1(cy - r0 * .3)}" r="${n1(r0 * .22)}" fill="#ffffff" opacity=".12"/>` : '';
+    if (sw && LUG.floresCopa) for (let i = 0; i < 6; i++) { const a = rnd() * Math.PI * 2, rr = r0 * (.3 + rnd() * .55); luz += `<ellipse cx="${n1(x + Math.cos(a) * rr)}" cy="${n1(cy + Math.sin(a) * rr * .8)}" rx="${n1(r0 * .09)}" ry="${n1(r0 * .14)}" transform="rotate(${n1(a * 57)} ${n1(x + Math.cos(a) * rr)} ${n1(cy + Math.sin(a) * rr * .8)})" fill="${LUG.floresCopa}" stroke="${L}" stroke-width="1"/>`; }
     return (sw ? P(tronco, LUG.tronco, sw) + circ(` fill="${c}" stroke="${L}" stroke-width="${sw * 2}"`) : P(tronco, LUG.tronco)) + circ(` fill="${c}"`) + somb + luz;
   }
 
@@ -185,7 +193,7 @@
     LUG = LUGARES[lugar] || LUGARES.bosque;
     const T = (lugar || 'bosque') === 'bosque' ? (temp === undefined ? Escena.temporada : temp) || {} : {};
     const C = LUG, M = 28, W = W0 + M * 2, H = H0 + M * 2;
-    const rnd = azarCon(({ bosque: 7, cueva: 11, biblioteca: 23, cumbre: 31, cielo: 43, pradera: 53 }[lugar] || 7) * 1000 + Math.round(W0 / 50));
+    const rnd = azarCon(({ bosque: 7, cueva: 11, biblioteca: 23, cumbre: 31, cielo: 43, pradera: 53, laguna: 61 }[lugar] || 7) * 1000 + Math.round(W0 / 50));
     const svg = (cls, inner, prof) => `<svg class="esc-capa ${cls}" data-prof="${prof}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="left:${-M}px;top:${-M}px" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
     const arbol = (x, y, h, w, c, sh, sw) => C.arbol === 'cristal' ? cristal(x, y, h, w, c, sh, sw, rnd)
       : C.arbol === 'libros' ? libros(x, y, h, w * .55, c, sh, sw, rnd)
@@ -276,6 +284,19 @@
       medio += `<g class="esc-arbol" data-x="${n1(x - M)}" style="--d:${n1(5 + rnd() * 3)}s;animation-delay:-${n1(rnd() * 6)}s">${esCeibo ? ceibo(x, y, h * .95, h * .95, false, 2.5, rnd, true) : arbol(x, y, h, h * .52, C.medio, C.medioSh, 2.5)}</g>`;
     }
     medio += `<g class="esc-niebla-b"><ellipse cx="${n1(W * .6)}" cy="${n1(yMedio + 14)}" rx="${n1(W * .5)}" ry="${n1(H * .03)}" fill="${C.niebla}" opacity=".2"/></g>`;
+    if (C.agua) {
+      const yA = yMedio + H * .045;
+      medio += P(`M-10 ${n1(yA)} Q${n1(W * .3)} ${n1(yA - H * .012)} ${n1(W * .6)} ${n1(yA)} T${W + 10} ${n1(yA)} V${H + 10} H-10Z`, C.agua, 2.5);
+      for (let i = 0; i < 9; i++) {
+        const x = rnd() * W, y = yA + H * (.025 + rnd() * .12), w = (18 + rnd() * 40) * esc;
+        medio += `<path class="c-brilla" style="animation-delay:-${n1(rnd() * 3)}s" d="M${n1(x - w / 2)} ${n1(y)} H${n1(x + w / 2)}" stroke="#c9e2e0" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>`;
+      }
+      for (let i = 0; i < 4; i++) {
+        const x = W * (.1 + rnd() * .8), y = yA + H * (.05 + rnd() * .1), r = (10 + rnd() * 8) * esc;
+        medio += `<ellipse cx="${n1(x)}" cy="${n1(y)}" rx="${n1(r)}" ry="${n1(r * .36)}" fill="#6f9a66" stroke="${L}" stroke-width="2"/>` + (rnd() < .6 ? `<circle cx="${n1(x + r * .2)}" cy="${n1(y - r * .2)}" r="${n1(r * .22)}" fill="#e8a6c0" stroke="${L}" stroke-width="1.4"/>` : '');
+      }
+    }
+    if (C.brumaFuerte) medio += `<g class="esc-niebla-a"><ellipse cx="${n1(W * .35)}" cy="${n1(yMedio - H * .02)}" rx="${n1(W * .6)}" ry="${n1(H * .05)}" fill="${C.niebla}" opacity=".32"/><ellipse cx="${n1(W * .9)}" cy="${n1(yMedio + H * .02)}" rx="${n1(W * .4)}" ry="${n1(H * .04)}" fill="${C.niebla}" opacity=".26"/></g>`;
 
     // ---- cerca: árboles grandes en los costados, suelo, detalles
     let cerca = '';
@@ -293,6 +314,12 @@
     cerca += P(cerros(W, ySuelo, H * .025, 5, rnd) + ` L${W + 10} ${H + 10} L-10 ${H + 10}Z`, C.suelo, 3);
     for (let i = 0; i < Math.round(W / 40); i++) {
       const x = rnd() * W, y = ySuelo + 6 + rnd() * H * .06;
+      // en la Laguna, juncos y totoras
+      if (C.juncos && rnd() < .45) {
+        const h = (22 + rnd() * 26) * esc;
+        cerca += `<path d="M${n1(x)} ${n1(y)} Q${n1(x - 3)} ${n1(y - h * .6)} ${n1(x + 2)} ${n1(y - h)}" stroke="${L}" stroke-width="4.4" fill="none" stroke-linecap="round"/><path d="M${n1(x)} ${n1(y)} Q${n1(x - 3)} ${n1(y - h * .6)} ${n1(x + 2)} ${n1(y - h)}" stroke="${C.sueloLuz}" stroke-width="2.4" fill="none" stroke-linecap="round"/>` + (rnd() < .5 ? `<rect x="${n1(x - 2.6)}" y="${n1(y - h * .8)}" width="5.2" height="${n1(h * .26)}" rx="2.6" fill="#8a5a3c" stroke="${L}" stroke-width="1.4"/>` : '');
+        continue;
+      }
       // en la Pradera, flores silvestres entre el pasto
       if (C.flores && rnd() < .4) {
         const col = ['#f6efe2', '#f2c66d', '#e8907a', '#c9485b', '#b8acec'][Math.floor(rnd() * 5)], r = 3 + rnd() * 1.6;

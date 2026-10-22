@@ -429,10 +429,15 @@
   const CAPITULOS = [
     { id: 'torre', ante: 'Capítulo gratis', n: 'La Torre Arcana', sub: '20 pisos · las mismas palabras para todos', libre: true,
       p: 'Nocturnia encerró las palabras del bosque en lo alto de la torre. Silabo sube piso por piso para liberarlas.', ayuda: 'Cada 5 pisos te espera un jefe. Arriba, la cima.' },
-    { id: 'pradera', ante: 'Capítulo 1', n: 'La Pradera', sub: 'Con Tomillo, la liebre', jugable: true, pisos: 6, jefe: 'El Viento Ladrón', logro: 'pradera',
+    { id: 'pradera', ante: 'Capítulo 1', n: 'La Pradera', corto: 'La Pradera', sub: 'Con Tomillo, la liebre', jugable: true, pisos: 6, jefe: 'El Viento Ladrón', contra: 'al Viento Ladrón', logro: 'pradera',
+      icono: '🌾', hilo: 'letras', poder: 'atajo', vuelve: '¡VOLVIERON LETRAS AL CARTEL!', final: 'El cartel ya dice {w} otra vez: la Pradera tiene camino.',
+      suma: 'Tomillo se suma a tu equipo:', sumaTexto: 'su Atajo te acompaña en los capítulos que siguen.', ayudaTexto: 'Tomillo te acompaña: una vez por piso, su Atajo te muestra con qué letra empieza una palabra larga.',
       historia: 'El Viento Ladrón se llevó las letras del cartel y Tomillo no encuentra el camino. Cada piso que pasás devuelve letras al cartel; en el sexto te espera el Viento.',
       p: 'El viento borró los carteles del camino y Tomillo no puede leer su mapa.', ayuda: 'Atajo de Tomillo: una vez por piso, te muestra la primera letra de una palabra larga que te falta.' },
-    { id: 'laguna', ante: 'Capítulo 2', n: 'La Laguna del Ceibo', sub: 'Con Doña Lenta',
+    { id: 'laguna', ante: 'Capítulo 2', n: 'La Laguna del Ceibo', corto: 'La Laguna', sub: 'Con Doña Lenta', jugable: true, pisos: 6, jefe: 'La Niebla Muda', contra: 'a la Niebla Muda', logro: 'laguna', requiere: 'pradera',
+      icono: '🌺', hilo: 'flores', poder: 'paciencia', vuelve: '¡SE ABRIÓ UNA FLOR DEL CEIBO!', final: 'El ceibo volvió a florecer y Doña Lenta encontró el hilo.',
+      historia: 'La Niebla Muda se echó a dormir sobre la laguna: tapó las flores del ceibo y Doña Lenta perdió el hilo. Cada piso que pasás abre una flor; en el sexto te espera la Niebla.',
+      suma: 'Doña Lenta se suma a tu equipo:', sumaTexto: 'su Paciencia congela el reloj 10 segundos, una vez por piso, en los capítulos que siguen.', ayudaTexto: 'Doña Lenta te acompaña: una vez por piso, su Paciencia congela el reloj 10 segundos.',
       p: 'La niebla tapó las flores del ceibo y Doña Lenta perdió el hilo de sus definiciones.', ayuda: 'Paciencia de Doña Lenta: congela el reloj 10 segundos una vez por piso.' },
     { id: 'pueblito', ante: 'Capítulo 3', n: 'El Pueblito', sub: 'Con Don Hornero',
       p: 'Don Hornero no puede cantar y sin su canto el horno no calienta: el pueblito se quedó sin pan.', ayuda: 'Barro de Hornero: pega dos palabras cortas que encontraste y cuentan como una larga.' },
@@ -484,5 +489,18 @@
       ${[0, 1, 2].map((i) => `<path d="M104 ${48 + i * 7} h14" stroke="#f3f6ee" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="6 5" class="c-flujo" style="animation-delay:${i * .2}s"/>`).join('')}</svg>`;
   }
 
-  window.WWCampanas = { CAPITULOS, escena, vigilar, ESCENAS, viento, palabra: W };
+  /** La Niebla Muda, jefa de la Laguna: una nube larga y baja que duerme, con la boca cosida. */
+  function nieblaJefe() {
+    const L = (E() && E().L) || '#16262c';
+    return `<svg viewBox="0 0 120 90" aria-hidden="true"><g class="c-niebla" style="animation-duration:6s">
+      <path d="M18 72 C4 72 2 54 16 50 C12 32 34 24 46 34 C54 18 82 18 88 34 C102 28 118 40 110 56 C120 60 116 74 104 74Z" fill="#eef3ef" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M24 66 C44 70 82 70 104 66" fill="none" stroke="#cfdad5" stroke-width="4" stroke-linecap="round"/>
+      <path d="M40 50 q6 5 12 0 M68 50 q6 5 12 0" fill="none" stroke="${L}" stroke-width="3" stroke-linecap="round"/>
+      <path d="M52 60 h16 M56 56 v8 M64 56 v8" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/>
+      <ellipse cx="36" cy="58" rx="6" ry="3.5" fill="#c9b6c8" opacity=".55"/><ellipse cx="86" cy="58" rx="6" ry="3.5" fill="#c9b6c8" opacity=".55"/></g>
+      <text x="98" y="22" font-size="14" font-family="Fredoka, sans-serif" fill="#cfdad5" stroke="${L}" stroke-width="2" paint-order="stroke" class="c-sube">z</text>
+      <text x="108" y="12" font-size="10" font-family="Fredoka, sans-serif" fill="#cfdad5" stroke="${L}" stroke-width="2" paint-order="stroke" class="c-sube" style="animation-delay:1.2s">z</text></svg>`;
+  }
+
+  window.WWCampanas = { CAPITULOS, escena, vigilar, ESCENAS, viento, nieblaJefe, palabra: W };
 })();

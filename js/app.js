@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.47.2',
+    version: '2.48.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -660,11 +660,16 @@
     /** El libro prometía "te aviso": a los que tienen el Pase, una vez, que llegó el capítulo 1 (v2.47). */
     avisoCapitulo() {
       const p = Estado.perfil, C = window.WWCampanas;
-      if (!p || !C || !this.tienePase() || (p.vistos && p.vistos.cap1pradera) || this.capitulo('pradera').visto) return false;
-      p.vistos = Object.assign({}, p.vistos, { cap1pradera: true }); Estado.guardar();
-      this.modal(`<h3>${T('¡LLEGÓ EL CAPÍTULO 1!')}</h3><div class="novedad-ilu">${C.escena('pradera')}</div><p>${T('<b>La Pradera</b>, con Tomillo, ya se juega en Aventura. Viene incluido en tu Pase.')}</p>`, [
+      if (!p || !C || !this.tienePase()) return false;
+      const v = p.vistos || {};
+      // el primer capítulo jugable que ya está abierto para este mago y que todavía no vio ni le avisamos
+      const cap = C.CAPITULOS.find((c) => c.jugable && (!c.requiere || this.capitulo(c.requiere).terminado) && !this.capitulo(c.id).visto
+        && !v['cap_' + c.id] && !(c.id === 'pradera' && v.cap1pradera));
+      if (!cap) return false;
+      p.vistos = Object.assign({}, p.vistos, { ['cap_' + cap.id]: true }); Estado.guardar();
+      this.modal(`<h3>${esc(T('¡LLEGÓ EL {a}!', { a: T(cap.ante).toUpperCase() }))}</h3><div class="novedad-ilu">${C.escena(cap.id)}</div><p>${T('<b>{c}</b> ya se juega en Aventura. Viene incluido en tu Pase.', { c: esc(T(cap.n)) })}</p>`, [
         { texto: T('Después'), clase: 'btn-secundario' },
-        { texto: T('Ir a la Pradera'), clase: 'btn-primario', accion: () => { this.verCampanas(); this.entrarCapitulo('pradera'); } },
+        { texto: T('Ir al capítulo'), clase: 'btn-primario', accion: () => { this.verCampanas(); this.entrarCapitulo(cap.id); } },
       ]);
       return true;
     },
@@ -962,7 +967,7 @@
         if (!/^[a-zñ]$/.test(l)) return;
         e.preventDefault();
         const pa = this.partida;
-        const idx = pa.orden.find((i) => !pa.fichas[i].usada && pa.fichas[i].l === l && !(pa.rafaga && pa.rafaga.idx === i));
+        const idx = pa.orden.find((i) => !pa.fichas[i].usada && pa.fichas[i].l === l && !this.tapada(pa, i));
         if (idx != null) this.elegirFicha(idx);
         else { Audio.borrar(); this.globo('Esa letra no está', 'mal'); }
       }
@@ -1202,6 +1207,8 @@
         objetivo, jefe, nombreJefe: jefe ? (cap ? T(cap.jefe) : WW.nombreJefe(piso)) : '',
         // el Viento Ladrón (jefe de la Pradera): cada 20 s tapa una letra de las fichas durante 6 s
         rafaga: jefe && cap && cap.id === 'pradera' ? { prox: Date.now() + 14000, idx: null, fin: 0, aviso: false } : null,
+        // la Niebla Muda (jefa de la Laguna): cada 12 s empaña una letra (hasta 3) y cada palabra que encontrás despeja una
+        niebla: jefe && cap && cap.id === 'laguna' ? { prox: Date.now() + 10000, tapadas: [], aviso: false } : null,
       };
       const pa = this.partida;
       if (pa.arcade) { pa.arcade.piso = piso; pa.arcade.usadas.push(base); if (!cap) this.guardarSubida(pa.arcade, piso); }
@@ -1209,7 +1216,7 @@
       const lugarNuevo = lugar && (piso === 1 || WW_LUGARES.dePiso(piso - 1).id !== lugar.id) && !opts.reintento;
       this.ponerLugar(lugar);
       if (lugarNuevo && !jefe && modo === 'arcade') setTimeout(() => this.banner(lugar.icono, lugar.nombre, 'Pisos ' + lugar.rango), 250);
-      if (cap && !jefe && !opts.reintento) setTimeout(() => this.banner('🌾', T(cap.n).toUpperCase(), T('Piso {n} de {t}', { n: piso, t: cap.pisos })), 250);
+      if (cap && !jefe && !opts.reintento) setTimeout(() => this.banner(cap.icono || '🌾', T(cap.n).toUpperCase(), T('Piso {n} de {t}', { n: piso, t: cap.pisos })), 250);
       this.magos.jefe.setEtapa(2);
       if (opts.reanudar) {
         const r = opts.reanudar;
@@ -1224,7 +1231,7 @@
       if (jefe) {
         this.globo(`${pa.nombreJefe}: "${azar(MENSAJES.jefeBurla)}"`, 'mal');
         Audio.jefe(); Audio.tema('jefe');
-        this.sacudir(true); this.vineta('flash-rojo'); this.banner(cap ? '🌪️' : '💀', pa.nombreJefe.toUpperCase(), cap ? T('Cuidado: cada tanto te tapa una letra') : 'Jefe del piso ' + piso, 'rojo');
+        this.sacudir(true); this.vineta('flash-rojo'); this.banner(cap ? (pa.niebla ? '🌫️' : '🌪️') : '💀', pa.nombreJefe.toUpperCase(), cap ? (pa.niebla ? T('Empaña letras: cada palabra que encontrás despeja una') : T('Cuidado: cada tanto te tapa una letra')) : 'Jefe del piso ' + piso, 'rojo');
         this.magos.jefe.animar('cast', 1200);
       } else {
         Audio.setTempo(false);
@@ -1241,20 +1248,28 @@
     renderJuego() {
       const pa = this.partida, p = Estado.perfil;
       $('p-juego').classList.toggle('en-guia', !!pa.opts.guia);
-      $('hud-modo').textContent = pa.opts.guia ? 'PRIMERA PARTIDA' : pa.modo === 'diario' ? `DESAFÍO #${pa.numero}` : pa.modo === 'archivo' ? `ARCHIVO #${pa.numero}` : pa.modo === 'arcade' && pa.arcade.cap ? `${T(this.datosCap(pa.arcade.cap).n).toUpperCase()} · ${pa.arcade.piso}/${this.datosCap(pa.arcade.cap).pisos}` : pa.modo === 'arcade' ? (pa.jefe ? `JEFE · PISO ${pa.arcade.piso}` : `TORRE · PISO ${pa.arcade.piso}`) : 'PRÁCTICA';
+      $('hud-modo').textContent = pa.opts.guia ? 'PRIMERA PARTIDA' : pa.modo === 'diario' ? `DESAFÍO #${pa.numero}` : pa.modo === 'archivo' ? `ARCHIVO #${pa.numero}` : pa.modo === 'arcade' && pa.arcade.cap ? `${T(this.datosCap(pa.arcade.cap).corto || this.datosCap(pa.arcade.cap).n).toUpperCase()} · ${pa.arcade.piso}/${this.datosCap(pa.arcade.cap).pisos}` : pa.modo === 'arcade' ? (pa.jefe ? `JEFE · PISO ${pa.arcade.piso}` : `TORRE · PISO ${pa.arcade.piso}`) : 'PRÁCTICA';
       $('hud-modo').classList.toggle('jefe', !!pa.jefe);
       $('hud-vidas').innerHTML = pa.arcade ? WWIconos.html('corazon').repeat(pa.arcade.vidas) + WWIconos.html('corazonVacio').repeat(CONFIG.arcade.vidas - pa.arcade.vidas) : '';
       $('hud-tiempo').classList.toggle('infinito', !pa.tiempoTotal);
       $('escenario').classList.toggle('con-jefe', !!pa.jefe);
-      const viento = !!(pa.jefe && pa.rafaga);
+      const viento = !!(pa.jefe && (pa.rafaga || pa.niebla));
       $('mago-jefe').classList.toggle('oculto', !pa.jefe || viento);
       $('jefe-viento').classList.toggle('oculto', !viento); $('jefe-viento').classList.remove('vencido');
-      if (viento && window.WWCampanas && WWCampanas.viento && !$('jefe-viento').firstChild) $('jefe-viento').innerHTML = WWCampanas.viento();
+      const jv = $('jefe-viento');
+      if (viento && window.WWCampanas && jv.dataset.cap !== pa.arcade.cap) { jv.innerHTML = pa.niebla ? WWCampanas.nieblaJefe() : WWCampanas.viento(); jv.dataset.cap = pa.arcade.cap; }
+      // las ayudas de los aliados: en su capítulo y, una vez terminado, en los que siguen
       const atajo = document.querySelector('.poder-atajo');
       if (atajo) {
-        atajo.classList.toggle('oculto', !(pa.arcade && pa.arcade.cap));
+        atajo.classList.toggle('oculto', !this.ayudaDisponible('atajo', pa));
         if (!$('atajo-cara').firstChild && window.WWElenco) $('atajo-cara').innerHTML = WWElenco.tomillo({ pelo: '#b99a76', bufanda: WWElenco.CEIBO });
       }
+      const paci = document.querySelector('.poder-paciencia');
+      if (paci) {
+        paci.classList.toggle('oculto', !this.ayudaDisponible('paciencia', pa));
+        if (!$('paciencia-cara').firstChild && window.WWElenco) $('paciencia-cara').innerHTML = WWElenco.lenta();
+      }
+      $('hud-tiempo').classList.remove('congelado');
       $('barra-rango').classList.toggle('hp', !!pa.jefe);
       this.renderFichas();
       this.renderSeleccion();
@@ -1280,8 +1295,8 @@
       for (const i of pa.orden) {
         const f = pa.fichas[i];
         const d = document.createElement('button');
-        const tapada = pa.rafaga && pa.rafaga.idx === i;
-        d.className = 'ficha' + (f.usada ? ' usada' : '') + (tapada ? ' tapada' : '') + (pa.atajo && pa.atajo.idx === i && !pa.encontradasSet.has(pa.atajo.w) ? ' atajo' : '');
+        const tapada = this.tapada(pa, i);
+        d.className = 'ficha' + (f.usada ? ' usada' : '') + (tapada ? (pa.niebla ? ' tapada empanada' : ' tapada') : '') + (pa.atajo && pa.atajo.idx === i && !pa.encontradasSet.has(pa.atajo.w) ? ' atajo' : '');
         d.dataset.idx = i;
         d.setAttribute('aria-label', 'letra ' + f.l);
         d.textContent = f.l.toUpperCase();
@@ -1375,7 +1390,8 @@
         const k = b.dataset.poder;
         const n = $(`poder-${k}-n`);
         let hab = true, txt = '';
-        if (k === 'atajo') { hab = !!(pa.arcade && pa.arcade.cap) && !pa.atajo; b.disabled = !hab || pa.terminada; n.innerHTML = pa.atajo ? 'USADO' : '1'; continue; }
+        if (k === 'atajo') { hab = this.ayudaDisponible('atajo', pa) && !pa.atajo; b.disabled = !hab || pa.terminada; n.innerHTML = pa.atajo ? 'USADO' : '1'; continue; }
+        if (k === 'paciencia') { hab = this.ayudaDisponible('paciencia', pa) && !pa.paciencia && !!pa.deadline; b.disabled = !hab || pa.terminada; n.innerHTML = pa.paciencia ? 'USADO' : '1'; continue; }
         if (pa.modo === 'diario' || pa.modo === 'archivo') { hab = false; txt = '—'; }
         else if (pa.modo === 'practica') {
           if (k === 'pista' || k === 'ojo') txt = 'LIBRE';
@@ -1397,6 +1413,12 @@
       const pa = this.partida;
       if (!pa || pa.terminada || pa.congelado || pa.pausaDesde) return;
       if (pa.rafaga) this.rafaga(pa);
+      if (pa.niebla) this.nieblaAvanza(pa);
+      // la Paciencia de Doña Lenta: el reloj se queda quieto mientras dura
+      if (pa.pacienciaHasta) {
+        if (Date.now() < pa.pacienciaHasta) pa.deadline = Date.now() + pa.pacienciaResto;
+        else { pa.pacienciaHasta = 0; $('hud-tiempo').classList.remove('congelado'); }
+      }
       if (!pa.deadline) { $('hud-tiempo').textContent = '∞'; $('barra-tiempo-fill').style.width = '100%'; return; }
       const rest = Math.max(0, (pa.deadline - Date.now()) / 1000);
       const seg = Math.ceil(rest);
@@ -1421,7 +1443,7 @@
     elegirFicha(idx) {
       const pa = this.partida;
       if (!pa || pa.terminada || pa.bloqueo || pa.congelado || pa.fichas[idx].usada) return;
-      if (pa.rafaga && pa.rafaga.idx === idx) { Audio.borrar(); this.globo(T('Esa se la llevó el viento: esperá un toque'), 'mal'); return; }
+      if (this.tapada(pa, idx)) { Audio.borrar(); this.globo(pa.niebla ? T('Esa la empañó la niebla: encontrá una palabra para despejarla') : T('Esa se la llevó el viento: esperá un toque'), 'mal'); return; }
       pa.fichas[idx].usada = true;
       pa.seleccion.push(idx);
       Audio.tecla();
@@ -1556,6 +1578,8 @@
         c.classList.remove('pum'); void c.offsetWidth; c.classList.add('pum'); Audio.combo(pa.combo);
       }
       this.flotante(`+${pts}`);
+      // cada palabra despeja una letra empañada por la Niebla Muda
+      if (pa.niebla && pa.niebla.tapadas.length && !revelada && !pa.superado) { pa.niebla.tapadas.shift(); setTimeout(() => { if (this.partida === pa) this.renderFichas(); }, 300); }
       if (!pa.jefe || pa.superado) setTimeout(() => this.rayo(this.magos.juego.puntaVarita(), this.centro($('hud-puntos')), colorRayo, () => this.particulas($('hud-puntos'), colorRayo, 6)), 90);
 
       const rangoAntes = pa.rangoIdx;
@@ -1600,7 +1624,7 @@
       this.globo(azar(MENSAJES[codigo] || MENSAJES.desconocida), 'mal');
       this.magos.juego.animar('sad', 600);
       const pv = this.magos.juego.puntaVarita(); this.humo(pv.x, pv.y);
-      if (pa.jefe) { this.magos.jefe.animar('cast', 600); this.rayo(pa.rafaga ? this.centro($('jefe-viento')) : this.magos.jefe.puntaVarita(), this.centro($('mago-juego')), '#ff5c7a', () => this.particulas($('mago-juego'), '#ff5c7a', 8)); }
+      if (pa.jefe) { this.magos.jefe.animar('cast', 600); this.rayo(pa.rafaga || pa.niebla ? this.centro($('jefe-viento')) : this.magos.jefe.puntaVarita(), this.centro($('mago-juego')), '#ff5c7a', () => this.particulas($('mago-juego'), '#ff5c7a', 8)); }
       if (!pa.escudo) { pa.combo = 0; $('combo').textContent = ''; $('combo').classList.remove('fuego'); this.magos.juego.setCombo(0); }
       pa.bloqueo = true; setTimeout(() => { pa.bloqueo = false; if (this.partida === pa && !pa.terminada) this.limpiarSeleccion(); }, 260);
     },
@@ -1658,6 +1682,7 @@
       const pa = this.partida, p = Estado.perfil;
       if (!pa || pa.terminada || pa.modo === 'diario' || pa.modo === 'archivo') return;
       if (k === 'atajo') return this.atajoTomillo();
+      if (k === 'paciencia') return this.pacienciaLenta();
       if (pa.modo === 'arcade') {
         if (k === 'escudo' && pa.escudo) return;
         pa.usados = pa.usados || {};
@@ -2077,6 +2102,7 @@
         this.magos.jefe.animar('sad', 2500);
         setTimeout(() => this.elJefe().classList.add('vencido'), 1200);
         if (pa.rafaga) { pa.rafaga.idx = null; pa.rafaga.prox = Infinity; $('fichas').classList.remove('viento-aviso'); this.renderFichas(); }
+        if (pa.niebla) { pa.niebla.tapadas = []; pa.niebla.prox = Infinity; this.renderFichas(); }
         this.confeti(80);
       } else {
         Audio.nivel(); this.vineta('flash-oro');
@@ -3182,7 +3208,7 @@
 
     /** Tiñe el bosque y cambia las partículas según el lugar de la Torre (null = el bosque de siempre). */
     ponerLugar(lugar) {
-      document.body.classList.remove('lugar-cueva', 'lugar-biblioteca', 'lugar-cumbre', 'lugar-cielo', 'lugar-pradera');
+      document.body.classList.remove('lugar-cueva', 'lugar-biblioteca', 'lugar-cumbre', 'lugar-cielo', 'lugar-pradera', 'lugar-laguna');
       if (lugar) document.body.classList.add('lugar-' + lugar.id);
       this.lugar = lugar ? lugar.id : null;
       if (window.WWEscena) WWEscena.ponerLugar(lugar ? lugar.id : 'bosque');
@@ -3656,6 +3682,7 @@
         }
         if (c.jugable && pase) {
           const k = this.capitulo(c.id);
+          if (c.requiere && !this.capitulo(c.requiere).terminado) return { tipo: 'bloqueado', txt: T('Primero terminá {c}', { c: T(this.datosCap(c.requiere).n) }), pct: 0 };
           if (k.terminado) return { tipo: 'hecho', txt: T('Terminado'), pct: 100 };
           if (k.mejorPiso) return { tipo: 'jugando', txt: T('Piso {n} de {t}', { n: k.mejorPiso, t: c.pisos }), pct: k.mejorPiso / c.pisos * 100 };
           return { tipo: 'nuevo', txt: T('Incluido en tu Pase'), pct: 0 };
@@ -3674,14 +3701,15 @@
       if (C.vigilar) C.vigilar(libro);
       const abrir = (i) => {
         const c = C.CAPITULOS[i], s = estado(c), a = $('campana-abierta');
-        const chip = s.tipo === 'hecho' ? `<span class="campana-chip hecho">✓ ${T('Terminada')}</span>` : s.tipo === 'pase' ? `<span class="campana-chip pase">🔒 ${T('Con el Pase de Mago')}</span>` : s.tipo === 'pronto' ? `<span class="campana-chip pronto">${T('Muy pronto')}</span>` : c.libre ? `<span class="campana-chip gratis">${T('Gratis')}</span>` : `<span class="campana-chip pase">✓ ${T('Incluido en tu Pase')}</span>`;
+        const chip = s.tipo === 'hecho' ? `<span class="campana-chip hecho">✓ ${T('Terminada')}</span>` : s.tipo === 'pase' ? `<span class="campana-chip pase">🔒 ${T('Con el Pase de Mago')}</span>` : s.tipo === 'pronto' ? `<span class="campana-chip pronto">${T('Muy pronto')}</span>` : s.tipo === 'bloqueado' ? `<span class="campana-chip pronto">🔒 ${esc(s.txt)}</span>` : c.libre ? `<span class="campana-chip gratis">${T('Gratis')}</span>` : `<span class="campana-chip pase">✓ ${T('Incluido en tu Pase')}</span>`;
         const boton = c.libre ? (s.tipo === 'hecho' ? T('Jugar de nuevo (no suma al ranking)') : sub ? T('Seguir subiendo') : m.piso ? T('Seguir la Torre') : T('Subir a la Torre'))
+          : s.tipo === 'bloqueado' ? s.txt
           : c.jugable && pase ? (s.tipo === 'hecho' ? T('Jugar de nuevo') : s.tipo === 'jugando' ? T('Seguir el capítulo') : T('Empezar el capítulo'))
           : s.tipo === 'pase' ? T('Conocé el Pase de Mago') : T('Llega muy pronto');
         a.innerHTML = `<div class="escena">${C.escena(c.id, s.tipo === 'hecho')}${c.libre || pase ? '' : '<span class="campana-velo"></span>'}<button class="volver" aria-label="${T('Volver')}">‹</button></div>
           <div class="txt"><span class="ante">${esc(T(c.ante))}</span><h3>${esc(T(c.n))}</h3>${chip}<p>${esc(T(c.p))}</p><div class="ayuda">${esc(T(c.ayuda))}</div>
           ${s.tipo === 'pronto' ? `<p>${T('Este capítulo se está escribiendo. Con tu Pase lo vas a tener apenas salga: te aviso.')}</p>` : ''}
-          <button class="btn ${s.tipo === 'pronto' ? 'btn-secundario' : 'btn-primario'}" id="campana-ir" ${s.tipo === 'pronto' ? 'disabled' : ''}>${boton}</button></div>`;
+          <button class="btn ${s.tipo === 'pronto' || s.tipo === 'bloqueado' ? 'btn-secundario' : 'btn-primario'}" id="campana-ir" ${s.tipo === 'pronto' || s.tipo === 'bloqueado' ? 'disabled' : ''}>${boton}</button></div>`;
         a.classList.add('ve'); a.setAttribute('aria-hidden', 'false'); a.classList.remove('c-quieta');
         // cerrada, su escena queda quieta (sigue en el DOM, fuera de la pantalla)
         const cerrar = () => { a.classList.remove('ve'); a.setAttribute('aria-hidden', 'true'); a.classList.add('c-quieta'); };
@@ -3690,7 +3718,7 @@
         $('campana-ir').addEventListener('click', () => {
           Audio.click(); cerrar();
           if (c.libre) this.entrarTorre();
-          else if (c.jugable && pase) this.entrarCapitulo(c.id);
+          else if (c.jugable && pase && s.tipo !== 'bloqueado') this.entrarCapitulo(c.id);
           else if (s.tipo === 'pase') this.avisoPase();
         });
       };
@@ -3710,7 +3738,38 @@
       return c;
     },
     /** El jefe que se ve: el Viento Ladrón en la Pradera, el mago oscuro en la Torre. */
-    elJefe() { return this.partida && this.partida.rafaga ? $('jefe-viento') : $('mago-jefe'); },
+    elJefe() { return this.partida && (this.partida.rafaga || this.partida.niebla) ? $('jefe-viento') : $('mago-jefe'); },
+    /** ¿La letra i está tapada (por el Viento Ladrón o por la Niebla Muda)? */
+    tapada(pa, i) { return !!((pa.rafaga && pa.rafaga.idx === i) || (pa.niebla && pa.niebla.tapadas.includes(i))); },
+    /** La ayuda de un aliado se usa en su capítulo y, cuando ya lo terminaste, en los demás capítulos (nunca en la Torre). */
+    ayudaDisponible(k, pa) {
+      if (!pa || !pa.arcade || !pa.arcade.cap || !window.WWCampanas) return false;
+      const C = WWCampanas.CAPITULOS.find((x) => x.jugable && x.poder === k);
+      return !!C && (pa.arcade.cap === C.id || !!this.capitulo(C.id).terminado);
+    },
+
+    /** La Niebla Muda: cada 12 segundos empaña una letra libre (hasta 3 a la vez); se despejan encontrando palabras. */
+    nieblaAvanza(pa) {
+      const nb = pa.niebla, ahora = Date.now();
+      if (pa.superado) return;
+      if (!nb.aviso && ahora >= nb.prox - 1200 && nb.tapadas.length < 3) { nb.aviso = true; $('jefe-viento').classList.add('sopla'); }
+      if (ahora >= nb.prox) {
+        nb.aviso = false; $('jefe-viento').classList.remove('sopla');
+        const libres = pa.orden.filter((i) => !pa.fichas[i].usada && !nb.tapadas.includes(i));
+        if (nb.tapadas.length < 3 && libres.length > 2) { nb.tapadas.push(azar(libres)); Audio.borrar(); this.renderFichas(); this.globo(T('La niebla empañó una letra: encontrá una palabra para despejarla'), 'mal'); }
+        nb.prox = ahora + 12000;
+      }
+    },
+
+    /** La Paciencia de Doña Lenta: una vez por piso, el reloj se queda quieto 10 segundos. */
+    pacienciaLenta() {
+      const pa = this.partida;
+      if (!pa || pa.terminada || !pa.deadline || pa.paciencia || !this.ayudaDisponible('paciencia', pa)) return;
+      pa.paciencia = true; pa.pacienciaHasta = Date.now() + 10000; pa.pacienciaResto = Math.max(0, pa.deadline - Date.now());
+      $('hud-tiempo').classList.add('congelado');
+      Audio.poder(); this.renderPoderes();
+      this.globo(T('Doña Lenta: tranqui, el reloj espera 10 segundos'), 'ok');
+    },
 
     /** El Viento Ladrón sopla cada 20 segundos: avisa un segundo antes y tapa una letra libre durante 6 segundos. */
     rafaga(pa) {
@@ -3729,13 +3788,13 @@
     /** El Atajo de Tomillo: una vez por piso, marca la primera letra de una palabra larga que te falta. */
     atajoTomillo() {
       const pa = this.partida;
-      if (!pa || pa.terminada || !pa.arcade || !pa.arcade.cap || pa.atajo) return;
+      if (!pa || pa.terminada || !this.ayudaDisponible('atajo', pa) || pa.atajo) return;
       // la palabra base no: sería regalar la más larga
       let cands = this.faltantes().filter((w) => w.length >= 6 && w !== pa.base);
       if (!cands.length) cands = this.faltantes().filter((w) => w.length >= 5 && w !== pa.base);
       if (!cands.length) { this.globo(T('Tomillo: ¡no te falta ninguna larga!'), 'wow'); return; }
       const w = azar(cands);
-      let idx = pa.orden.find((i) => pa.fichas[i].l === w[0] && !(pa.rafaga && pa.rafaga.idx === i));
+      let idx = pa.orden.find((i) => pa.fichas[i].l === w[0] && !this.tapada(pa, i));
       if (idx == null) idx = pa.orden.find((i) => pa.fichas[i].l === w[0]);
       pa.atajo = { w, idx };
       Audio.poder();
@@ -3745,7 +3804,12 @@
 
     /** El cartel del capítulo con las letras que ya volvieron (la última que volvió, con brillo). */
     cartelCap(id, hechos, nueva) {
-      const C = this.datosCap(id), pal = window.WWCampanas && WWCampanas.palabra ? WWCampanas.palabra('camino') : 'CAMINO';
+      const C = this.datosCap(id);
+      if (C.hilo === 'flores') {
+        const flor = (abierta) => `<svg viewBox="-30 -58 60 62" aria-hidden="true">${abierta && window.WWElenco ? WWElenco.florCeibo(0, 0, .95, 0) : '<path d="M0 -4 C-8 -16 -6 -34 0 -44 C6 -34 8 -16 0 -4Z" fill="#a9aeab" stroke="#16262c" stroke-width="3" stroke-linejoin="round"/>'}</svg>`;
+        return `<div class="cartel-cap flores" data-no-t>${Array.from({ length: C.pisos }, (_, i) => `<span class="${i < hechos ? (nueva && i === hechos - 1 ? 'nueva' : '') : 'falta'}">${flor(i < hechos)}</span>`).join('')}</div>`;
+      }
+      const pal = window.WWCampanas && WWCampanas.palabra ? WWCampanas.palabra('camino') : 'CAMINO';
       const n = pal.length, ve = Math.round(hechos * n / C.pisos), antes = nueva ? Math.round((hechos - 1) * n / C.pisos) : ve;
       return `<div class="cartel-cap" data-no-t aria-label="${esc(pal)}">${pal.split('').map((l, i) => `<span class="${i < ve ? (i >= antes ? 'nueva' : '') : 'falta'}">${i < ve ? l : ''}</span>`).join('')}</div>`;
     },
@@ -3757,10 +3821,10 @@
       if (primera) { c.visto = true; Estado.guardar(); }
       const sig = c.terminado ? 1 : Math.min(C.pisos, (c.mejorPiso || 0) + 1);
       const texto = c.terminado ? T('Ya lo terminaste. Podés jugarlo de nuevo: no suma monedas.')
-        : primera ? `${T(C.historia)} ${T('Tomillo te acompaña: una vez por piso, su Atajo te muestra con qué letra empieza una palabra larga.')}`
-          : sig === C.pisos ? T('Te falta el último: el Viento Ladrón.') : T('Vas por el piso {n} de {t}.', { n: sig, t: C.pisos });
+        : primera ? `${T(C.historia)} ${T(C.ayudaTexto)}`
+          : sig === C.pisos ? T('Te falta el último: {j}.', { j: T(C.jefe) }) : T('Vas por el piso {n} de {t}.', { n: sig, t: C.pisos });
       this.modal(`<h3>${esc(T(C.n).toUpperCase())}</h3><div class="novedad-ilu">${WWCampanas.escena(id, !!c.terminado)}</div>${this.cartelCap(id, c.terminado ? C.pisos : sig - 1)}<p>${esc(texto)}</p>`, [
-        { texto: c.terminado ? T('Jugar de nuevo') : sig === C.pisos ? T('Enfrentar al Viento Ladrón') : T('Jugar el piso {n}', { n: sig }), clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { cap: id, piso: sig }) },
+        { texto: c.terminado ? T('Jugar de nuevo') : sig === C.pisos ? T('Enfrentar {x}', { x: T(C.contra) }) : T('Jugar el piso {n}', { n: sig }), clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { cap: id, piso: sig }) },
       ], { cerrar: true });
     },
 
@@ -3769,8 +3833,8 @@
       const a = pa.arcade, C = this.datosCap(a.cap);
       if (a.piso >= C.pisos) return this.finCap(pa);
       const sig = a.piso + 1;
-      this.modal(`<h3>${T('¡VOLVIERON LETRAS AL CARTEL!')}</h3><div class="novedad-ilu">${WWCampanas.escena(a.cap, false)}</div>${this.cartelCap(a.cap, a.piso, true)}<p>${esc(sig === C.pisos ? T('Ahora sí: el Viento Ladrón te espera en el piso {n}.', { n: sig }) : T('Piso {n} de {t}.', { n: sig, t: C.pisos }))} ${WWIconos.html('corazon').repeat(a.vidas)}</p>`, [
-        { texto: sig === C.pisos ? T('Enfrentar al Viento Ladrón') : T('Jugar el piso {n}', { n: sig }), clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { cap: a.cap, piso: sig, continuar: true }) },
+      this.modal(`<h3>${esc(T(C.vuelve))}</h3><div class="novedad-ilu">${WWCampanas.escena(a.cap, false)}</div>${this.cartelCap(a.cap, a.piso, true)}<p>${esc(sig === C.pisos ? T('Ahora sí: {j} te espera en el piso {n}.', { j: T(C.jefe), n: sig }) : T('Piso {n} de {t}.', { n: sig, t: C.pisos }))} ${WWIconos.html('corazon').repeat(a.vidas)}</p>`, [
+        { texto: sig === C.pisos ? T('Enfrentar {x}', { x: T(C.contra) }) : T('Jugar el piso {n}', { n: sig }), clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { cap: a.cap, piso: sig, continuar: true }) },
         { texto: T('Seguir después'), clase: 'btn-secundario', accion: () => this.cerrarCap(pa) },
       ]);
     },
@@ -3778,10 +3842,14 @@
     /** El final del capítulo: el cartel completo, el lugar liberado y Tomillo que se suma. */
     finCap(pa) {
       const a = pa.arcade, C = this.datosCap(a.cap), c = this.capitulo(a.cap);
-      const primeraVez = !c.festejado; c.festejado = true; Estado.guardar();
+      const primeraVez = !c.festejado; c.festejado = true;
+      // el que sigue queda abierto (y no hace falta avisarlo aparte)
+      const sigCap = primeraVez ? WWCampanas.CAPITULOS.find((x) => x.jugable && x.requiere === a.cap) : null;
+      if (sigCap) Estado.perfil.vistos = Object.assign({}, Estado.perfil.vistos, { ['cap_' + sigCap.id]: true });
+      Estado.guardar();
       const pal = window.WWCampanas && WWCampanas.palabra ? WWCampanas.palabra('camino') : 'CAMINO';
       this.confeti(120); Audio.victoria();
-      this.modal(`<h3>${esc(T('¡{c}, COMPLETO!', { c: T(C.n).toUpperCase() }))}</h3><div class="novedad-ilu">${WWCampanas.escena(a.cap, true)}</div>${this.cartelCap(a.cap, C.pisos)}<p>${esc(T('El cartel ya dice {w} otra vez: la Pradera tiene camino.', { w: pal }))}</p>${primeraVez ? `<p><b>${esc(T('Tomillo se suma a tu equipo:'))}</b> ${esc(T('su Atajo te acompaña en los capítulos que siguen.'))}</p>` : ''}`, [
+      this.modal(`<h3>${esc(T('¡{c}, COMPLETO!', { c: T(C.n).toUpperCase() }))}</h3><div class="novedad-ilu">${WWCampanas.escena(a.cap, true)}</div>${this.cartelCap(a.cap, C.pisos)}<p>${esc(T(C.final, { w: pal }))}</p>${primeraVez ? `<p><b>${esc(T(C.suma))}</b> ${esc(T(C.sumaTexto))}</p>` : ''}${sigCap ? `<p>${esc(T('Ya se abrió el capítulo que sigue: {c}.', { c: T(sigCap.n) }))}</p>` : ''}`, [
         { texto: T('Volver a Aventura'), clase: 'btn-primario', accion: () => this.cerrarCap(pa) },
       ]);
     },
