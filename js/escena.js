@@ -42,6 +42,13 @@
       medio: '#6f9a6a', medioSh: '#5f8a5c', cerca: '#4f7f4a', cercaSh: '#416d3e',
       suelo: '#5f8a54', sueloLuz: '#86b072', tronco: '#7a5a3c', arbol: 'copa', torre: true, flores: true,
     },
+    // el Pueblito (capítulo 3, v2.49): la pradera con casitas de techo rojo y humo de las chimeneas
+    pueblito: {
+      cielo: ['#6f9aa0', '#7fa6a8', '#90b3b0', '#a3c0b8', '#b6cdc2'], astro: 'sol', estrellas: 0, nubeCol: '#f3f6ee', nubeSh: '#dbe6e0',
+      montes: '#a3c0b0', montesSh: '#97b6a5', lejos: '#8fb39b', niebla: '#eef4ef',
+      medio: '#6f9a6a', medioSh: '#5f8a5c', cerca: '#4f7f4a', cercaSh: '#416d3e',
+      suelo: '#7b8f6a', sueloLuz: '#9cb486', tronco: '#7a5a3c', arbol: 'copa', flores: true, casitas: true,
+    },
     // la Laguna del Ceibo (capítulo 2, v2.48): bruma baja, agua quieta con reflejos, juncos y ceibos en flor
     laguna: {
       cielo: ['#6d8f93', '#7a9b9d', '#88a7a7', '#97b3b0', '#a8c1bb'], astro: 'sol', estrellas: 0, nubeCol: '#e6eeea', nubeSh: '#cfdcd6',
@@ -193,7 +200,7 @@
     LUG = LUGARES[lugar] || LUGARES.bosque;
     const T = (lugar || 'bosque') === 'bosque' ? (temp === undefined ? Escena.temporada : temp) || {} : {};
     const C = LUG, M = 28, W = W0 + M * 2, H = H0 + M * 2;
-    const rnd = azarCon(({ bosque: 7, cueva: 11, biblioteca: 23, cumbre: 31, cielo: 43, pradera: 53, laguna: 61 }[lugar] || 7) * 1000 + Math.round(W0 / 50));
+    const rnd = azarCon(({ bosque: 7, cueva: 11, biblioteca: 23, cumbre: 31, cielo: 43, pradera: 53, laguna: 61, pueblito: 67 }[lugar] || 7) * 1000 + Math.round(W0 / 50));
     const svg = (cls, inner, prof) => `<svg class="esc-capa ${cls}" data-prof="${prof}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="left:${-M}px;top:${-M}px" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
     const arbol = (x, y, h, w, c, sh, sw) => C.arbol === 'cristal' ? cristal(x, y, h, w, c, sh, sw, rnd)
       : C.arbol === 'libros' ? libros(x, y, h, w * .55, c, sh, sw, rnd)
@@ -294,6 +301,18 @@
       for (let i = 0; i < 4; i++) {
         const x = W * (.1 + rnd() * .8), y = yA + H * (.05 + rnd() * .1), r = (10 + rnd() * 8) * esc;
         medio += `<ellipse cx="${n1(x)}" cy="${n1(y)}" rx="${n1(r)}" ry="${n1(r * .36)}" fill="#6f9a66" stroke="${L}" stroke-width="2"/>` + (rnd() < .6 ? `<circle cx="${n1(x + r * .2)}" cy="${n1(y - r * .2)}" r="${n1(r * .22)}" fill="#e8a6c0" stroke="${L}" stroke-width="1.4"/>` : '');
+      }
+    }
+    if (C.casitas) {
+      // casitas entre los árboles: pared clara, techo rojo, ventana encendida y humo
+      for (let i = 0; i < 4; i++) {
+        const x = W * (.12 + i * .25 + rnd() * .06), y = yMedio + H * .03 + rnd() * H * .01, w = (34 + rnd() * 12) * esc, h = w * .72;
+        medio += P(`M${n1(x - w / 2)} ${n1(y)} V${n1(y - h)} H${n1(x + w / 2)} V${n1(y)}Z`, '#efd9b6', 2.5) + P(`M${n1(x + w * .2)} ${n1(y)} V${n1(y - h)} H${n1(x + w / 2)} V${n1(y)}Z`, '#dcc39b')
+          + P(`M${n1(x - w * .62)} ${n1(y - h)} L${n1(x)} ${n1(y - h - w * .5)} L${n1(x + w * .62)} ${n1(y - h)}Z`, '#c46a4a', 2.5)
+          + P(`M${n1(x + w * .22)} ${n1(y - h - w * .1)} V${n1(y - h - w * .42)} H${n1(x + w * .36)} V${n1(y - h - w * .2)}`, '#8a5a3c', 2)
+          + `<rect class="esc-ventana" x="${n1(x - w * .28)}" y="${n1(y - h * .66)}" width="${n1(w * .22)}" height="${n1(h * .26)}" rx="2" fill="#f2c66d" stroke="${L}" stroke-width="1.6"/>`
+          + P(`M${n1(x + w * .02)} ${n1(y)} V${n1(y - h * .5)} H${n1(x + w * .18)} V${n1(y)}Z`, '#7a5638', 1.8)
+          + `<circle class="esc-flota" cx="${n1(x + w * .29)}" cy="${n1(y - h - w * .56)}" r="${n1(w * .09)}" fill="#f3efe6" opacity=".8"/>`;
       }
     }
     if (C.brumaFuerte) medio += `<g class="esc-niebla-a"><ellipse cx="${n1(W * .35)}" cy="${n1(yMedio - H * .02)}" rx="${n1(W * .6)}" ry="${n1(H * .05)}" fill="${C.niebla}" opacity=".32"/><ellipse cx="${n1(W * .9)}" cy="${n1(yMedio + H * .02)}" rx="${n1(W * .4)}" ry="${n1(H * .04)}" fill="${C.niebla}" opacity=".26"/></g>`;

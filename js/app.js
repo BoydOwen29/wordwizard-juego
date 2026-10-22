@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.48.0',
+    version: '2.49.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -1206,13 +1206,21 @@
         arcade: modo === 'arcade' ? (anterior || { piso: 1, vidas: CONFIG.arcade.vidas, puntajeTotal: 0, palabrasTotal: 0, usadas: [], monedas: 0, jefes: 0, cap: opts.cap || null }) : null,
         objetivo, jefe, nombreJefe: jefe ? (cap ? T(cap.jefe) : WW.nombreJefe(piso)) : '',
         // el Viento Ladrón (jefe de la Pradera): cada 20 s tapa una letra de las fichas durante 6 s
-        rafaga: jefe && cap && cap.id === 'pradera' ? { prox: Date.now() + 14000, idx: null, fin: 0, aviso: false } : null,
+        rafaga: jefe && cap && cap.id === 'pradera' ? { prox: Date.now() + 14000, idx: null, fin: 0, aviso: false }
+          : jefe && cap && cap.id === 'umbria' ? { prox: Date.now() + 8000, idx: null, fin: 0, aviso: false, cada: 24000 } : null,
         // la Niebla Muda (jefa de la Laguna): cada 12 s empaña una letra (hasta 3) y cada palabra que encontrás despeja una
-        niebla: jefe && cap && cap.id === 'laguna' ? { prox: Date.now() + 10000, tapadas: [], aviso: false } : null,
+        niebla: jefe && cap && cap.id === 'laguna' ? { prox: Date.now() + 10000, tapadas: [], aviso: false }
+          : jefe && cap && cap.id === 'umbria' ? { prox: Date.now() + 16000, tapadas: [], aviso: false, cada: 24000 } : null,
+        // la Gran Polilla (Robledal): cada 15 s apaga la luz 4 s (las letras no se ven, pero se pueden tocar)
+        apagon: jefe && cap && (cap.id === 'robledal' || cap.id === 'umbria') ? { prox: Date.now() + (cap.id === 'umbria' ? 24000 : 12000), fin: 0, cada: cap.id === 'umbria' ? 24000 : 15000, dura: 4000 } : null,
+        // la Ventisca (Cumbres): si pasan 8 s sin encontrar nada, te roba 3 s de reloj
+        ventisca: jefe && cap && cap.id === 'cumbres' ? { ultimo: Date.now() + 4000 } : null,
+        // el Horno Frío (Pueblito): las palabras de 3 letras no le hacen daño
+        hornoFrio: !!(jefe && cap && cap.id === 'pueblito'),
       };
       const pa = this.partida;
       if (pa.arcade) { pa.arcade.piso = piso; pa.arcade.usadas.push(base); if (!cap) this.guardarSubida(pa.arcade, piso); }
-      const lugar = cap ? { id: cap.id } : modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' || modo === 'archivo' ? { id: FONDOS['p-practica'] } : null;
+      const lugar = cap ? { id: cap.lugar || cap.id } : modo === 'arcade' ? WW_LUGARES.dePiso(piso) : modo === 'practica' || modo === 'archivo' ? { id: FONDOS['p-practica'] } : null;
       const lugarNuevo = lugar && (piso === 1 || WW_LUGARES.dePiso(piso - 1).id !== lugar.id) && !opts.reintento;
       this.ponerLugar(lugar);
       if (lugarNuevo && !jefe && modo === 'arcade') setTimeout(() => this.banner(lugar.icono, lugar.nombre, 'Pisos ' + lugar.rango), 250);
@@ -1231,7 +1239,7 @@
       if (jefe) {
         this.globo(`${pa.nombreJefe}: "${azar(MENSAJES.jefeBurla)}"`, 'mal');
         Audio.jefe(); Audio.tema('jefe');
-        this.sacudir(true); this.vineta('flash-rojo'); this.banner(cap ? (pa.niebla ? '🌫️' : '🌪️') : '💀', pa.nombreJefe.toUpperCase(), cap ? (pa.niebla ? T('Empaña letras: cada palabra que encontrás despeja una') : T('Cuidado: cada tanto te tapa una letra')) : 'Jefe del piso ' + piso, 'rojo');
+        this.sacudir(true); this.vineta('flash-rojo'); this.banner(cap ? cap.icono : '💀', pa.nombreJefe.toUpperCase(), cap ? T(cap.reglaJefe) : 'Jefe del piso ' + piso, 'rojo');
         this.magos.jefe.animar('cast', 1200);
       } else {
         Audio.setTempo(false);
@@ -1253,23 +1261,20 @@
       $('hud-vidas').innerHTML = pa.arcade ? WWIconos.html('corazon').repeat(pa.arcade.vidas) + WWIconos.html('corazonVacio').repeat(CONFIG.arcade.vidas - pa.arcade.vidas) : '';
       $('hud-tiempo').classList.toggle('infinito', !pa.tiempoTotal);
       $('escenario').classList.toggle('con-jefe', !!pa.jefe);
-      const viento = !!(pa.jefe && (pa.rafaga || pa.niebla));
+      const viento = !!(pa.jefe && pa.arcade && pa.arcade.cap);
       $('mago-jefe').classList.toggle('oculto', !pa.jefe || viento);
       $('jefe-viento').classList.toggle('oculto', !viento); $('jefe-viento').classList.remove('vencido');
       const jv = $('jefe-viento');
-      if (viento && window.WWCampanas && jv.dataset.cap !== pa.arcade.cap) { jv.innerHTML = pa.niebla ? WWCampanas.nieblaJefe() : WWCampanas.viento(); jv.dataset.cap = pa.arcade.cap; }
-      // las ayudas de los aliados: en su capítulo y, una vez terminado, en los que siguen
-      const atajo = document.querySelector('.poder-atajo');
-      if (atajo) {
-        atajo.classList.toggle('oculto', !this.ayudaDisponible('atajo', pa));
-        if (!$('atajo-cara').firstChild && window.WWElenco) $('atajo-cara').innerHTML = WWElenco.tomillo({ pelo: '#b99a76', bufanda: WWElenco.CEIBO });
+      if (viento && window.WWCampanas && jv.dataset.cap !== pa.arcade.cap) { jv.innerHTML = WWCampanas.jefeSvg(pa.arcade.cap); jv.dataset.cap = pa.arcade.cap; }
+      // las ayudas de los aliados: en su capítulo y, una vez terminado, en los que siguen (un solo botón; con varias, un menú)
+      const ali = document.querySelector('.poder-aliados'), lista = this.aliados(pa);
+      if (ali) {
+        ali.classList.toggle('oculto', !lista.length);
+        $('aliados-cara').innerHTML = lista.length ? lista[0].cara() : '';
+        ali.classList.toggle('varios', lista.length > 1);
       }
-      const paci = document.querySelector('.poder-paciencia');
-      if (paci) {
-        paci.classList.toggle('oculto', !this.ayudaDisponible('paciencia', pa));
-        if (!$('paciencia-cara').firstChild && window.WWElenco) $('paciencia-cara').innerHTML = WWElenco.lenta();
-      }
-      $('hud-tiempo').classList.remove('congelado');
+      $('aliados').classList.add('oculto');
+      $('hud-tiempo').classList.remove('congelado'); $('fichas').classList.remove('apagon');
       $('barra-rango').classList.toggle('hp', !!pa.jefe);
       this.renderFichas();
       this.renderSeleccion();
@@ -1296,7 +1301,7 @@
         const f = pa.fichas[i];
         const d = document.createElement('button');
         const tapada = this.tapada(pa, i);
-        d.className = 'ficha' + (f.usada ? ' usada' : '') + (tapada ? (pa.niebla ? ' tapada empanada' : ' tapada') : '') + (pa.atajo && pa.atajo.idx === i && !pa.encontradasSet.has(pa.atajo.w) ? ' atajo' : '');
+        d.className = 'ficha' + (f.usada ? ' usada' : '') + (tapada ? (pa.niebla ? ' tapada empanada' : ' tapada') : '') + ((pa.atajo && pa.atajo.idx === i && !pa.encontradasSet.has(pa.atajo.w)) || (pa.memoria && pa.memoria.idx === i && !pa.encontradasSet.has(pa.memoria.w)) ? ' atajo' : '');
         d.dataset.idx = i;
         d.setAttribute('aria-label', 'letra ' + f.l);
         d.textContent = f.l.toUpperCase();
@@ -1390,8 +1395,7 @@
         const k = b.dataset.poder;
         const n = $(`poder-${k}-n`);
         let hab = true, txt = '';
-        if (k === 'atajo') { hab = this.ayudaDisponible('atajo', pa) && !pa.atajo; b.disabled = !hab || pa.terminada; n.innerHTML = pa.atajo ? 'USADO' : '1'; continue; }
-        if (k === 'paciencia') { hab = this.ayudaDisponible('paciencia', pa) && !pa.paciencia && !!pa.deadline; b.disabled = !hab || pa.terminada; n.innerHTML = pa.paciencia ? 'USADO' : '1'; continue; }
+        if (k === 'aliados') { const q = this.aliados(pa).filter((x) => !x.usado(pa)).length; b.disabled = !q || pa.terminada; n.innerHTML = q ? String(q) : 'USADO'; continue; }
         if (pa.modo === 'diario' || pa.modo === 'archivo') { hab = false; txt = '—'; }
         else if (pa.modo === 'practica') {
           if (k === 'pista' || k === 'ojo') txt = 'LIBRE';
@@ -1414,6 +1418,8 @@
       if (!pa || pa.terminada || pa.congelado || pa.pausaDesde) return;
       if (pa.rafaga) this.rafaga(pa);
       if (pa.niebla) this.nieblaAvanza(pa);
+      if (pa.apagon) this.apagonAvanza(pa);
+      if (pa.ventisca) this.ventiscaAvanza(pa);
       // la Paciencia de Doña Lenta: el reloj se queda quieto mientras dura
       if (pa.pacienciaHasta) {
         if (Date.now() < pa.pacienciaHasta) pa.deadline = Date.now() + pa.pacienciaResto;
@@ -1536,7 +1542,13 @@
       // el rango y el % se calculan sin combo (puntosBase); el puntaje lleva el combo
       pa.puntosBase += pts;
       pts = Math.round(pts * mult);
-      pa.puntos += pts; pa.puntosPiso += pts;
+      // la Llamita de Chispa: esta palabra vale el doble
+      let llamita = false;
+      if (pa.llamita && !revelada) { pts *= 2; pa.llamita = false; llamita = true; }
+      if (pa.ventisca) pa.ventisca.ultimo = ahora;
+      // al Horno Frío no le hacen nada las de 3 letras (suman puntos, pero no daño)
+      const sinDanio = pa.hornoFrio && !pa.superado && w.length <= 3;
+      pa.puntos += pts; if (!sinDanio) pa.puntosPiso += pts;
       pa.encontradas.push(w); pa.encontradasSet.add(w);
       const extra = !pa.nucleo.has(w);
       if (extra) pa.extras++; else pa.nEnc++;
@@ -1568,7 +1580,7 @@
           Audio.golpe(); this.sacudir(w.length >= 6); this.vineta('flash-rojo'); this.magos.jefe.animar('sad', 700);
           this.particulas(this.elJefe(), colorRayo, 12);
         });
-        this.globo(`${azar(MENSAJES.jefeGolpe)} −${pts} HP`, w.length >= 6 ? 'wow' : 'ok');
+        this.globo(sinDanio ? T('Al Horno Frío ni le hace cosquillas: probá con 4 letras o más') : llamita ? T('¡Llamita de Chispa! −{n} HP', { n: pts }) : `${azar(MENSAJES.jefeGolpe)} −${pts} HP`, sinDanio ? 'mal' : w.length >= 6 || llamita ? 'wow' : 'ok');
       } else if (w === pa.base) { Audio.completa(); this.vineta('flash-oro'); this.banner('💎', 'PALABRA COMPLETA', '+' + pts + ' puntos', 'oro'); this.globo('¡PALABRA COMPLETA! +' + pts, 'wow'); this.magos.juego.animar('happy', 1200); }
       else if (extra && !revelada) { Audio.acierto(w.length); this.globo(`${T('¡Palabra extra!')} +${pts}`, 'wow'); this.magos.juego.animar('cast', 900); }
       else if (w.length >= 6) { Audio.acierto(w.length); this.globo(`${azar(MENSAJES.largo)} +${pts}`, 'wow'); this.magos.juego.animar('cast', 900); }
@@ -1578,6 +1590,7 @@
         c.classList.remove('pum'); void c.offsetWidth; c.classList.add('pum'); Audio.combo(pa.combo);
       }
       this.flotante(`+${pts}`);
+      if (llamita && !pa.jefe) this.globo(T('¡Llamita de Chispa! Esta valió el doble: +{n}', { n: pts }), 'wow');
       // cada palabra despeja una letra empañada por la Niebla Muda
       if (pa.niebla && pa.niebla.tapadas.length && !revelada && !pa.superado) { pa.niebla.tapadas.shift(); setTimeout(() => { if (this.partida === pa) this.renderFichas(); }, 300); }
       if (!pa.jefe || pa.superado) setTimeout(() => this.rayo(this.magos.juego.puntaVarita(), this.centro($('hud-puntos')), colorRayo, () => this.particulas($('hud-puntos'), colorRayo, 6)), 90);
@@ -1624,7 +1637,7 @@
       this.globo(azar(MENSAJES[codigo] || MENSAJES.desconocida), 'mal');
       this.magos.juego.animar('sad', 600);
       const pv = this.magos.juego.puntaVarita(); this.humo(pv.x, pv.y);
-      if (pa.jefe) { this.magos.jefe.animar('cast', 600); this.rayo(pa.rafaga || pa.niebla ? this.centro($('jefe-viento')) : this.magos.jefe.puntaVarita(), this.centro($('mago-juego')), '#ff5c7a', () => this.particulas($('mago-juego'), '#ff5c7a', 8)); }
+      if (pa.jefe) { this.magos.jefe.animar('cast', 600); this.rayo(pa.arcade && pa.arcade.cap ? this.centro($('jefe-viento')) : this.magos.jefe.puntaVarita(), this.centro($('mago-juego')), '#ff5c7a', () => this.particulas($('mago-juego'), '#ff5c7a', 8)); }
       if (!pa.escudo) { pa.combo = 0; $('combo').textContent = ''; $('combo').classList.remove('fuego'); this.magos.juego.setCombo(0); }
       pa.bloqueo = true; setTimeout(() => { pa.bloqueo = false; if (this.partida === pa && !pa.terminada) this.limpiarSeleccion(); }, 260);
     },
@@ -1681,8 +1694,7 @@
     usarPoder(k) {
       const pa = this.partida, p = Estado.perfil;
       if (!pa || pa.terminada || pa.modo === 'diario' || pa.modo === 'archivo') return;
-      if (k === 'atajo') return this.atajoTomillo();
-      if (k === 'paciencia') return this.pacienciaLenta();
+      if (k === 'aliados') return this.abrirAliados();
       if (pa.modo === 'arcade') {
         if (k === 'escudo' && pa.escudo) return;
         pa.usados = pa.usados || {};
@@ -2103,6 +2115,8 @@
         setTimeout(() => this.elJefe().classList.add('vencido'), 1200);
         if (pa.rafaga) { pa.rafaga.idx = null; pa.rafaga.prox = Infinity; $('fichas').classList.remove('viento-aviso'); this.renderFichas(); }
         if (pa.niebla) { pa.niebla.tapadas = []; pa.niebla.prox = Infinity; this.renderFichas(); }
+        if (pa.apagon) { pa.apagon.prox = Infinity; pa.apagon.fin = 0; $('fichas').classList.remove('apagon'); }
+        pa.ventisca = null; pa.hornoFrio = false;
         this.confeti(80);
       } else {
         Audio.nivel(); this.vineta('flash-oro');
@@ -3208,7 +3222,7 @@
 
     /** Tiñe el bosque y cambia las partículas según el lugar de la Torre (null = el bosque de siempre). */
     ponerLugar(lugar) {
-      document.body.classList.remove('lugar-cueva', 'lugar-biblioteca', 'lugar-cumbre', 'lugar-cielo', 'lugar-pradera', 'lugar-laguna');
+      document.body.classList.remove('lugar-cueva', 'lugar-biblioteca', 'lugar-cumbre', 'lugar-cielo', 'lugar-pradera', 'lugar-laguna', 'lugar-pueblito');
       if (lugar) document.body.classList.add('lugar-' + lugar.id);
       this.lugar = lugar ? lugar.id : null;
       if (window.WWEscena) WWEscena.ponerLugar(lugar ? lugar.id : 'bosque');
@@ -3738,7 +3752,7 @@
       return c;
     },
     /** El jefe que se ve: el Viento Ladrón en la Pradera, el mago oscuro en la Torre. */
-    elJefe() { return this.partida && (this.partida.rafaga || this.partida.niebla) ? $('jefe-viento') : $('mago-jefe'); },
+    elJefe() { return this.partida && this.partida.jefe && this.partida.arcade && this.partida.arcade.cap ? $('jefe-viento') : $('mago-jefe'); },
     /** ¿La letra i está tapada (por el Viento Ladrón o por la Niebla Muda)? */
     tapada(pa, i) { return !!((pa.rafaga && pa.rafaga.idx === i) || (pa.niebla && pa.niebla.tapadas.includes(i))); },
     /** La ayuda de un aliado se usa en su capítulo y, cuando ya lo terminaste, en los demás capítulos (nunca en la Torre). */
@@ -3746,6 +3760,96 @@
       if (!pa || !pa.arcade || !pa.arcade.cap || !window.WWCampanas) return false;
       const C = WWCampanas.CAPITULOS.find((x) => x.jugable && x.poder === k);
       return !!C && (pa.arcade.cap === C.id || !!this.capitulo(C.id).terminado);
+    },
+
+    /** Las ayudas de los aliados de Aventura que valen en esta partida (en su capítulo o, terminado, en los demás). */
+    aliados(pa) {
+      if (!window.WWElenco) return [];
+      const E = WWElenco;
+      const AYUDAS = [
+        { k: 'atajo', quien: 'Tomillo', nombre: 'Atajo', cara: () => E.tomillo({ pelo: '#b99a76', bufanda: E.CEIBO }), usar: () => this.atajoTomillo(), usado: (x) => !!x.atajo },
+        { k: 'paciencia', quien: 'Doña Lenta', nombre: 'Paciencia', cara: () => E.lenta(), usar: () => this.pacienciaLenta(), usado: (x) => !!x.paciencia || !x.deadline },
+        { k: 'barro', quien: 'Don Hornero', nombre: 'Barro', cara: () => E.hornero({}), usar: () => this.barroHornero(), usado: (x) => !!x.barro },
+        { k: 'memoria', quien: 'Ulises', nombre: 'Memoria', cara: () => E.ulises({}), usar: () => this.memoriaUlises(), usado: (x) => !!x.memoria },
+        { k: 'llamita', quien: 'Chispa', nombre: 'Llamita', cara: () => E.chispa({ cuerpo: '#67948f', panza: '#dfebd6', cuerno: '#f2c66d', cresta: '#e8907a', ala: '#92afa1' }), usar: () => this.llamitaChispa(), usado: (x) => !!x.llamitaUsada },
+      ];
+      return AYUDAS.filter((a) => this.ayudaDisponible(a.k, pa));
+    },
+    /** El botón de aliados: con una sola ayuda la usa; con varias abre el menú para elegir. */
+    abrirAliados() {
+      const pa = this.partida, lista = this.aliados(pa).filter((x) => !x.usado(pa));
+      if (!lista.length) return;
+      if (lista.length === 1) { lista[0].usar(); return; }
+      const panel = $('aliados');
+      if (!panel.classList.contains('oculto')) { panel.classList.add('oculto'); return; }
+      panel.innerHTML = lista.map((a, i) => `<button class="aliado" data-i="${i}"><span class="atajo-cara">${a.cara()}</span><b>${esc(T(a.nombre))}</b><small>${esc(T(a.quien))}</small></button>`).join('');
+      panel.classList.remove('oculto');
+      panel.querySelectorAll('.aliado').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); panel.classList.add('oculto'); Audio.click(); lista[Number(b.dataset.i)].usar(); }));
+      clearTimeout(this._tAliados); this._tAliados = setTimeout(() => panel.classList.add('oculto'), 6000);
+    },
+    /** Puntos que suma una ayuda (como si fueran de una palabra): al puntaje y al objetivo del piso. */
+    sumarExtra(pa, pts) {
+      pa.puntos += pts; pa.puntosPiso += pts;
+      this.flotante(`+${pts}`);
+      this.renderProgreso(); this.tween($('hud-puntos'), pa.arcade ? pa.arcade.puntajeTotal + pa.puntos : pa.puntos, 450);
+      if (pa.modo === 'arcade' && !pa.superado && pa.puntosPiso >= pa.objetivo) this.objetivoLogrado();
+    },
+    /** El Barro de Don Hornero: pega las dos últimas palabras cortas (4 letras o menos) y valen como una larga. */
+    barroHornero() {
+      const pa = this.partida;
+      if (!pa || pa.terminada || pa.barro || !this.ayudaDisponible('barro', pa)) return;
+      const cortas = pa.encontradas.filter((w) => w.length <= 4 && !pa.ojos.has(w)).slice(-2);
+      if (cortas.length < 2) { this.globo(T('Don Hornero: primero encontrá dos palabras cortas y las pego'), 'mal'); return; }
+      pa.barro = true;
+      const largo = Math.min(10, cortas[0].length + cortas[1].length), pts = WW.PUNTOS_POR_LARGO[largo] || 0;
+      Audio.poder(); this.renderPoderes();
+      this.globo(T('Don Hornero pegó {a} + {b}: valen como una de {n} (+{p})', { a: cortas[0].toUpperCase(), b: cortas[1].toUpperCase(), n: largo, p: pts }), 'wow');
+      this.sumarExtra(pa, pts);
+    },
+    /** La Memoria de Ulises: una vez por piso, cómo termina una palabra larga que te falta. */
+    memoriaUlises() {
+      const pa = this.partida;
+      if (!pa || pa.terminada || pa.memoria || !this.ayudaDisponible('memoria', pa)) return;
+      let cands = this.faltantes().filter((w) => w.length >= 6 && w !== pa.base);
+      if (!cands.length) cands = this.faltantes().filter((w) => w.length >= 5 && w !== pa.base);
+      if (!cands.length) { this.globo(T('Ulises: ¡no te falta ninguna larga!'), 'wow'); return; }
+      const w = azar(cands), l = w[w.length - 1];
+      let idx = pa.orden.find((i) => pa.fichas[i].l === l && !this.tapada(pa, i));
+      if (idx == null) idx = pa.orden.find((i) => pa.fichas[i].l === l);
+      pa.memoria = { w, idx };
+      Audio.poder(); this.renderFichas(); this.renderPoderes();
+      this.globo(T('Ulises: hay una de {n} letras que termina con {l}', { n: w.length, l: l.toUpperCase() }), 'ok');
+    },
+    /** La Llamita de Chispa: la próxima palabra vale el doble. */
+    llamitaChispa() {
+      const pa = this.partida;
+      if (!pa || pa.terminada || pa.llamitaUsada || !this.ayudaDisponible('llamita', pa)) return;
+      pa.llamitaUsada = true; pa.llamita = true;
+      Audio.poder(); this.renderPoderes();
+      this.globo(T('Chispa: ¡tu próxima palabra vale el doble!'), 'ok');
+    },
+    /** La Gran Polilla tapa la lámpara: cada tanto, unos segundos sin ver las letras (se pueden tocar igual). */
+    apagonAvanza(pa) {
+      const ap = pa.apagon, ahora = Date.now();
+      if (pa.superado) return;
+      if (ap.fin && ahora >= ap.fin) { ap.fin = 0; $('fichas').classList.remove('apagon'); }
+      if (!ap.fin && !ap.aviso && ahora >= ap.prox - 1200) { ap.aviso = true; $('fichas').classList.add('viento-aviso'); }
+      if (!ap.fin && ahora >= ap.prox) {
+        ap.aviso = false; $('fichas').classList.remove('viento-aviso');
+        ap.fin = ahora + ap.dura; ap.prox = ahora + ap.cada;
+        $('fichas').classList.add('apagon'); Audio.borrar();
+        this.globo(pa.arcade.cap === 'umbria' ? T('¡Umbrío apagó la luz!') : T('¡La Polilla tapó la lámpara! Acordate de las letras'), 'mal');
+      }
+    },
+    /** La Ventisca: si pasan 8 segundos sin encontrar nada, se lleva 3 segundos del reloj. */
+    ventiscaAvanza(pa) {
+      const v = pa.ventisca, ahora = Date.now();
+      if (pa.superado || !pa.deadline || pa.pacienciaHasta) return;
+      if (ahora - v.ultimo >= 8000) {
+        v.ultimo = ahora; pa.deadline -= 3000;
+        $('hud-tiempo').classList.remove('robado'); void $('hud-tiempo').offsetWidth; $('hud-tiempo').classList.add('robado');
+        Audio.borrar(); this.globo(T('La Ventisca te robó 3 segundos: ¡no te quedes quieto!'), 'mal');
+      }
     },
 
     /** La Niebla Muda: cada 12 segundos empaña una letra libre (hasta 3 a la vez); se despejan encontrando palabras. */
@@ -3757,7 +3861,7 @@
         nb.aviso = false; $('jefe-viento').classList.remove('sopla');
         const libres = pa.orden.filter((i) => !pa.fichas[i].usada && !nb.tapadas.includes(i));
         if (nb.tapadas.length < 3 && libres.length > 2) { nb.tapadas.push(azar(libres)); Audio.borrar(); this.renderFichas(); this.globo(T('La niebla empañó una letra: encontrá una palabra para despejarla'), 'mal'); }
-        nb.prox = ahora + 12000;
+        nb.prox = ahora + (nb.cada || 12000);
       }
     },
 
@@ -3781,7 +3885,7 @@
         r.aviso = false; $('fichas').classList.remove('viento-aviso'); $('jefe-viento').classList.remove('sopla');
         const libres = pa.orden.filter((i) => !pa.fichas[i].usada);
         if (libres.length) { r.idx = azar(libres); r.fin = ahora + 6000; Audio.borrar(); this.renderFichas(); this.globo(T('¡Ráfaga! El viento te tapó una letra'), 'mal'); }
-        r.prox = ahora + 20000;
+        r.prox = ahora + (r.cada || 20000);
       }
     },
 
@@ -3805,11 +3909,10 @@
     /** El cartel del capítulo con las letras que ya volvieron (la última que volvió, con brillo). */
     cartelCap(id, hechos, nueva) {
       const C = this.datosCap(id);
-      if (C.hilo === 'flores') {
-        const flor = (abierta) => `<svg viewBox="-30 -58 60 62" aria-hidden="true">${abierta && window.WWElenco ? WWElenco.florCeibo(0, 0, .95, 0) : '<path d="M0 -4 C-8 -16 -6 -34 0 -44 C6 -34 8 -16 0 -4Z" fill="#a9aeab" stroke="#16262c" stroke-width="3" stroke-linejoin="round"/>'}</svg>`;
-        return `<div class="cartel-cap flores" data-no-t>${Array.from({ length: C.pisos }, (_, i) => `<span class="${i < hechos ? (nueva && i === hechos - 1 ? 'nueva' : '') : 'falta'}">${flor(i < hechos)}</span>`).join('')}</div>`;
+      if (C.hilo === 'iconos') {
+        return `<div class="cartel-cap flores hilo-${C.id}" data-no-t>${Array.from({ length: C.pisos }, (_, i) => `<span class="${i < hechos ? (nueva && i === hechos - 1 ? 'nueva' : '') : 'falta'}">${WWCampanas.hiloIcono(C.id, i < hechos)}</span>`).join('')}</div>`;
       }
-      const pal = window.WWCampanas && WWCampanas.palabra ? WWCampanas.palabra('camino') : 'CAMINO';
+      const pal = window.WWCampanas && WWCampanas.palabra ? WWCampanas.palabra(C.palabraHilo || 'camino') : 'CAMINO';
       const n = pal.length, ve = Math.round(hechos * n / C.pisos), antes = nueva ? Math.round((hechos - 1) * n / C.pisos) : ve;
       return `<div class="cartel-cap" data-no-t aria-label="${esc(pal)}">${pal.split('').map((l, i) => `<span class="${i < ve ? (i >= antes ? 'nueva' : '') : 'falta'}">${i < ve ? l : ''}</span>`).join('')}</div>`;
     },
@@ -3847,9 +3950,9 @@
       const sigCap = primeraVez ? WWCampanas.CAPITULOS.find((x) => x.jugable && x.requiere === a.cap) : null;
       if (sigCap) Estado.perfil.vistos = Object.assign({}, Estado.perfil.vistos, { ['cap_' + sigCap.id]: true });
       Estado.guardar();
-      const pal = window.WWCampanas && WWCampanas.palabra ? WWCampanas.palabra('camino') : 'CAMINO';
+      const pal = window.WWCampanas && WWCampanas.palabra ? WWCampanas.palabra(C.palabraHilo || 'camino') : 'CAMINO';
       this.confeti(120); Audio.victoria();
-      this.modal(`<h3>${esc(T('¡{c}, COMPLETO!', { c: T(C.n).toUpperCase() }))}</h3><div class="novedad-ilu">${WWCampanas.escena(a.cap, true)}</div>${this.cartelCap(a.cap, C.pisos)}<p>${esc(T(C.final, { w: pal }))}</p>${primeraVez ? `<p><b>${esc(T(C.suma))}</b> ${esc(T(C.sumaTexto))}</p>` : ''}${sigCap ? `<p>${esc(T('Ya se abrió el capítulo que sigue: {c}.', { c: T(sigCap.n) }))}</p>` : ''}`, [
+      this.modal(`<h3>${esc(T('¡{a} COMPLETO!', { a: T(C.ante).toUpperCase() }))}</h3><div class="novedad-ilu">${WWCampanas.escena(a.cap, true)}</div>${this.cartelCap(a.cap, C.pisos)}<p>${esc(T(C.final, { w: pal }))}</p>${primeraVez ? `<p><b>${esc(T(C.suma))}</b> ${esc(T(C.sumaTexto))}</p>` : ''}${sigCap ? `<p>${esc(T('Ya se abrió el capítulo que sigue: {c}.', { c: T(sigCap.n) }))}</p>` : ''}`, [
         { texto: T('Volver a Aventura'), clase: 'btn-primario', accion: () => this.cerrarCap(pa) },
       ]);
     },
@@ -3869,6 +3972,7 @@
       if (nuevos.length) Estado.sumarMonedas(5 * nuevos.length);
       Estado.guardar();
       $('modal').classList.add('oculto');
+      this.ponerLugar(null);   // de vuelta al bosque (el fondo del capítulo no se queda en el libro)
       this.verCampanas();
       const sinVidas = a.vidas <= 0 && !this.capitulo(a.cap).terminado;
       if (xp || sinVidas) this.toast(`<div><b>${xp ? `+${xp} XP` : esc(T(this.datosCap(a.cap).n))}</b>${sinVidas ? `<br><small>${esc(T('Se acabaron las vidas: seguís desde el piso {n}', { n: Math.min(this.datosCap(a.cap).pisos, (this.capitulo(a.cap).mejorPiso || 0) + 1) }))}</small>` : ''}</div>`);

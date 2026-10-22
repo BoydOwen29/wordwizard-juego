@@ -429,23 +429,39 @@
   const CAPITULOS = [
     { id: 'torre', ante: 'Capítulo gratis', n: 'La Torre Arcana', sub: '20 pisos · las mismas palabras para todos', libre: true,
       p: 'Nocturnia encerró las palabras del bosque en lo alto de la torre. Silabo sube piso por piso para liberarlas.', ayuda: 'Cada 5 pisos te espera un jefe. Arriba, la cima.' },
-    { id: 'pradera', ante: 'Capítulo 1', n: 'La Pradera', corto: 'La Pradera', sub: 'Con Tomillo, la liebre', jugable: true, pisos: 6, jefe: 'El Viento Ladrón', contra: 'al Viento Ladrón', logro: 'pradera',
-      icono: '🌾', hilo: 'letras', poder: 'atajo', vuelve: '¡VOLVIERON LETRAS AL CARTEL!', final: 'El cartel ya dice {w} otra vez: la Pradera tiene camino.',
+    { id: 'pradera', ante: 'Capítulo 1', n: 'La Pradera', corto: 'Pradera', sub: 'Con Tomillo, la liebre', jugable: true, pisos: 6, jefe: 'El Viento Ladrón', contra: 'al Viento Ladrón', logro: 'pradera',
+      icono: '🌾', hilo: 'letras', palabraHilo: 'camino', poder: 'atajo', reglaJefe: 'Cuidado: cada tanto te tapa una letra', vuelve: '¡VOLVIERON LETRAS AL CARTEL!', final: 'El cartel ya dice {w} otra vez: la Pradera tiene camino.',
       suma: 'Tomillo se suma a tu equipo:', sumaTexto: 'su Atajo te acompaña en los capítulos que siguen.', ayudaTexto: 'Tomillo te acompaña: una vez por piso, su Atajo te muestra con qué letra empieza una palabra larga.',
       historia: 'El Viento Ladrón se llevó las letras del cartel y Tomillo no encuentra el camino. Cada piso que pasás devuelve letras al cartel; en el sexto te espera el Viento.',
       p: 'El viento borró los carteles del camino y Tomillo no puede leer su mapa.', ayuda: 'Atajo de Tomillo: una vez por piso, te muestra la primera letra de una palabra larga que te falta.' },
-    { id: 'laguna', ante: 'Capítulo 2', n: 'La Laguna del Ceibo', corto: 'La Laguna', sub: 'Con Doña Lenta', jugable: true, pisos: 6, jefe: 'La Niebla Muda', contra: 'a la Niebla Muda', logro: 'laguna', requiere: 'pradera',
-      icono: '🌺', hilo: 'flores', poder: 'paciencia', vuelve: '¡SE ABRIÓ UNA FLOR DEL CEIBO!', final: 'El ceibo volvió a florecer y Doña Lenta encontró el hilo.',
+    { id: 'laguna', ante: 'Capítulo 2', n: 'La Laguna del Ceibo', corto: 'Laguna', sub: 'Con Doña Lenta', jugable: true, pisos: 6, jefe: 'La Niebla Muda', contra: 'a la Niebla Muda', logro: 'laguna', requiere: 'pradera',
+      icono: '🌺', hilo: 'iconos', poder: 'paciencia', reglaJefe: 'Empaña letras: cada palabra que encontrás despeja una', vuelve: '¡SE ABRIÓ UNA FLOR DEL CEIBO!', final: 'El ceibo volvió a florecer y Doña Lenta encontró el hilo.',
       historia: 'La Niebla Muda se echó a dormir sobre la laguna: tapó las flores del ceibo y Doña Lenta perdió el hilo. Cada piso que pasás abre una flor; en el sexto te espera la Niebla.',
       suma: 'Doña Lenta se suma a tu equipo:', sumaTexto: 'su Paciencia congela el reloj 10 segundos, una vez por piso, en los capítulos que siguen.', ayudaTexto: 'Doña Lenta te acompaña: una vez por piso, su Paciencia congela el reloj 10 segundos.',
       p: 'La niebla tapó las flores del ceibo y Doña Lenta perdió el hilo de sus definiciones.', ayuda: 'Paciencia de Doña Lenta: congela el reloj 10 segundos una vez por piso.' },
-    { id: 'pueblito', ante: 'Capítulo 3', n: 'El Pueblito', sub: 'Con Don Hornero',
+    { id: 'pueblito', ante: 'Capítulo 3', n: 'El Pueblito', corto: 'Pueblito', sub: 'Con Don Hornero', jugable: true, pisos: 6, jefe: 'El Horno Frío', contra: 'al Horno Frío', logro: 'pueblito', requiere: 'laguna',
+      icono: '🍞', hilo: 'letras', palabraHilo: 'panaderia', poder: 'barro', lugar: 'pueblito', reglaJefe: 'Las palabras de 3 letras no le hacen nada',
+      historia: 'El Horno Frío se quedó con el calor del pueblito: Don Hornero no puede cantar y no hay pan. Cada piso que pasás devuelve letras al cartel de la panadería; en el sexto te espera el Horno.',
+      vuelve: '¡VOLVIERON LETRAS A LA PANADERÍA!', final: 'El cartel dice {w} otra vez, el horno calienta y Don Hornero canta.',
+      suma: 'Don Hornero se suma a tu equipo:', sumaTexto: 'su Barro pega dos palabras cortas y valen como una larga, una vez por piso.', ayudaTexto: 'Don Hornero te acompaña: una vez por piso, su Barro pega dos palabras cortas que encontraste y valen como una larga.',
       p: 'Don Hornero no puede cantar y sin su canto el horno no calienta: el pueblito se quedó sin pan.', ayuda: 'Barro de Hornero: pega dos palabras cortas que encontraste y cuentan como una larga.' },
-    { id: 'robledal', ante: 'Capítulo 4', n: 'El Robledal', sub: 'Con Ulises, el búho',
-      p: 'Ulises se olvidó los acertijos y la biblioteca del roble quedó a oscuras.', ayuda: 'Memoria de Ulises: una vez por piso, te dice cuántas palabras faltan de cada largo.' },
-    { id: 'cumbres', ante: 'Capítulo 5', n: 'Las Cumbres', sub: 'Con Chispa',
-      p: 'Chispa solo echa humo: le robaron la palabra "fuego". Las cumbres se congelaron.', ayuda: 'Llamita de Chispa: derrite una letra repetida y te la cambia por otra.' },
-    { id: 'umbria', ante: 'Capítulo 6', n: 'La Torre Umbría', sub: 'El duelo con Umbrío',
+    { id: 'robledal', ante: 'Capítulo 4', n: 'El Robledal', corto: 'Robledal', sub: 'Con Ulises, el búho', jugable: true, pisos: 6, jefe: 'La Gran Polilla', contra: 'a la Gran Polilla', logro: 'robledal', requiere: 'pueblito',
+      icono: '🦉', hilo: 'iconos', poder: 'memoria', lugar: 'biblioteca', reglaJefe: 'Cada tanto apaga la luz: acordate de las letras',
+      historia: 'La Gran Polilla se comió los acertijos de Ulises y dejó la biblioteca del roble a oscuras. Cada piso que pasás enciende una ventana; en el sexto te espera la Polilla.',
+      vuelve: '¡SE ENCENDIÓ UNA VENTANA!', final: 'La biblioteca del roble brilla otra vez y Ulises recordó sus acertijos.',
+      suma: 'Ulises se suma a tu equipo:', sumaTexto: 'su Memoria te dice con qué letra termina una palabra larga, una vez por piso.', ayudaTexto: 'Ulises te acompaña: una vez por piso, su Memoria te dice con qué letra termina una palabra larga.',
+      p: 'Ulises se olvidó los acertijos y la biblioteca del roble quedó a oscuras.', ayuda: 'Memoria de Ulises: una vez por piso, te dice con qué letra termina una palabra larga que te falta.' },
+    { id: 'cumbres', ante: 'Capítulo 5', n: 'Las Cumbres', corto: 'Cumbres', sub: 'Con Chispa', jugable: true, pisos: 6, jefe: 'La Ventisca', contra: 'a la Ventisca', logro: 'cumbres', requiere: 'robledal',
+      icono: '🔥', hilo: 'iconos', poder: 'llamita', lugar: 'cumbre', reglaJefe: 'Si te quedás quieto, te roba segundos',
+      historia: 'La Ventisca le robó a Chispa la palabra "fuego" y congeló las cumbres. Cada piso que pasás prende una fogata; en el sexto te espera la Ventisca.',
+      vuelve: '¡SE PRENDIÓ UNA FOGATA!', final: 'Las cumbres se deshielan y Chispa recuperó su fuego.',
+      suma: 'Chispa se suma a tu equipo:', sumaTexto: 'su Llamita hace que tu próxima palabra valga el doble, una vez por piso.', ayudaTexto: 'Chispa te acompaña: una vez por piso, su Llamita hace que tu próxima palabra valga el doble.',
+      p: 'Chispa solo echa humo: le robaron la palabra "fuego". Las cumbres se congelaron.', ayuda: 'Llamita de Chispa: una vez por piso, tu próxima palabra vale el doble.' },
+    { id: 'umbria', ante: 'Capítulo 6', n: 'La Torre Umbría', corto: 'Umbría', sub: 'El duelo con Umbrío', jugable: true, pisos: 6, jefe: 'Umbrío', contra: 'a Umbrío', logro: 'umbria', requiere: 'cumbres',
+      icono: '🌀', hilo: 'letras', palabraHilo: 'voz', lugar: 'cueva', reglaJefe: 'Usa todos los trucos: viento, niebla y apagón',
+      historia: 'La torre del archimago. Umbrío se robó las palabras porque nadie lo escuchaba. Hilda conoce el camino de adentro y todos tus aliados vienen con vos: cada piso le devuelve letras a su voz; en el sexto, el duelo.',
+      vuelve: '¡UMBRÍO RECUPERA SU VOZ!', final: 'Umbrío dice {w} y por fin lo escuchan. Devolviste la voz al bosque.',
+      suma: '¡Terminaste la Campaña del Archimago!', sumaTexto: 'Umbrío se queda en el bosque contando cuentos. Gracias por jugarla.', ayudaTexto: 'En el duelo final se usan las ayudas de todos tus aliados.',
       p: 'La torre del archimago. Hilda, que tejió el mapa todo el viaje, conoce el camino de adentro.', ayuda: 'Todos juntos: en el duelo final se usan las ayudas de todos los aliados.' },
   ];
 
@@ -502,5 +518,57 @@
       <text x="108" y="12" font-size="10" font-family="Fredoka, sans-serif" fill="#cfdad5" stroke="${L}" stroke-width="2" paint-order="stroke" class="c-sube" style="animation-delay:1.2s">z</text></svg>`;
   }
 
-  window.WWCampanas = { CAPITULOS, escena, vigilar, ESCENAS, viento, nieblaJefe, palabra: W };
+  /** El Horno Frío, jefe del Pueblito: un horno de barro con escarcha y cara de pocos amigos. */
+  function hornoFrio() {
+    const L = (E() && E().L) || '#16262c';
+    return `<svg viewBox="0 0 120 90" aria-hidden="true"><g class="c-tirita">
+      <path d="M14 82 C10 46 34 18 60 18 C86 18 110 46 106 82Z" fill="#a98a72" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M82 24 C98 34 108 56 106 82 H92 C96 60 90 38 82 24Z" fill="#8f7360"/>
+      <path d="M24 44 C34 26 48 20 60 20 C76 20 90 28 98 42 C86 36 74 34 62 36 C48 38 36 40 24 44Z" fill="#eef4f7" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/>
+      ${[34, 46, 58, 70, 82].map((x, i) => `<path d="M${x - 3} ${40 - (i % 2) * 3} L${x} ${50 - (i % 2) * 3} L${x + 3} ${40 - (i % 2) * 3}Z" fill="#dff1f8" stroke="${L}" stroke-width="1.4"/>`).join('')}
+      <path d="M44 82 V66 a16 14 0 0 1 32 0 V82Z" fill="#2b3a44" stroke="${L}" stroke-width="2.4"/>
+      <path d="M60 68 v10 M55 73 h10 M56.5 69.5 l7 7 M63.5 69.5 l-7 7" stroke="#cfe6f0" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M40 54 l10 3 M80 54 l-10 3" stroke="${L}" stroke-width="2.6" stroke-linecap="round"/>
+      <circle cx="46" cy="60" r="2.6" fill="${L}"/><circle cx="74" cy="60" r="2.6" fill="${L}"/></g></svg>`;
+  }
+  /** La Gran Polilla, jefa del Robledal: alas grandes que aletean y antenas, con ojos de sueño. */
+  function polilla() {
+    const L = (E() && E().L) || '#16262c';
+    return `<svg viewBox="0 0 120 90" aria-hidden="true"><g class="c-flota">
+      <g class="c-aleteo" style="animation-duration:.6s"><path d="M58 46 C40 18 10 16 8 36 C6 52 28 60 56 52Z" fill="#9c8a74" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M62 46 C80 18 110 16 112 36 C114 52 92 60 64 52Z" fill="#9c8a74" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M56 54 C40 58 22 70 28 80 C36 86 50 74 58 60Z M64 54 C80 58 98 70 92 80 C84 86 70 74 62 60Z" fill="#857460" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>
+      <circle cx="28" cy="36" r="7" fill="#e9dcbc" stroke="${L}" stroke-width="2"/><circle cx="92" cy="36" r="7" fill="#e9dcbc" stroke="${L}" stroke-width="2"/></g>
+      <ellipse cx="60" cy="54" rx="9" ry="22" fill="#6e5e4e" stroke="${L}" stroke-width="3"/>
+      <path d="M56 34 C50 20 44 14 38 12 M64 34 C70 20 76 14 82 12" fill="none" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M54 42 q3 3 6 0 M60 42 q3 3 6 0" fill="none" stroke="${L}" stroke-width="2.2" stroke-linecap="round"/></g></svg>`;
+  }
+  /** La Ventisca, jefa de las Cumbres: una nube de nieve con el ceño fruncido. */
+  function ventiscaJefe() {
+    const L = (E() && E().L) || '#16262c';
+    return `<svg viewBox="0 0 120 90" aria-hidden="true"><g class="c-sopla" style="transform-origin:60px 40px">
+      <path d="M22 58 C6 58 4 38 20 34 C18 16 42 10 52 22 C60 6 92 10 92 30 C108 30 116 48 104 58Z" fill="#eef4f7" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M40 36 l10 4 M80 36 l-10 4" stroke="${L}" stroke-width="2.8" stroke-linecap="round"/>
+      <circle cx="46" cy="44" r="2.8" fill="${L}"/><circle cx="74" cy="44" r="2.8" fill="${L}"/>
+      <path d="M54 52 q6 -4 12 0" fill="none" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/></g>
+      ${[[30, 0], [52, .8], [74, 1.6], [96, .4], [42, 2.2], [86, 1.2]].map(([x, dl]) => `<circle cx="${x}" cy="64" r="2.4" fill="#ffffff" stroke="${L}" stroke-width=".8" class="c-gota" style="animation-delay:${dl}s;animation-duration:1.6s"/>`).join('')}</svg>`;
+  }
+  /** El jefe de cada capítulo, para el piso 6. */
+  function jefeSvg(id) {
+    if (id === 'laguna') return nieblaJefe();
+    if (id === 'pueblito') return hornoFrio();
+    if (id === 'robledal') return polilla();
+    if (id === 'cumbres') return ventiscaJefe();
+    if (id === 'umbria') return UMBRIO(false);
+    return viento();
+  }
+  /** El hilo de cada capítulo cuando no son letras: flores del ceibo, ventanas encendidas, fogatas. */
+  function hiloIcono(id, on) {
+    const L = (E() && E().L) || '#16262c';
+    if (id === 'laguna') return `<svg viewBox="-30 -58 60 62" aria-hidden="true">${on && E() ? E().florCeibo(0, 0, .95, 0) : `<path d="M0 -4 C-8 -16 -6 -34 0 -44 C6 -34 8 -16 0 -4Z" fill="#a9aeab" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`}</svg>`;
+    if (id === 'robledal') return `<svg viewBox="0 0 40 44" aria-hidden="true">${on ? `<circle cx="20" cy="22" r="18" fill="#ffd98a" opacity=".35"/>` : ''}<path d="M8 40 V18 a12 12 0 0 1 24 0 V40Z" fill="${on ? '#f6d27a' : '#2b3a30'}" stroke="${L}" stroke-width="2.6"/><path d="M20 6 V40 M8 24 H32" stroke="${L}" stroke-width="2"/></svg>`;
+    if (id === 'cumbres') return `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M6 40 L34 32 M8 32 L34 40" stroke="${L}" stroke-width="6" stroke-linecap="round"/><path d="M6 40 L34 32 M8 32 L34 40" stroke="#8a5a3c" stroke-width="3.4" stroke-linecap="round"/>${on ? `<path d="M10 34 C8 22 16 18 14 6 C22 12 28 14 28 4 C34 14 34 26 30 34Z" fill="#e8907a" stroke="${L}" stroke-width="2.2" stroke-linejoin="round"/><path d="M16 34 C16 26 20 24 20 16 C26 22 28 26 26 34Z" fill="#f2c66d"/>` : `<path d="M10 32 C16 28 26 28 32 32" fill="none" stroke="#dfeef5" stroke-width="3" stroke-linecap="round"/>`}</svg>`;
+    return '';
+  }
+
+  window.WWCampanas = { CAPITULOS, escena, vigilar, ESCENAS, viento, nieblaJefe, jefeSvg, hiloIcono, palabra: W };
 })();

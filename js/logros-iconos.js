@@ -501,6 +501,27 @@
       F('M15.2 21 C13 17 11.6 12.8 11.4 9.6 C14.2 12 16 15.8 15.2 21Z', k.coralLi) +
       P(k, 'M15.2 21 C19.6 17.6 23 13.8 23.4 9.2 C19.2 10.8 16.2 15 15.2 21Z', k.coralSh),
 
+    // Pan para el pueblito: una hogaza con sus cortes
+    pueblito: (k) =>
+      P(k, 'M4 22 C4 12 12 7 16 7 C20 7 28 12 28 22 C28 25 25 27 22 27 H10 C7 27 4 25 4 22Z', k.oro) +
+      F('M20 8.4 C25 10.6 28 15.6 28 22 C28 25 25 27 22 27 H19 C23 23 24 15 20 8.4Z', k.oroSh) +
+      P(k, 'M10 13 L13 17 M15 11 L18 15 M20 13 L23 17', null, 1.6),
+    // Luz en la biblioteca: una ventana redonda encendida
+    robledal: (k) =>
+      P(k, 'M7 28 V14 a9 9 0 0 1 18 0 V28Z', k.oro) +
+      F('M18 6 C22 7.6 25 11 25 14 V28 H20 V14 C20 11 19.4 8 18 6Z', k.oroSh) +
+      P(k, 'M16 5 V28 M7 17 H25', null, 1.8) + P(k, 'M5 28 H27', null, 2.4),
+    // Fuego en las cumbres: la fogata encendida
+    cumbres: (k) =>
+      P(k, 'M5 28 L27 23 M6 23 L27 28', null, 3.4) + T(k, 'M5 28 L27 23 M6 23 L27 28', k.madera, 1.6) +
+      P(k, 'M9 24 C7 16 13 13 12 4 C18 9 22 10 22 3 C27 10 27 19 24 24Z', k.coral) +
+      F('M13 24 C13 19 16 17 16 12 C20 16 22 19 20 24Z', k.oro),
+    // Devolviste la voz al bosque: la estrella del archimago con su espiral
+    umbria: (k) =>
+      P(k, 'M16 3 L19.6 11.4 L28.6 12 L21.6 17.8 L23.8 26.6 L16 21.8 L8.2 26.6 L10.4 17.8 L3.4 12 L12.4 11.4Z', k.violeta) +
+      F('M16 3 L19.6 11.4 L28.6 12 L21.6 17.8 L23.8 26.6 L16 21.8Z', k.violetaSh) +
+      P(k, 'M16 18 a2 2 0 1 1 2 -2 a4 4 0 1 1 -4 -4', null, 1.6),
+
     // Cumplidor: carpetas con el sello de hecho
     misiones25: (k) =>
       P(k, 'M5.5 7.6 C5.5 6.7 6.2 6 7.1 6 H12 L14 8.4 H25.4 C26.3 8.4 27 9.1 27 10 V22 H5.5Z', k.salvia) +

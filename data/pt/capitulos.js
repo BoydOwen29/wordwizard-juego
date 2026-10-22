@@ -1,2 +1,2 @@
 // Generado por tools/build-capitulos.js. No editar a mano. Las palabras de los capítulos de Aventura (6 por capítulo).
-window.WW_CAPITULOS={"pradera":["campina","caminho","ventania","abelhas","pradaria","sementes"],"laguna":["margens","nevoeiro","caracol","flores","libelula","tartaruga"]};
+window.WW_CAPITULOS={"pradera":["campina","caminho","ventania","abelhas","pradaria","sementes"],"laguna":["margens","nevoeiro","caracol","flores","libelula","tartaruga"],"pueblito":["telhado","fornalha","sobrado","massinha","farinha","vizinhos"],"robledal":["bolotas","enigmas","lendas","esquilo","coruja","charada"],"cumbres":["vulcao","cachecol","pedras","casacos","brasas","montanha"],"umbria":["encanto","sombras","palavras","varinha","feitico","sussurro"]};

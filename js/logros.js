@@ -45,6 +45,10 @@
     { id: 'ceibo', icono: '🌺', nombre: 'Primavera del Ceibo', desc: 'Juntá 20 flores de ceibo en la temporada de primavera.', cond: (p) => ((p.temporadas && p.temporadas.ceibo && p.temporadas.ceibo.flores) || 0) >= 20 },
     { id: 'pradera', icono: '🪧', nombre: 'La Pradera tiene camino', desc: 'Terminá el capítulo 1 de Aventura, con Tomillo.', cond: (p) => !!(p.capitulos && p.capitulos.pradera && p.capitulos.pradera.terminado) },
     { id: 'laguna', icono: '🌺', nombre: 'La laguna florece', desc: 'Terminá el capítulo 2 de Aventura, con Doña Lenta.', cond: (p) => !!(p.capitulos && p.capitulos.laguna && p.capitulos.laguna.terminado) },
+    { id: 'pueblito', icono: '🍞', nombre: 'Pan para el pueblito', desc: 'Terminá el capítulo 3 de Aventura, con Don Hornero.', cond: (p) => !!(p.capitulos && p.capitulos.pueblito && p.capitulos.pueblito.terminado) },
+    { id: 'robledal', icono: '🦉', nombre: 'Luz en la biblioteca', desc: 'Terminá el capítulo 4 de Aventura, con Ulises.', cond: (p) => !!(p.capitulos && p.capitulos.robledal && p.capitulos.robledal.terminado) },
+    { id: 'cumbres', icono: '🔥', nombre: 'Fuego en las cumbres', desc: 'Terminá el capítulo 5 de Aventura, con Chispa.', cond: (p) => !!(p.capitulos && p.capitulos.cumbres && p.capitulos.cumbres.terminado) },
+    { id: 'umbria', icono: '🌀', nombre: 'Devolviste la voz al bosque', desc: 'Terminá la Campaña del Archimago: vencé a Umbrío en la Torre Umbría.', cond: (p) => !!(p.capitulos && p.capitulos.umbria && p.capitulos.umbria.terminado) },
     { id: 'misiones25', icono: '🗂️', nombre: 'Cumplidor', desc: 'Completá 25 misiones diarias.', cond: (p) => (p.stats.misiones || 0) >= 25 },
     { id: 'perfecto', icono: '💯', nombre: 'Omnisciente', desc: 'Encontrá todas las palabras de una base.', cond: (p, c) => c.tipo === 'fin' && c.total > 0 && c.encontradas >= c.total },
   ];
