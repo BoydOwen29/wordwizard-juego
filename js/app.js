@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.49.1',
+    version: '2.49.2',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -190,6 +190,10 @@
       this.destellos();
       this.eventos();
       this.pwa();
+      this.avisoEnApp();
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && this.pantalla === 'p-juego') this.pantallaPrendida(true); });
+      // que el navegador no borre el progreso cuando le falta lugar (Chrome lo da solo; Firefox preguntaría, ahí no se pide)
+      try { if (navigator.storage && navigator.storage.persist && !/firefox/i.test(navigator.userAgent)) navigator.storage.persisted().then((p) => { if (!p) navigator.storage.persist().catch(() => {}); }).catch(() => {}); } catch (e) { /* nada */ }
       this.juice();
       this.compras();
       this.cuenta();
@@ -338,6 +342,31 @@
       const si = !!this.modoInstalar();
       $('btn-instalar').classList.toggle('oculto', !si);
       $('aj-instalar').classList.toggle('oculto', !si);
+    },
+
+    /** Dentro de Instagram, Facebook, TikTok…: Google no deja entrar desde ese navegador (lo bloquea Google). */
+    googleEnApp() {
+      const url = location.origin + location.pathname, nav = this.esIOS ? 'Safari' : 'Chrome';
+      this.modal(`<h3>${T('GOOGLE NO DEJA ENTRAR ACÁ')}</h3><div class="modal-silabo" data-pose="sad"></div><p>${T('Estás dentro de {app} y Google no permite entrar desde ese navegador.', { app: esc(this.enApp) })}</p><p>${T('Abrí el juego en {nav} (tres puntitos → Abrir en {nav}) o usá el código por mail, que anda en cualquier lado.', { nav })}</p>`, [
+        { texto: T('Copiar el link'), clase: 'btn-secundario', accion: () => this.copiar(url) },
+        { texto: T('Entendido'), clase: 'btn-primario' },
+      ]);
+    },
+    /** La primera vez dentro de Instagram, Facebook…: el progreso queda en ese navegador, no en Chrome o Safari. */
+    avisoEnApp() {
+      if (!this.enApp) return;
+      try { if (localStorage.getItem('ww.avisoEnApp')) return; localStorage.setItem('ww.avisoEnApp', '1'); } catch (e) { return; }
+      const nav = this.esIOS ? 'Safari' : 'Chrome';
+      setTimeout(() => this.toast(`<div><b>${esc(T('Estás jugando dentro de {app}', { app: this.enApp }))}</b><br><small>${esc(T('Para no perder tu progreso, abrilo en {nav}: tres puntitos → Abrir en {nav}.', { nav }))}</small></div>`), 3500);
+    },
+    /** Que el celular no apague la pantalla en medio de una partida (si el navegador lo permite). */
+    pantallaPrendida(on) {
+      try {
+        if (on) {
+          if (this._wake || !navigator.wakeLock || document.hidden) return;
+          navigator.wakeLock.request('screen').then((w) => { this._wake = w; w.addEventListener('release', () => { this._wake = null; }); }).catch(() => {});
+        } else if (this._wake) { this._wake.release().catch(() => {}); this._wake = null; }
+      } catch (e) { /* sin wake lock */ }
     },
 
     /** Dentro de Instagram, Facebook, TikTok…: no se puede instalar; hay que abrirlo en el navegador. */
@@ -535,6 +564,7 @@
       if (id !== 'p-campanas' && this._cerrarCampana) this._cerrarCampana();
       document.querySelectorAll('.pantalla').forEach((s) => s.classList.toggle('activa', s.id === id));
       this.pantalla = id;
+      this.pantallaPrendida(id === 'p-juego');
       if (id === 'p-practica') { this.pintarArchivo(); this.pintarPracticas(); }
       this.magos.titulo.visible = id === 'p-titulo';
       this.magos.menu.visible = id === 'p-menu';
@@ -2791,7 +2821,7 @@
           Estado.cargar(p.nombre);
           this.modal(`<h3>ESE GOOGLE YA TIENE CUENTA</h3><div class="modal-silabo"></div><p>Esa cuenta de Google ya tiene un mago guardado.</p><p>Podés entrar a esa cuenta: te muestro los dos magos y elegís. No se borra ninguno.</p>`, [
             { texto: 'Ahora no', clase: 'btn-secundario' },
-            { texto: 'Entrar a esa cuenta', clase: 'btn-primario', accion: () => WWCuenta.google(v.clave, true) },
+            { texto: 'Entrar a esa cuenta', clase: 'btn-primario', accion: () => (this.enApp ? this.googleEnApp() : WWCuenta.google(v.clave, true)) },
           ]);
         } else this.toast('No se pudo entrar con Google. Probá de nuevo.');
         // para entender qué pasó (llega a la base: node tools/reportes.js)
@@ -2867,7 +2897,7 @@
           <button class="btn btn-primario" id="cu-mandar">Mandame un código</button>${WWCuenta.metodo('mail') ? '' : '-->'}
           <p class="cuenta-nota">Tu mail solo sirve para reconocer tu cuenta. Nada de publicidad.</p>
         </div>`, [], { cerrar: true });
-      if ($('cu-google')) $('cu-google').addEventListener('click', () => { Audio.click(); $('cu-google').disabled = true; WWCuenta.google(clave); });
+      if ($('cu-google')) $('cu-google').addEventListener('click', () => { Audio.click(); if (this.enApp) return this.googleEnApp(); $('cu-google').disabled = true; WWCuenta.google(clave); });
       const mandar = async () => {
         const mail = $('cu-mail').value, b = $('cu-mandar');
         b.disabled = true; b.textContent = 'Mandando…';

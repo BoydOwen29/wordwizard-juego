@@ -544,4 +544,9 @@ window.WWI18n && WWI18n.registrar('en', {   // si i18n.js no llegó, index.html 
   "¡{a} COMPLETO!": "{a} COMPLETE!",
   "Girá el celular": "Turn your phone",
   "Word Wizard se juega en vertical": "Word Wizard is played upright",
+  "GOOGLE NO DEJA ENTRAR ACÁ": "GOOGLE WON'T LET YOU SIGN IN HERE",
+  "Estás dentro de {app} y Google no permite entrar desde ese navegador.": "You're inside {app} and Google doesn't allow signing in from that browser.",
+  "Abrí el juego en {nav} (tres puntitos → Abrir en {nav}) o usá el código por mail, que anda en cualquier lado.": "Open the game in {nav} (three dots → Open in {nav}) or use the email code, which works anywhere.",
+  "Estás jugando dentro de {app}": "You're playing inside {app}",
+  "Para no perder tu progreso, abrilo en {nav}: tres puntitos → Abrir en {nav}.": "So you don't lose your progress, open it in {nav}: three dots → Open in {nav}.",
 });
