@@ -1618,3 +1618,5 @@ body.lugar-pradera #p-juego .hud, body.lugar-pradera #p-juego .progreso, body.lu
   #girar { display: flex; position: fixed; inset: 0; z-index: 9999; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: #1c2f38; color: #e9f1ea; text-align: center; }
   #girar b { font: 600 24px var(--display); } #girar small { font: 700 14px var(--texto-f); color: #a9bfb6; }
 }
+/* pantallas muy angostas (pantalla agrandada): el nombre del modo entra entero */
+@media (max-width: 340px) { .hud-modo { font-size: calc(11px * var(--letra, 1)); letter-spacing: 0; } }

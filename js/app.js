@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.49.2',
+    version: '2.49.3',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -191,6 +191,8 @@
       this.eventos();
       this.pwa();
       this.avisoEnApp();
+      this.avisoModoComputadora();
+      this.medirBarraApp();
       document.addEventListener('visibilitychange', () => { if (!document.hidden && this.pantalla === 'p-juego') this.pantallaPrendida(true); });
       // que el navegador no borre el progreso cuando le falta lugar (Chrome lo da solo; Firefox preguntaría, ahí no se pide)
       try { if (navigator.storage && navigator.storage.persist && !/firefox/i.test(navigator.userAgent)) navigator.storage.persisted().then((p) => { if (!p) navigator.storage.persist().catch(() => {}); }).catch(() => {}); } catch (e) { /* nada */ }
@@ -359,6 +361,26 @@
       const nav = this.esIOS ? 'Safari' : 'Chrome';
       setTimeout(() => this.toast(`<div><b>${esc(T('Estás jugando dentro de {app}', { app: this.enApp }))}</b><br><small>${esc(T('Para no perder tu progreso, abrilo en {nav}: tres puntitos → Abrir en {nav}.', { nav }))}</small></div>`), 3500);
     },
+    /** Chrome del celular en "Versión para computadora": la pantalla mide 980 px de ancho y todo se ve chiquito. */
+    avisoModoComputadora() {
+      const tactil = navigator.maxTouchPoints > 0, chica = Math.min(screen.width, screen.height) < 520;
+      if (!tactil || !chica || innerWidth < 900 || /android|iphone|ipad/i.test(navigator.userAgent)) return;
+      setTimeout(() => this.toast(`<div><b>${esc(T('Estás en "versión para computadora"'))}</b><br><small>${esc(T('Por eso se ve chiquito: sacala desde el menú de Chrome (tres puntitos).'))}</small></div>`), 3000);
+    },
+    /**
+     * La app de Play (TWA) a veces abre con la barra de dirección de Chrome arriba: pasa cuando Chrome no llega a confirmar
+     * que la app y el sitio son del mismo dueño. Se mide (una vez por día) para saber cuántas veces pasa (vigilar.js lo avisa).
+     */
+    medirBarraApp() {
+      if (!/^android-app:\/\/com\.capralabsgames\.wordwizard/.test(document.referrer || '')) return;
+      setTimeout(() => {
+        const sobra = screen.height - innerHeight;   // con la barra de Chrome, la ventana es unos 56 px más baja
+        if (sobra < 130) return;
+        try { const k = 'ww.barraApp'; if (localStorage.getItem(k) === this.hoy) return; localStorage.setItem(k, this.hoy); } catch (e) { return; }
+        if (window.WWReportes && WWReportes.error) WWReportes.error('Diagnóstico: la app abrió con la barra de Chrome', { alto: innerHeight, pantalla: screen.height, sobra });
+      }, 4000);
+    },
+
     /** Que el celular no apague la pantalla en medio de una partida (si el navegador lo permite). */
     pantallaPrendida(on) {
       try {
@@ -2869,17 +2891,18 @@
       const v = p.vistos && p.vistos.cuenta || { veces: 0, dia: null };
       const dias = v.dia ? (new Date(this.hoy) - new Date(v.dia)) / 864e5 : 99;
       const pase = this.tienePase();
-      if (v.veces >= 3 || dias < 7 || (!pase && p.stats.partidas < 6) || (p.ventas && p.ventas.dia === this.hoy)) return;
+      const safari = this.esIOS && !this.instalada && !this.enApp;   // Safari borra lo guardado si no abrís el sitio en 7 días
+      if (safari ? (v.veces >= 6 || dias < 3 || p.stats.partidas < 2) : (v.veces >= 3 || dias < 7 || (!pase && p.stats.partidas < 6)) || (p.ventas && p.ventas.dia === this.hoy)) return;
       setTimeout(() => {
         if (this.pantalla !== 'p-menu' || !$('modal').classList.contains('oculto') || this.tieneCuenta()) return;
         p.vistos = Object.assign({}, p.vistos, { cuenta: { veces: v.veces + 1, dia: this.hoy } }); Estado.guardar();
         const racha = Estado.rachaVigente(this.hoy);
         this.modal(`<h3>¿TE GUARDO EL PROGRESO?</h3><div class="modal-silabo" data-pose="happy"></div>
           <p>${pase ? 'Tenés el Pase de Mago.' : `Ya vas por el nivel ${p.nivel}${racha >= 2 ? ` con ${racha} días de racha` : ''}.`}</p>
-          <p>Con una cuenta no lo perdés si cambiás de celular, y seguís jugando en la compu.</p>`, [
-          { texto: 'Ahora no', clase: 'btn-secundario' },
+          <p>${safari ? T('En iPhone, Safari borra lo guardado si no abrís el juego en 7 días. Con una cuenta (o instalándolo en el inicio) no se pierde.') : 'Con una cuenta no lo perdés si cambiás de celular, y seguís jugando en la compu.'}</p>`, [
+          safari && !this.instalada ? { texto: T('Instalarlo'), clase: 'btn-secundario', accion: () => this.instalar() } : { texto: 'Ahora no', clase: 'btn-secundario' },
           { texto: 'Guardar mi progreso', clase: 'btn-primario', accion: () => this.entrarCuenta(this.claveNube()) },
-        ]);
+        ], safari ? { cerrar: true } : undefined);
       }, 1500);
     },
 

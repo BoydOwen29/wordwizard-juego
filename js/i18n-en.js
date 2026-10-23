@@ -549,4 +549,8 @@ window.WWI18n && WWI18n.registrar('en', {   // si i18n.js no llegó, index.html 
   "Abrí el juego en {nav} (tres puntitos → Abrir en {nav}) o usá el código por mail, que anda en cualquier lado.": "Open the game in {nav} (three dots → Open in {nav}) or use the email code, which works anywhere.",
   "Estás jugando dentro de {app}": "You're playing inside {app}",
   "Para no perder tu progreso, abrilo en {nav}: tres puntitos → Abrir en {nav}.": "So you don't lose your progress, open it in {nav}: three dots → Open in {nav}.",
+  "En iPhone, Safari borra lo guardado si no abrís el juego en 7 días. Con una cuenta (o instalándolo en el inicio) no se pierde.": "On iPhone, Safari deletes saved data if you don't open the game for 7 days. With an account (or installing it on your home screen) it isn't lost.",
+  "Instalarlo": "Install it",
+  "Estás en \"versión para computadora\"": "You are on \"desktop site\"",
+  "Por eso se ve chiquito: sacala desde el menú de Chrome (tres puntitos).": "That's why it looks tiny: turn it off in Chrome's menu (three dots).",
 });
