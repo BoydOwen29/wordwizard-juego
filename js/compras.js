@@ -92,6 +92,8 @@
     }
     // un Pase de prueba sigue sus 30 días aunque Play ya no lo liste (Google vence las de prueba a la media hora)
     for (const k of PASE) if (!d[k] && antes[k] && antes[k].prueba && antes[k].vence > Date.now()) d[k] = antes[k];
+    // lo comprado con la cuenta en otro lado (Mercado Pago en la web) sigue: Play no lo conoce
+    for (const k of Object.keys(antes)) if (!d[k] && antes[k].nube && (!antes[k].vence || antes[k].vence > Date.now())) d[k] = antes[k];
     escribir(d);
     for (const p of lista) {
       const r = await validar(p.itemId, p.purchaseToken, usuario);

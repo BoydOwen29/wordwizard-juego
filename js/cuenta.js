@@ -331,6 +331,24 @@
     } catch (e) { return null; }
   }
 
+  // ------------------------------------------------------------ Mercado Pago (cobro en la web, Fase 8)
+  /** Pide el link de pago del Pase (plan 'mes' o 'anio'); devuelve { url } o { error }. Hace falta la cuenta del mago. */
+  async function pagarMP(clave, plan) {
+    if (!activo() || !de(clave)) return { error: 'hace falta una cuenta' };
+    try {
+      const s = await R().sesion(clave);
+      const r = await api('/functions/v1/mp-pagar', { method: 'POST', body: JSON.stringify({ plan }) }, s.token);
+      return r.ok && r.j && r.j.url ? { url: r.j.url } : { error: (r.j && r.j.error) || 'no se pudo' };
+    } catch (e) { return { error: 'sin señal' }; }
+  }
+  /** Al volver de Mercado Pago: le pide al servidor que confirme ese pago (sin esperar el aviso de Mercado Pago). */
+  async function confirmarMP(pagoId) {
+    try {
+      const r = await api('/functions/v1/mp-aviso?payment_id=' + encodeURIComponent(pagoId), { method: 'GET' });
+      return r.j && r.j.estado || null;
+    } catch (e) { return null; }
+  }
+
   // ------------------------------------------------------------ salir y borrar
   /** Cierra la sesión en este dispositivo (el progreso sigue en la cuenta). */
   async function salir(clave) {
@@ -346,5 +364,5 @@
     return ok;
   }
 
-  window.WWCuenta = { activo, metodo, revisarVinculo, alEstado, de, hayAlguna, preparar: prepararFusion, google, pedirCodigo, verificar, alVolver, completar, canjear, vincular, empezar, adoptar, baseDe, sincronizar, programar, vaciar, compras, salir, borrar };
+  window.WWCuenta = { activo, metodo, revisarVinculo, alEstado, de, hayAlguna, preparar: prepararFusion, google, pedirCodigo, verificar, alVolver, completar, canjear, vincular, empezar, adoptar, baseDe, sincronizar, programar, vaciar, compras, pagarMP, confirmarMP, salir, borrar };
 })();

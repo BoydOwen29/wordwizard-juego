@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.50.0',
+    version: '2.51.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -76,6 +76,7 @@
     // archivo de desafíos: los últimos días gratis; el resto, con el Pase de Mago (docs/HOJA-DE-RUTA.md)
     archivoGratis: 3, archivoDias: 30,
     trajeTemporada: 'ceibo',   // el traje de la temporada que viene con el Pase (Silabo lo luce en la pantalla del Pase)
+    preciosMP: { mes: 3000, anio: 19900 },   // pesos; los mismos que en supabase/functions/mp-pagar (Fase 8)
     practicasGratis: 3,   // por día; con el Pase de Mago, sin límite (docs/MONETIZACION.md)
     practicasTester: 10,  // los testers de la prueba cerrada (entran una vez con el link ?tester=bosque)
     // monedas que la Torre puede dar por día; las fuertes vienen de volver cada día (diario y misiones)
@@ -192,6 +193,7 @@
       this.pwa();
       this.avisoEnApp();
       this.instalarPorLink();
+      setTimeout(() => this.revisarPagoMP(), 2000);
       this.avisoModoComputadora();
       this.medirBarraApp();
       document.addEventListener('visibilitychange', () => { if (!document.hidden && this.pantalla === 'p-juego') this.pantallaPrendida(true); });
@@ -2124,10 +2126,34 @@
       const gratis = `<p class="pase-nota">Gratis para siempre: el desafío del día, la Torre Arcana, ${CONFIG.practicasGratis} prácticas por día y los últimos ${CONFIG.archivoGratis} días del archivo.</p>`;
       const cabeza = `<h3>PASE DE MAGO</h3><div class="modal-silabo" data-pose="happy" data-paleta="${CONFIG.trajeTemporada}"></div>`;
       if (this.tienePase()) {
-        return this.modal(`${cabeza}<p>Tu Pase está activo. ¡Gracias por darme una mano! 💚</p>${incluye}<p class="pase-nota">Lo manejás (o lo cancelás) desde Google Play → Pagos y suscripciones.</p>`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+        return this.modal(`${cabeza}<p>Tu Pase está activo. ¡Gracias por darme una mano! 💚</p>${incluye}${this.notaPaseActivo()}`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
       }
       if (!this.playBilling) {
-        return this.modal(`${cabeza}<p>Con el <b>Pase de Mago</b> practicás sin límite, abrís todo el archivo y te llevás el traje de cada temporada. Y me ayudás a seguir creciendo.</p>${incluye}<p>Muy pronto, desde la app de Android (Google Play).</p>${gratis}`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+        const intro = `${cabeza}<p>Con el <b>Pase de Mago</b> practicás sin límite, abrís todo el archivo y te llevás el traje de cada temporada. Y me ayudás a seguir creciendo.</p>${incluye}`;
+        if (!this.pagoWebDisponible()) return this.modal(`${intro}<p>Muy pronto, desde la app de Android (Google Play).</p>${gratis}`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
+        // en la web (iPhone, compu): Mercado Pago, en pesos, como pago único (sin renovación). Queda en la cuenta del mago.
+        const P = CONFIG.preciosMP, fmt = (n) => '$ ' + n.toLocaleString('es-AR');
+        const regalo = Math.round(12 - P.anio / P.mes);
+        const planes = `<div class="pase-planes">
+          <button class="pase-plan" data-plan="mes"><small>${T('30 días')}</small><b>${fmt(P.mes)}</b><span>${T('un solo pago')}</span></button>
+          <button class="pase-plan sel" data-plan="anio">${regalo >= 2 ? `<em class="pase-cinta">${T('{n} meses de regalo', { n: regalo })}</em>` : ''}<small>${T('1 año')}</small><b>${fmt(P.anio)}</b><span>${fmt(Math.round(P.anio / 12))} ${T('por mes')}</span></button>
+        </div>`;
+        if (!this.tieneCuenta()) {
+          return this.modal(`${intro}${planes}<p>${T('Para que el Pase quede guardado y lo tengas en todos tus dispositivos, primero guardá tu progreso (con Google o con tu mail).')}</p>${gratis}`, [
+            { texto: 'Ahora no', clase: 'btn-secundario' },
+            { texto: T('Guardar mi progreso'), clase: 'btn-primario', accion: () => this.entrarCuenta(this.claveNube()) },
+          ]);
+        }
+        let plan = 'anio';
+        this.modal(`${intro}${planes}${gratis}<p class="pase-nota">${T('Pagás una sola vez con Mercado Pago (tarjeta, débito o dinero en cuenta). No se renueva solo.')}</p>`, [
+          { texto: 'Ahora no', clase: 'btn-secundario' },
+          { texto: T('Pagar con Mercado Pago'), clase: 'btn-primario', accion: () => this.pagarMP(plan) },
+        ]);
+        $('modal-caja').querySelectorAll('.pase-plan').forEach((b) => b.addEventListener('click', () => {
+          Audio.click(); plan = b.dataset.plan;
+          $('modal-caja').querySelectorAll('.pase-plan').forEach((x) => x.classList.toggle('sel', x === b));
+        }));
+        return;
       }
       WWCompras.precios(WWCompras.PASE).then((pr) => {
         const m = pr.pase_mensual, a = pr.pase_anual;
@@ -2150,6 +2176,46 @@
           boton.textContent = window.WWI18n.t(sku === 'pase_anual' ? 'Sacar el Pase anual' : 'Sacar el Pase mensual');
         }));
       });
+    },
+
+    /** Debajo del Pase activo: en la app de Play se maneja desde Play; el pagado con Mercado Pago dice hasta cuándo va. */
+    notaPaseActivo() {
+      if (this.playBilling) return '<p class="pase-nota">Lo manejás (o lo cancelás) desde Google Play → Pagos y suscripciones.</p>';
+      const e = window.WWCompras && WWCompras.estadoPase(), hasta = e && e.expira ? new Date(e.expira) : null;
+      return hasta && !isNaN(hasta) ? `<p class="pase-nota">${T('Tu Pase va hasta el {f}. Para seguir, lo renovás desde acá cuando venza.', { f: hasta.toLocaleDateString('es-AR') })}</p>` : '';
+    },
+    /** ¿Se puede pagar en la web? Con Mercado Pago, en pesos: para quien juega desde Argentina. */
+    pagoWebDisponible() {
+      if (this.playBilling || !window.WWCuenta || !WWCuenta.activo()) return false;
+      let zona = '';
+      try { zona = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* nada */ }
+      return /^America\/(Argentina|Buenos_Aires|Cordoba|Catamarca|Jujuy|Mendoza)/.test(zona);
+    },
+    /** Lleva a Mercado Pago a pagar el Pase. Vuelve a ?pago=ok|pendiente|error (ver revisarPagoMP). */
+    async pagarMP(plan) {
+      this.toast(`<div><b>${esc(T('Abriendo Mercado Pago…'))}</b></div>`);
+      const r = await WWCuenta.pagarMP(this.claveNube(), plan);
+      if (r.url) { try { localStorage.setItem('ww.pagoMP', JSON.stringify({ plan, t: Date.now() })); } catch (e) { /* nada */ } location.href = r.url; return; }
+      this.toast(`<div><b>${esc(T('No se pudo abrir el pago'))}</b><br><small>${esc(T('Probá de nuevo en un rato. Si sigue, escribime desde Ayuda.'))}</small></div>`);
+      if (window.WWReportes && WWReportes.error) WWReportes.error('Mercado Pago: no se pudo armar el pago', { error: r.error, plan });
+    },
+    /** Al volver de Mercado Pago (?pago=…&payment_id=…): confirma el pago y trae el Pase de la cuenta. */
+    async revisarPagoMP() {
+      let q;
+      try { q = new URLSearchParams(location.search); } catch (e) { return; }
+      const pago = q.get('pago');
+      if (!pago) return;
+      const id = q.get('payment_id') || q.get('collection_id');
+      try { history.replaceState(null, '', location.pathname); } catch (e) { /* nada */ }
+      if (pago === 'error') return setTimeout(() => this.toast(`<div><b>${esc(T('El pago no se hizo'))}</b><br><small>${esc(T('No se te cobró nada. Podés probar de nuevo cuando quieras.'))}</small></div>`), 1500);
+      if (pago === 'pendiente') return setTimeout(() => this.toast(`<div><b>${esc(T('Tu pago está pendiente'))}</b><br><small>${esc(T('Cuando Mercado Pago lo acredite, el Pase se activa solo.'))}</small></div>`), 1500);
+      if (id && window.WWCuenta) await WWCuenta.confirmarMP(id);
+      // el Pase llega con las compras de la cuenta
+      for (let i = 0; i < 4 && !this.tienePase(); i++) { await this.sincronizarCuenta(); if (!this.tienePase()) await new Promise((r) => setTimeout(r, 2500)); }
+      if (this.tienePase()) {
+        this.repintarPase(); Audio.victoria(); this.confeti(80);
+        this.toast(`<div><b>${esc(T('¡Gracias! Tu Pase de Mago está activo'))}</b><br><small>${esc(T('Ya tenés práctica sin límite, todo el archivo y Aventura.'))}</small></div>`, 'logro');
+      } else this.toast(`<div><b>${esc(T('Recibimos tu pago'))}</b><br><small>${esc(T('El Pase se activa en unos minutos. Si no, escribime desde Ayuda.'))}</small></div>`);
     },
 
     /** Recordatorio diario (game/js/recordatorio.js). hora null = apagar. */
