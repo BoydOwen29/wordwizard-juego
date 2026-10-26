@@ -25,7 +25,7 @@
 <link rel="apple-touch-icon" href="assets/img/icon-192x192.png">
 <link rel="preload" href="assets/fonts/fredoka-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/nunito-700.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/estilo.css?v=2.52.0">
+<link rel="stylesheet" href="css/estilo.css?v=2.53.0">
 </head>
 <body>
 
@@ -96,13 +96,13 @@
   <section id="p-menu" class="pantalla con-tabs">
     <header class="hud-inicio">
       <button class="hud-yo" id="hud-yo" title="Mi mago"><span class="hud-nivel pixel" id="hud-nivel">1</span><span class="hud-datos"><b id="hud-nombre">—</b><small id="hud-titulo">Aprendiz de letras</small></span></button>
-      <span class="chip" title="Monedas"><i class="ic" data-ic="moneda"></i> <b id="hud-monedas">0</b></span>
+      <button class="chip chip-monedas" id="hud-monedas-btn" title="Tienda"><i class="ic" data-ic="moneda"></i> <b id="hud-monedas">0</b><span class="punto-nuevo oculto" id="hud-tienda-punto"></span></button>
       <button class="chip chip-racha" id="chip-racha" title="Racha diaria y velas"><i class="ic" data-ic="llama"></i> <b id="menu-racha">0</b><span class="chip-velas" id="menu-velas"></span></button>
       <button class="btn-icono btn-musica btn-musica-menu" id="btn-musica-menu" title="Música"><i class="ic" data-ic="nota"></i></button>
     </header>
 
     <div class="inicio-logo" id="inicio-logo"></div>
-    <div class="inicio-mago"><div class="pase-brillo" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div><div id="mago-menu" class="mago mago-inicio"></div></div>
+    <div class="inicio-mago"><button class="inicio-pase oculto" id="btn-pase-inicio"><i class="sello-pase"></i><span>Pase de Mago</span></button><div class="pase-brillo" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div><div id="mago-menu" class="mago mago-inicio"></div></div>
 
     <div class="inicio-abajo">
       <button class="btn-desafio" id="btn-diario">
@@ -134,7 +134,7 @@
     <div class="mago-medallones">
       <button class="medallon oculto" id="btn-logros"><i class="ic" data-ic="trofeo"></i><span>Logros</span></button>
       <button class="medallon oculto" id="btn-stats"><i class="ic" data-ic="grafico"></i><span>Números</span></button>
-      <button class="medallon" id="btn-tienda"><i class="ic" data-ic="moneda"></i><span>Tienda</span></button>
+      <button class="medallon" id="btn-tienda"><i class="ic" data-ic="moneda"></i><span>Tienda</span><span class="punto-nuevo oculto" id="tienda-punto"></span></button>
       <button class="medallon" id="btn-ayuda"><i class="ic" data-ic="pregunta"></i><span>Ayuda</span></button>
       <button class="medallon" id="btn-ajustes"><i class="ic" data-ic="engranaje"></i><span>Ajustes</span></button>
       <button class="medallon oculto" id="btn-idioma" data-no-t><span class="medallon-bandera" id="btn-idioma-bandera"></span><span>Idioma · Language</span></button>
@@ -435,10 +435,10 @@
 <div id="toasts" aria-live="polite"></div>
 <div id="modal" class="modal oculto"><div class="modal-caja" id="modal-caja" role="dialog" aria-modal="true"></div></div>
 
-<script src="js/reportes.js?v=2.52.0"></script>
-<script src="js/i18n.js?v=2.52.0"></script>
-<script src="js/i18n-en.js?v=2.52.0"></script>
-<script src="js/i18n-pt.js?v=2.52.0"></script>
+<script src="js/reportes.js?v=2.53.0"></script>
+<script src="js/i18n.js?v=2.53.0"></script>
+<script src="js/i18n-en.js?v=2.53.0"></script>
+<script src="js/i18n-pt.js?v=2.53.0"></script>
 <script>
   // si un archivo no llegó (la página nueva bajó pero sus scripts no, por la señal), se reintenta una vez sola;
   // si tampoco, se avisa en vez de quedar la pantalla en blanco
@@ -454,27 +454,27 @@
   };
   if (!window.WWI18n) WWFalla();
   // diccionario, desafíos y totales del idioma elegido
-  else for (const n of ['diccionario', 'desafios', 'totales', 'torre', 'capitulos']) document.write('<script src="' + WWI18n.datos + n + '.js?v=2.52.0"><\/script>');
+  else for (const n of ['diccionario', 'desafios', 'totales', 'torre', 'capitulos']) document.write('<script src="' + WWI18n.datos + n + '.js?v=2.53.0"><\/script>');
 </script>
-<script src="js/motor.js?v=2.52.0"></script>
-<script src="js/silabo.js?v=2.52.0"></script>
-<script src="js/iconos.js?v=2.52.0"></script>
-  <script src="js/logros-iconos.js?v=2.52.0"></script>
-<script src="js/mago.js?v=2.52.0"></script>
-<script src="js/mapa.js?v=2.52.0"></script>
-<script src="js/escena.js?v=2.52.0"></script>
-<script src="js/vida.js?v=2.52.0"></script>
-<script src="js/audio.js?v=2.52.0"></script>
-<script src="js/logros.js?v=2.52.0"></script>
-<script src="js/estado.js?v=2.52.0"></script>
-<script src="js/ranking.js?v=2.52.0"></script>
-<script src="js/compras.js?v=2.52.0"></script>
-<script src="js/cuenta.js?v=2.52.0"></script>
-<script src="js/recordatorio.js?v=2.52.0"></script>
-<script src="js/metricas.js?v=2.52.0"></script>
-<script src="js/tarjeta.js?v=2.52.0"></script>
-<script src="js/elenco.js?v=2.52.0"></script>
-<script src="js/campanas.js?v=2.52.0"></script>
-<script src="js/app.js?v=2.52.0"></script>
+<script src="js/motor.js?v=2.53.0"></script>
+<script src="js/silabo.js?v=2.53.0"></script>
+<script src="js/iconos.js?v=2.53.0"></script>
+  <script src="js/logros-iconos.js?v=2.53.0"></script>
+<script src="js/mago.js?v=2.53.0"></script>
+<script src="js/mapa.js?v=2.53.0"></script>
+<script src="js/escena.js?v=2.53.0"></script>
+<script src="js/vida.js?v=2.53.0"></script>
+<script src="js/audio.js?v=2.53.0"></script>
+<script src="js/logros.js?v=2.53.0"></script>
+<script src="js/estado.js?v=2.53.0"></script>
+<script src="js/ranking.js?v=2.53.0"></script>
+<script src="js/compras.js?v=2.53.0"></script>
+<script src="js/cuenta.js?v=2.53.0"></script>
+<script src="js/recordatorio.js?v=2.53.0"></script>
+<script src="js/metricas.js?v=2.53.0"></script>
+<script src="js/tarjeta.js?v=2.53.0"></script>
+<script src="js/elenco.js?v=2.53.0"></script>
+<script src="js/campanas.js?v=2.53.0"></script>
+<script src="js/app.js?v=2.53.0"></script>
 </body>
 </html>

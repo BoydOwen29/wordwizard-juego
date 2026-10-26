@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.52.0',
+    version: '2.53.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -886,6 +886,10 @@
       document.body.classList.toggle('con-pase', pase);
       this.pintarNube();
       $('hud-monedas').textContent = p.monedas;
+      const vende = this.playBilling || this.pagoWebDisponible();
+      $('btn-pase-inicio').classList.toggle('oculto', pase || !vende);
+      const nuevo = this.trajeNuevo();
+      for (const id of ['hud-tienda-punto', 'tienda-punto']) $(id).classList.toggle('oculto', !nuevo);
       $('menu-nombre').textContent = p.nombre;
       $('menu-titulo').textContent = WW.tituloNivel(p.nivel);
       this.pintarXp('menu-xp-fill', 'menu-xp-txt', p.xp);
@@ -938,6 +942,7 @@
       });
       $('mapa-tienda').addEventListener('click', () => { Audio.click(); this.abrirTienda(); });
       this.abrirTienda = () => {
+        if (this.trajeNuevo()) { Estado.perfil.tiendaVista = CONFIG.trajeTemporada; Estado.guardar(); }
         this.modal(`<h3>TIENDA</h3><p class="tienda-saldo">TENÉS ${Estado.perfil.monedas} ${WWIconos.html('moneda')}</p><div class="tienda" id="tienda"></div>`, [{ texto: 'Listo', clase: 'btn-primario', accion: () => { this.pintarPerfil(); if (this.pantalla === 'p-mago') this.pintarMagoPanel(); } }]);
         this.renderTienda();
       };
@@ -981,6 +986,8 @@
       $('hud-yo').addEventListener('click', () => { Audio.click(); this.verMago(); });
       $('btn-misiones').addEventListener('click', () => { Audio.click(); this.verMisiones(); });
       $('btn-tienda').addEventListener('click', () => { Audio.click(); this.abrirTienda(); });
+      $('hud-monedas-btn').addEventListener('click', () => { Audio.click(); this.abrirTienda(); });
+      $('btn-pase-inicio').addEventListener('click', () => { Audio.click(); this.avisoPase(); });
 
       document.querySelectorAll('#p-practica [data-largo]').forEach((b) => b.addEventListener('click', () => {
         Audio.click();
@@ -1993,7 +2000,7 @@
      * se puede comprar; dos "Ahora no" a un mismo aviso lo callan una semana.
      */
     puedeVender(id) {
-      const p = Estado.perfil; if (!p || this.tienePase() || !this.playBilling) return false;
+      const p = Estado.perfil; if (!p || this.tienePase() || !(this.playBilling || this.pagoWebDisponible())) return false;
       this.pase();
       if ((p.stats.partidas || 0) < 3 || p.ventas.dia === this.hoy) return false;
       const n = p.ventas.no[id];
@@ -2234,8 +2241,7 @@
       // el Pase llega con las compras de la cuenta
       for (let i = 0; i < 4 && !this.tienePase(); i++) { await this.sincronizarCuenta(); if (!this.tienePase()) await new Promise((r) => setTimeout(r, 2500)); }
       if (this.tienePase()) {
-        this.repintarPase(); Audio.victoria(); this.confeti(80);
-        this.toast(`<div><b>${esc(T('¡Gracias! Tu Pase de Mago está activo'))}</b><br><small>${esc(T('Ya tenés práctica sin límite, todo el archivo y Aventura.'))}</small></div>`, 'logro');
+        this.repintarPase(); this.bienvenidaPase();
       } else this.toast(`<div><b>${esc(T('Recibimos tu pago'))}</b><br><small>${esc(T('El Pase se activa en unos minutos. Si no, escribime desde Ayuda.'))}</small></div>`);
     },
 
@@ -2533,6 +2539,11 @@
     },
     cerrarTraje() { const c = document.querySelector('#modal-caja .vista-traje'); if (c) { c.remove(); return true; } return false; },
 
+    /** ¿Hay un traje de temporada que se puede comprar y todavía no se vio en la tienda? (el puntito) */
+    trajeNuevo() {
+      const p = Estado.perfil, k = CONFIG.trajeTemporada;
+      return !!(p && k && Magos.PALETAS[k] && p.tiendaVista !== k && !this.tieneTraje(k) && (this.playBilling || this.pagoWebDisponible()));
+    },
     /** Un traje es del jugador si llegó al nivel o si lo compró con monedas. */
     tieneTraje(k) {
       const p = Estado.perfil, v = Magos.PALETAS[k];
