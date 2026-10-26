@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.51.0',
+    version: '2.52.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -76,7 +76,7 @@
     // archivo de desafíos: los últimos días gratis; el resto, con el Pase de Mago (docs/HOJA-DE-RUTA.md)
     archivoGratis: 3, archivoDias: 30,
     trajeTemporada: 'ceibo',   // el traje de la temporada que viene con el Pase (Silabo lo luce en la pantalla del Pase)
-    preciosMP: { mes: 3000, anio: 19900 },   // pesos; los mismos que en supabase/functions/mp-pagar (Fase 8)
+    preciosMP: { mes: 3000, anio: 19900, traje: 1500, apoyo: 2500 },   // pesos; los mismos que en supabase/functions/mp-pagar (Fase 8)
     practicasGratis: 3,   // por día; con el Pase de Mago, sin límite (docs/MONETIZACION.md)
     practicasTester: 10,  // los testers de la prueba cerrada (entran una vez con el link ?tester=bosque)
     // monedas que la Torre puede dar por día; las fuertes vienen de volver cada día (diario y misiones)
@@ -2104,6 +2104,20 @@
     avisoCompra(v) {
       const k = Object.keys(Magos.PALETAS).find((x) => Magos.PALETAS[x] === v);
       const texto = v.especial.apoyo ? 'Gracias por querer darme una mano. 💚' : 'Un traje para lucirte: no da ninguna ventaja.';
+      if (!this.playBilling && this.pagoWebDisponible()) {
+        // en la web: Mercado Pago, en pesos, una sola vez y para siempre. Queda en la cuenta del mago.
+        const cab = `<h3>${esc(v.nombre.toUpperCase())}</h3><div class="modal-silabo" data-paleta="${k}"></div><p>${texto}</p>`;
+        if (!this.tieneCuenta()) {
+          return this.modal(`${cab}<p>${T('Para que el traje quede guardado y lo tengas en todos tus dispositivos, primero guardá tu progreso (con Google o con tu mail).')}</p>`, [
+            { texto: 'Ahora no', clase: 'btn-secundario' },
+            { texto: T('Guardar mi progreso'), clase: 'btn-primario', accion: () => this.entrarCuenta(this.claveNube()) },
+          ]);
+        }
+        return this.modal(`${cab}<p class="pase-nota">${T('Pagás una sola vez con Mercado Pago (tarjeta, débito o dinero en cuenta). Es tuyo para siempre.')}</p>`, [
+          { texto: 'Ahora no', clase: 'btn-secundario' },
+          { texto: T('Pagar {p}', { p: this.pesos(this.precioTrajeMP(v)) }), clase: 'btn-primario', accion: () => this.pagarMP(v.especial.sku) },
+        ]);
+      }
       if (!this.playBilling) {
         return this.modal(`<h3>${esc(v.nombre.toUpperCase())}</h3><div class="modal-silabo" data-paleta="${k}"></div><p>${texto}</p><p>Muy pronto, desde la app de Android (Google Play).</p>`, [{ texto: 'Dale', clase: 'btn-primario' }]);
       }
@@ -2192,6 +2206,8 @@
       return /^America\/(Argentina|Buenos_Aires|Cordoba|Catamarca|Jujuy|Mendoza)/.test(zona);
     },
     /** Lleva a Mercado Pago a pagar el Pase. Vuelve a ?pago=ok|pendiente|error (ver revisarPagoMP). */
+    precioTrajeMP(v) { return v.especial.apoyo ? CONFIG.preciosMP.apoyo : CONFIG.preciosMP.traje; },
+    pesos(n) { return '$ ' + n.toLocaleString('es-AR'); },
     async pagarMP(plan) {
       this.toast(`<div><b>${esc(T('Abriendo Mercado Pago…'))}</b></div>`);
       const r = await WWCuenta.pagarMP(this.claveNube(), plan);
@@ -2207,6 +2223,11 @@
       if (!pago) return;
       const id = q.get('payment_id') || q.get('collection_id');
       try { history.replaceState(null, '', location.pathname); } catch (e) { /* nada */ }
+      let guardado = null;
+      try { guardado = JSON.parse(localStorage.getItem('ww.pagoMP') || 'null'); } catch (e) { /* nada */ }
+      const sku = guardado && /^traje_/.test(guardado.plan) ? guardado.plan : null;
+      const k = sku && Object.keys(Magos.PALETAS).find((x) => Magos.PALETAS[x].especial && Magos.PALETAS[x].especial.sku === sku);
+      if (k) return this.revisarTrajeMP(pago, id, k);
       if (pago === 'error') return setTimeout(() => this.toast(`<div><b>${esc(T('El pago no se hizo'))}</b><br><small>${esc(T('No se te cobró nada. Podés probar de nuevo cuando quieras.'))}</small></div>`), 1500);
       if (pago === 'pendiente') return setTimeout(() => this.toast(`<div><b>${esc(T('Tu pago está pendiente'))}</b><br><small>${esc(T('Cuando Mercado Pago lo acredite, el Pase se activa solo.'))}</small></div>`), 1500);
       if (id && window.WWCuenta) await WWCuenta.confirmarMP(id);
@@ -2216,6 +2237,22 @@
         this.repintarPase(); Audio.victoria(); this.confeti(80);
         this.toast(`<div><b>${esc(T('¡Gracias! Tu Pase de Mago está activo'))}</b><br><small>${esc(T('Ya tenés práctica sin límite, todo el archivo y Aventura.'))}</small></div>`, 'logro');
       } else this.toast(`<div><b>${esc(T('Recibimos tu pago'))}</b><br><small>${esc(T('El Pase se activa en unos minutos. Si no, escribime desde Ayuda.'))}</small></div>`);
+    },
+
+    /** La vuelta de Mercado Pago cuando se compró un traje especial: lo confirma, lo trae de la cuenta y se lo pone. */
+    async revisarTrajeMP(pago, id, k) {
+      const v = Magos.PALETAS[k];
+      if (pago === 'error') return setTimeout(() => this.toast(`<div><b>${esc(T('El pago no se hizo'))}</b><br><small>${esc(T('No se te cobró nada. Podés probar de nuevo cuando quieras.'))}</small></div>`), 1500);
+      if (pago === 'pendiente') return setTimeout(() => this.toast(`<div><b>${esc(T('Tu pago está pendiente'))}</b><br><small>${esc(T('Cuando Mercado Pago lo acredite, el traje llega solo.'))}</small></div>`), 1500);
+      if (id && window.WWCuenta) await WWCuenta.confirmarMP(id);
+      for (let i = 0; i < 4 && !this.tieneTraje(k); i++) { await this.sincronizarCuenta(); if (!this.tieneTraje(k)) await new Promise((r) => setTimeout(r, 2500)); }
+      try { localStorage.removeItem('ww.pagoMP'); } catch (e) { /* nada */ }
+      if (!this.tieneTraje(k)) return this.toast(`<div><b>${esc(T('Recibimos tu pago'))}</b><br><small>${esc(T('El traje llega en unos minutos. Si no, escribime desde Ayuda.'))}</small></div>`);
+      const p = Estado.perfil;
+      p.sombrero = k; Estado.guardar();
+      for (const mg of ['titulo', 'menu', 'juego', 'mapa']) if (this.magos[mg]) this.magos[mg].setPaleta(k);
+      Audio.victoria(); this.confeti(80);
+      this.modal(`<h3>¡GRACIAS!</h3><div class="modal-silabo" data-pose="happy" data-paleta="${k}"></div><p>${esc(T('{n} ya es tuyo. ¡Me encanta cómo te queda! 💚', { n: v.nombre }))}</p>`, [{ texto: '¡Vamos!', clase: 'btn-primario' }]);
     },
 
     /** Recordatorio diario (game/js/recordatorio.js). hora null = apagar. */
@@ -2447,7 +2484,7 @@
         d.className = 'tienda-item traje especial' + (tiene ? ' tiene' : '') + (v.especial.apoyo ? ' apoyo' : ''); d.dataset.k = k;
         const sub = (v.especial.apoyo ? 'Invitale un mate a Silabo: para quien quiera bancar el juego' : `Temporada: ${v.especial.temporada}`)
           + (k === CONFIG.trajeTemporada && !tiene ? '<span class="chip-pase chico"><i class="sello-pase"></i>Incluido en el Pase</span>' : '');
-        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : sub}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : v.especial.precio}</button>`;
+        d.innerHTML = `<span class="mini-mago">${window.Silabo.mago(Object.assign({}, window.Silabo.OFICIAL, { colores: v.c, adorno: v.adorno, estilo: v.estilo }))}</span><div><b>${esc(v.nombre)}</b> <small>${tiene ? (p.sombrero === k ? 'Lo tenés puesto' : 'Ya es tuyo') : sub}</small></div><button class="btn ${tiene ? 'btn-secundario' : 'btn-primario'}">${tiene ? (p.sombrero === k ? '✓' : 'Usar') : this.pagoWebDisponible() ? this.pesos(this.precioTrajeMP(v)) : v.especial.precio}</button>`;
         const b = d.querySelector('button');
         d.addEventListener('click', (e) => { if (!e.target.closest('button')) this.verTraje(k, d); });
         if (tiene && p.sombrero === k) b.disabled = true;
