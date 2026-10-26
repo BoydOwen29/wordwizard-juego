@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.49.3',
+    version: '2.50.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -191,6 +191,7 @@
       this.eventos();
       this.pwa();
       this.avisoEnApp();
+      this.instalarPorLink();
       this.avisoModoComputadora();
       this.medirBarraApp();
       document.addEventListener('visibilitychange', () => { if (!document.hidden && this.pantalla === 'p-juego') this.pantallaPrendida(true); });
@@ -321,8 +322,53 @@
       if ($('aj-musica')) $('aj-musica').checked = on;
     },
 
-    /** Pasos para instalar en iPhone/iPad (Compartir → Agregar a inicio), con los dibujos de los botones de Safari. */
+    /**
+     * Guía visual para instalar en iPhone/iPad (v2.50, 26/10/2026): tres pantallas dibujadas como las de Safari y una flecha
+     * que señala el botón real. Safari 26 tiene la barra nueva (el botón ••• abajo a la derecha, Compartir adentro); Chrome
+     * en iPhone tiene Compartir arriba, en la barra de la dirección.
+     */
     instalarIOS() {
+      const ua = navigator.userAgent, L = '#16262c';
+      const chrome = /CriOS/i.test(ua), firefox = /FxiOS/i.test(ua);
+      const v = (ua.match(/Version\/(\d+)/) || [])[1], safari26 = !chrome && !firefox && Number(v) >= 26;
+      const ipad = /ipad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const azul = '#3d8bfd';
+      const icCompartir = `<path d="M8 9 H6 V21 H18 V9 H16" fill="none" stroke="${azul}" stroke-width="2" stroke-linejoin="round"/><path d="M12 3 V14 M8 7 L12 3 L16 7" fill="none" stroke="${azul}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const resalte = (x, y) => `<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="#f2c66d" stroke-width="3" class="guia-pulso"/>`;
+      // 1 · la barra del navegador con el botón a tocar
+      const barra = chrome
+        ? `<svg viewBox="0 0 240 70" class="guia-ios-dib"><rect x="4" y="10" width="232" height="50" rx="12" fill="#f2f2f5" stroke="${L}" stroke-width="2"/><rect x="16" y="22" width="160" height="26" rx="13" fill="#e2e2e8"/><text x="96" y="40" font-size="11" text-anchor="middle" fill="#555" font-family="sans-serif">wordwizard.capr…</text><g transform="translate(192 23) scale(1)">${icCompartir}</g>${resalte(204, 35)}</svg>`
+        : safari26
+          ? `<svg viewBox="0 0 240 70" class="guia-ios-dib"><rect x="4" y="10" width="232" height="50" rx="25" fill="#f2f2f5" stroke="${L}" stroke-width="2"/><path d="M26 35 l8 -8 M26 35 l8 8" stroke="${azul}" stroke-width="2.6" stroke-linecap="round"/><rect x="50" y="22" width="130" height="26" rx="13" fill="#e2e2e8"/><text x="115" y="40" font-size="11" text-anchor="middle" fill="#555" font-family="sans-serif">wordwizard.capr…</text><circle cx="200" cy="35" r="2.6" fill="${azul}"/><circle cx="208" cy="35" r="2.6" fill="${azul}"/><circle cx="216" cy="35" r="2.6" fill="${azul}"/>${resalte(208, 35)}</svg>`
+          : `<svg viewBox="0 0 240 70" class="guia-ios-dib"><rect x="4" y="10" width="232" height="50" rx="12" fill="#f2f2f5" stroke="${L}" stroke-width="2"/><path d="M30 35 l8 -8 M30 35 l8 8" stroke="${azul}" stroke-width="2.6" stroke-linecap="round"/><path d="M72 35 l-8 -8 M72 35 l-8 8" stroke="#b9c0cc" stroke-width="2.6" stroke-linecap="round"/><g transform="translate(108 23)">${icCompartir}</g>${resalte(120, 35)}<path d="M160 27 h14 v16 h-14z M164 31 h6" fill="none" stroke="${azul}" stroke-width="2"/><rect x="194" y="26" width="18" height="18" rx="4" fill="none" stroke="${azul}" stroke-width="2"/></svg>`;
+      // 2 · el menú de compartir con "Agregar a inicio" marcado
+      const menu = `<svg viewBox="0 0 240 104" class="guia-ios-dib"><rect x="4" y="4" width="232" height="96" rx="14" fill="#f2f2f5" stroke="${L}" stroke-width="2"/>
+        <text x="20" y="30" font-size="12" fill="#333" font-family="sans-serif">${esc(T('Copiar'))}</text><rect x="204" y="18" width="14" height="16" rx="3" fill="none" stroke="#333" stroke-width="1.6"/>
+        <path d="M14 42 H226" stroke="#d7d7de"/>
+        <rect x="10" y="48" width="220" height="30" rx="8" fill="#fff4d6" stroke="#f2c66d" stroke-width="2.4" class="guia-pulso"/>
+        <text x="20" y="68" font-size="12" font-weight="bold" fill="#222" font-family="sans-serif">${esc(T('Agregar a inicio'))}</text><rect x="203" y="54" width="18" height="18" rx="4" fill="none" stroke="#222" stroke-width="1.8"/><path d="M212 58 v10 M207 63 h10" stroke="#222" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M14 84 H226" stroke="#d7d7de"/><text x="20" y="96" font-size="11" fill="#999" font-family="sans-serif">…</text></svg>`;
+      // 3 · la pantalla final, con "Agregar" arriba a la derecha
+      const final = `<svg viewBox="0 0 240 92" class="guia-ios-dib"><rect x="4" y="4" width="232" height="84" rx="14" fill="#f2f2f5" stroke="${L}" stroke-width="2"/>
+        <text x="20" y="26" font-size="12" fill="${azul}" font-family="sans-serif">${esc(T('Cancelar'))}</text><text x="112" y="26" font-size="10.5" font-weight="bold" text-anchor="middle" fill="#222" font-family="sans-serif">${esc(T('Agregar a inicio'))}</text>
+        <rect x="186" y="12" width="44" height="20" rx="10" fill="#fff4d6" stroke="#f2c66d" stroke-width="2.4" class="guia-pulso"/><text x="208" y="26" font-size="12" font-weight="bold" text-anchor="middle" fill="${azul}" font-family="sans-serif">${esc(T('Agregar'))}</text>
+        <image href="assets/img/icon-192x192.png" x="18" y="42" width="36" height="36"/><text x="64" y="58" font-size="12" font-weight="bold" fill="#222" font-family="sans-serif">Word Wizard</text><text x="64" y="74" font-size="10" fill="#888" font-family="sans-serif">wordwizard.capralabsgames.com</text></svg>`;
+      const paso1 = chrome ? T('Tocá <b>Compartir</b>, arriba a la derecha, en la barra de la dirección')
+        : firefox ? T('Tocá el menú <b>☰</b> y después <b>Compartir</b>')
+          : safari26 ? T('Tocá los tres puntitos <b>•••</b>, abajo a la derecha, y después <b>Compartir</b>')
+            : ipad ? T('Tocá <b>Compartir</b>, arriba a la derecha') : T('Tocá <b>Compartir</b>, abajo en el medio');
+      this.modal(`<h3>${T('INSTALALO EN TU IPHONE')}</h3><p class="guia-ios-sub">${T('Queda como una app: con su ícono, en pantalla completa, sin internet y sin que se borre tu progreso.')}</p>
+        <ol class="guia-ios"><li><span>${paso1}</span>${barra}</li><li><span>${T('Bajá un poco y elegí <b>Agregar a inicio</b>')}</span>${menu}</li><li><span>${T('Tocá <b>Agregar</b>, arriba a la derecha. ¡Listo!')}</span>${final}</li></ol>`, [{ texto: T('Entendido'), clase: 'btn-primario' }], { cerrar: true });
+      // la flecha que señala el botón de verdad (abajo en Safari; arriba en Chrome y en el iPad)
+      const donde = chrome || ipad ? 'arriba-der' : safari26 ? 'abajo-der' : firefox ? 'abajo-der' : 'abajo';
+      const f = document.createElement('div');
+      f.className = 'flecha-ios ' + donde; f.setAttribute('aria-hidden', 'true');
+      f.innerHTML = `<span>${donde.startsWith('arriba') ? '↑' : '↓'}</span>`;
+      $('modal').appendChild(f);
+      try { localStorage.setItem('ww.guiaIOS', String(Date.now())); } catch (e) { /* nada */ }
+    },
+    /** Pasos para instalar en iPhone/iPad (versión anterior, en texto). */
+    instalarIOSTexto() {
       const L = '#16262c';
       const compartir = `<svg class="ios-ic" viewBox="0 0 24 24"><path d="M8 9 H6 V21 H18 V9 H16" fill="none" stroke="#5aa2ff" stroke-width="2" stroke-linejoin="round"/><path d="M12 3 V14 M8 7 L12 3 L16 7" fill="none" stroke="#5aa2ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
       const agregar = `<svg class="ios-ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="${L}" stroke-width="2"/><path d="M12 8 V16 M8 12 H16" stroke="${L}" stroke-width="2" stroke-linecap="round"/></svg>`;
@@ -354,6 +400,20 @@
         { texto: T('Entendido'), clase: 'btn-primario' },
       ]);
     },
+    /**
+     * wordwizard.capralabsgames.com/?instalar (el link para pasarle a los de iPhone): abre la guía de instalación.
+     * Y la primera vez que se abre ya instalado en iPhone, un festejo corto.
+     */
+    instalarPorLink() {
+      let pide = false;
+      try { pide = new URLSearchParams(location.search).has('instalar'); if (pide) history.replaceState(null, '', location.pathname); } catch (e) { /* nada */ }
+      if (pide && this.modoInstalar()) setTimeout(() => { if (document.querySelector('#modal:not(.oculto)')) return; this.instalar(); }, 2500);
+      if (this.esIOS && this.instalada) {
+        try { if (localStorage.getItem('ww.instaladaIOS')) return; localStorage.setItem('ww.instaladaIOS', '1'); } catch (e) { return; }
+        setTimeout(() => this.toast(`<div><b>${esc(T('¡Instalado!'))}</b><br><small>${esc(T('Ahora Word Wizard vive en tu pantalla de inicio y tu progreso queda guardado.'))}</small></div>`, 'logro'), 3000);
+      }
+    },
+
     /** La primera vez dentro de Instagram, Facebook…: el progreso queda en ese navegador, no en Chrome o Safari. */
     avisoEnApp() {
       if (!this.enApp) return;
@@ -419,6 +479,7 @@
         if (!modo || this.pantalla !== 'p-resultado' || document.querySelector('#modal:not(.oculto)')) return;
         o.veces += 1; o.ultima = Date.now();
         try { localStorage.setItem('ww.instalar', JSON.stringify(o)); } catch (e) { /* sin almacenamiento */ }
+        if (modo === 'ios') return this.instalarIOS();
         const donde = this.esIOS ? 'en el iPhone' : this.esAndroid ? 'en el celular' : 'en la compu';
         this.modal(`<h3>¿LO INSTALÁS?</h3><div class="modal-silabo" data-pose="happy"></div><p>Word Wizard se puede tener como app ${donde}: con su ícono, en pantalla completa y sin internet. Así no te perdés el desafío de mañana.</p>`, [
           { texto: 'Ahora no', clase: 'btn-secundario' },
@@ -4202,6 +4263,7 @@
     /** opc.cerrar: suma una X arriba (para avisos donde hay que elegir pero también se puede no elegir nada). */
     modal(html, botones, opc) {
       const m = $('modal'), caja = $('modal-caja');
+      m.querySelectorAll('.flecha-ios').forEach((f) => f.remove());
       caja.innerHTML = html + '<div class="fila"></div>';
       const fila = caja.querySelector('.fila:last-child');
       if (opc && opc.cerrar) {

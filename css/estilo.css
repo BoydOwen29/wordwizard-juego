@@ -1620,3 +1620,19 @@ body.lugar-pradera #p-juego .hud, body.lugar-pradera #p-juego .progreso, body.lu
 }
 /* pantallas muy angostas (pantalla agrandada): el nombre del modo entra entero */
 @media (max-width: 340px) { .hud-modo { font-size: calc(11px * var(--letra, 1)); letter-spacing: 0; } }
+/* guía visual para instalar en iPhone (v2.50): dibujos de Safari y la flecha que señala el botón real */
+.guia-ios-sub { margin: 2px 0 8px; font-size: calc(13px * var(--letra, 1)); color: var(--texto-suave); }
+.guia-ios { margin: 0; padding: 0; list-style: none; counter-reset: paso; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.guia-ios li { counter-increment: paso; display: flex; flex-direction: column; gap: 4px; padding: 6px 10px; border-radius: 12px; background: rgba(0,0,0,.18); font-weight: 700; font-size: calc(13.5px * var(--letra, 1)); }
+.guia-ios li > span::before { content: counter(paso); display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; background: var(--oro); color: #2a2412; font: 700 13px var(--display); vertical-align: middle; }
+.guia-ios-dib { display: block; width: 100%; max-width: 210px; height: auto; margin: 0 auto; }
+@keyframes guiaPulso { 50% { opacity: .35; } }
+.guia-pulso { animation: guiaPulso 1.2s ease-in-out infinite; }
+.flecha-ios { position: fixed; z-index: 120; pointer-events: none; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: var(--oro); color: #2a2412; font: 700 30px var(--display); box-shadow: 0 0 0 4px rgba(242,198,109,.35), 0 4px 0 #16262c; }
+.flecha-ios.abajo { left: calc(50% - 27px); bottom: calc(10px + env(safe-area-inset-bottom)); animation: flechaAbajo 1s ease-in-out infinite; }
+.flecha-ios.abajo-der { right: 14px; bottom: calc(10px + env(safe-area-inset-bottom)); animation: flechaAbajo 1s ease-in-out infinite; }
+.flecha-ios.arriba-der { right: 14px; top: calc(10px + env(safe-area-inset-top)); animation: flechaArriba 1s ease-in-out infinite; }
+@keyframes flechaAbajo { 50% { transform: translateY(8px); } }
+@keyframes flechaArriba { 50% { transform: translateY(-8px); } }
+#modal.oculto .flecha-ios { display: none; }
+@media (prefers-reduced-motion: reduce) { .flecha-ios, .guia-pulso { animation: none; } }
