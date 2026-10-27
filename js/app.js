@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.53.0',
+    version: '2.54.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -74,7 +74,7 @@
     // cuántas veces se puede usar cada poder en un mismo piso de la Torre: ayudan a destrabar, no reemplazan jugar
     limites: { pista: 2, tiempo: 1, ojo: 1, escudo: 1 },
     // archivo de desafíos: los últimos días gratis; el resto, con el Pase de Mago (docs/HOJA-DE-RUTA.md)
-    archivoGratis: 3, archivoDias: 30,
+    archivoGratis: 0, archivoDias: 30,   // 27/10/2026: sin días gratis (Owen): gratis es el desafío del día y las prácticas
     trajeTemporada: 'ceibo',   // el traje de la temporada que viene con el Pase (Silabo lo luce en la pantalla del Pase)
     preciosMP: { mes: 3000, anio: 19900, traje: 1500, apoyo: 2500 },   // pesos; los mismos que en supabase/functions/mp-pagar (Fase 8)
     practicasGratis: 3,   // por día; con el Pase de Mago, sin límite (docs/MONETIZACION.md)
@@ -137,6 +137,7 @@
       const med = $('btn-idioma');
       if (med) {
         $('btn-idioma-bandera').innerHTML = band(I.idioma);
+        med.lastElementChild.textContent = I.idioma === 'en' ? 'Language · Idioma' : 'Idioma';
         med.classList.remove('oculto');
         med.addEventListener('click', () => {
           Audio.click();
@@ -1941,7 +1942,8 @@
         const jugado = (p.archivo && p.archivo[n]) || p.diarios[K(WW.claveDia(fecha))];
         dias.push({ n, fecha, libre, jugado });
       }
-      const filas = dias.filter((x) => filtro === 'todos' || (filtro === 'pendientes' ? !x.jugado : !!x.jugado)).map(({ n, fecha, libre, jugado }) => {
+      if (!this.tienePase()) dias.splice(7);   // sin el Pase alcanza con una muestra de la semana
+      const filas = dias.filter((x) => !this.tienePase() || filtro === 'todos' || (filtro === 'pendientes' ? !x.jugado : !!x.jugado)).map(({ n, fecha, libre, jugado }) => {
         const r = jugado && WW.RANGOS.find((x) => x.nombre === jugado.rango);
         const dia = `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}`;
         return `<button class="archivo-fila${libre ? '' : ' bloqueado'}${libre && !jugado ? ' pendiente' : ''}" data-n="${n}" data-dias="${hoyN - n}"><b>#${n}</b><span>${dia}${libre ? '' : `<small>${T('guardado para el Pase de Mago')}</small>`}</span><em>${jugado ? `${r ? r.icono : ''} ${jugado.puntos} pts` : libre ? T('Jugar') : '<i class="sello-pase"></i>'}</em></button>`;
@@ -1953,10 +1955,15 @@
         fs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.f === filtro));
         fs.onclick = (e) => { const b = e.target.closest('button[data-f]'); if (!b) return; Audio.click(); this._archivoFiltro = b.dataset.f; this.pintarArchivo(); };
       }
-      const sig = dias.find((x) => x.libre && !x.jugado), bs = $('archivo-sig');
+      // sin el Pase: el archivo se ve (bloqueado) pero sin filtros ni atajo; con el Pase, el atajo al más nuevo que falta
+      const pase = this.tienePase();
+      if (fs) fs.classList.toggle('oculto', !pase);
+      const txt = document.querySelector('.archivo-texto');
+      if (txt) txt.textContent = pase ? T('Los desafíos de días anteriores, con reloj y sin poderes. No cuentan para el ranking ni para la racha.') : T('Con el Pase de Mago jugás los desafíos de días anteriores. No cuentan para el ranking ni para la racha.');
+      const sig = pase && dias.find((x) => x.libre && !x.jugado), bs = $('archivo-sig');
       if (bs) {
         bs.classList.toggle('oculto', !sig);
-        if (sig) { bs.textContent = T('Jugar el próximo sin jugar (#{n})', { n: sig.n }); bs.onclick = () => { Audio.click(); this.nuevaPartida('archivo', { fecha: sig.fecha }); }; }
+        if (sig) { bs.textContent = T('Jugar el #{n}, el más nuevo que te falta', { n: sig.n }); bs.onclick = () => { Audio.click(); this.nuevaPartida('archivo', { fecha: sig.fecha }); }; }
       }
       cont.onclick = (e) => {
         const b = e.target.closest('.archivo-fila'); if (!b) return;
@@ -2058,7 +2065,7 @@
       if (ps.visto && this.playBilling) {
         ps.visto = false; ps.cancelAviso = null; Estado.guardar();
         this.repintarPase();
-        this.modal(`<h3>TU PASE TERMINÓ</h3><div class="modal-silabo"></div><p>Gracias por estos meses: <b>tus trajes y tu progreso siguen siendo tuyos.</b></p><p>Vuelven las ${CONFIG.practicasGratis} prácticas por día y los últimos ${CONFIG.archivoGratis} días del archivo.</p>`, [
+        this.modal(`<h3>TU PASE TERMINÓ</h3><div class="modal-silabo"></div><p>Gracias por estos meses: <b>tus trajes y tu progreso siguen siendo tuyos.</b></p><p>Vuelven las ${CONFIG.practicasGratis} prácticas por día.</p>`, [
           { texto: 'Entendido', clase: 'btn-secundario' },
           { texto: 'Volver al Pase', clase: 'btn-primario', accion: () => this.avisoPase() },
         ]);
@@ -2143,8 +2150,8 @@
      */
     avisoPase() {
       const ficha = (ic, t) => `<div><i class="ic" data-ic="${ic}"></i>${t}</div>`;
-      const incluye = `<div class="pase-inc">${ficha('vela', 'Práctica sin límite')}${ficha('calendario', 'Todo el archivo')}${ficha('torre', 'Historias nuevas')}${ficha('estrella', 'Traje de temporada')}</div>`;
-      const gratis = `<p class="pase-nota">Gratis para siempre: el desafío del día, la Torre Arcana, ${CONFIG.practicasGratis} prácticas por día y los últimos ${CONFIG.archivoGratis} días del archivo.</p>`;
+      const incluye = `<div class="pase-inc">${ficha('vela', 'Práctica sin límite')}${ficha('calendario', 'El archivo de desafíos')}${ficha('torre', 'Historias nuevas')}${ficha('estrella', 'Traje de temporada')}</div>`;
+      const gratis = `<p class="pase-nota">Gratis para siempre: el desafío del día, la Torre Arcana y ${CONFIG.practicasGratis} prácticas por día.</p>`;
       const cabeza = `<h3>PASE DE MAGO</h3><div class="modal-silabo" data-pose="happy" data-paleta="${CONFIG.trajeTemporada}"></div>`;
       if (this.tienePase()) {
         return this.modal(`${cabeza}<p>Tu Pase está activo. ¡Gracias por darme una mano! 💚</p>${incluye}${this.notaPaseActivo()}`, [{ texto: '¡Genial!', clase: 'btn-primario' }]);
@@ -2863,7 +2870,7 @@
       const fila = (f, i) => `<div class="rank-fila${f.yo ? ' yo' : ''}"><span class="rank-pos">${i + 1}</span><div class="rank-nombre">${esc(f.nombre)}${f.yo ? sello : ''}<small>${esc(f.sub)}</small></div><div class="rank-valor">${f.valor}<small>${f.unidad}</small></div></div>`;
       let html = '';
       if (total >= 3) {
-        const pod = (i, c) => `<div class="rk-pod ${c}${filas[i].yo ? ' yo' : ''}"><i class="rk-medalla">${['🥇', '🥈', '🥉'][i]}</i><b>${esc(filas[i].nombre)}${filas[i].yo ? sello : ''}</b><span>${filas[i].valor}</span></div>`;
+        const pod = (i, c) => `<div class="rk-pod ${c}${filas[i].yo ? ' yo' : ''}"><i class="rk-medalla">${['🥇', '🥈', '🥉'][i]}</i><b>${esc(filas[i].nombre)}${filas[i].yo ? sello : ''}</b><span>${filas[i].valor}</span><small>${esc(filas[i].sub)}</small></div>`;
         html += `<div class="rk-podio">${pod(1, 'p2')}${pod(0, 'p1')}${pod(2, 'p3')}</div>`;
       }
       const desde = total >= 3 ? 3 : 0;

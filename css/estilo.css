@@ -1282,7 +1282,12 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 #p-titulo { position: relative; }
 .idioma-chip-caja { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; z-index: 5; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .idioma-chip-caja.oculto { display: none; }
-.medallon-bandera { display: grid; place-items: center; height: 28px; }
+.medallon-bandera { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: var(--madera); border: 3px solid var(--borde-m);
+  box-shadow: inset 0 3px 0 var(--madera-hi), inset 0 -4px 0 var(--madera-sh), 0 4px 0 var(--borde-m); transition: transform .15s var(--spring); }
+.medallon-bandera .bandera { display: block; width: 30px; line-height: 0; }
+.medallon-bandera .bandera svg { width: 30px; height: 21px; border-radius: 3px; border: 2px solid var(--borde-m); }
+.medallon:hover .medallon-bandera { transform: translateY(-2px) rotate(-4deg); }
+.medallon:active .medallon-bandera { transform: translateY(3px); }
 .fila-idiomas { flex-direction: column; }
 .idioma-chip { display: flex; align-items: center; gap: 7px; padding: 5px 11px 5px 6px; border-radius: 999px; background: #3f666c; color: #f3f6ee; border: 3px solid #16262c; box-shadow: inset 0 -3px 0 #2c4d58, 0 3px 0 #16262c; font: 600 14px var(--display); cursor: pointer; }
 .idioma-chip:active { transform: translateY(2px); box-shadow: inset 0 -2px 0 #2c4d58, 0 1px 0 #16262c; }
@@ -1303,6 +1308,8 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .rk-medalla { display: block; font-style: normal; font-size: 24px; line-height: 1.1; }
 .rk-pod b { display: block; font-size: calc(13px * var(--letra, 1)); color: #f3f6ee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rk-pod span { display: block; font: 700 calc(18px * var(--letra, 1)) var(--display); color: #fff; }
+.rk-pod small { display: block; margin-top: 2px; font-size: calc(10.5px * var(--letra, 1)); line-height: 1.2; color: var(--texto-suave); }
+.rk-pod.yo small { color: #4a3d1a; }
 .rk-corte { text-align: center; color: #eef4ec; text-shadow: 0 2px 0 rgba(22,38,44,.7); font: 700 18px var(--display); letter-spacing: 5px; line-height: 1; margin: 2px 0; }
 .rk-frase { margin-top: 8px; border-radius: 14px; padding: 9px 12px; background: rgba(242,198,109,.14); border: 2px dashed rgba(242,198,109,.55); color: #f6e6c0; font-size: calc(13px * var(--letra, 1)); text-align: center; }
 #ranking-contenido { display: flex; flex-direction: column; gap: 8px; }
