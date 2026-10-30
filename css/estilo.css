@@ -1,6 +1,6 @@
 /* el juego ya es oscuro y lo dice: así el modo oscuro automático (Chrome, Samsung Internet) no lo vuelve a oscurecer.
    Con "only light" (23/10) Chrome lo respetaba, pero Samsung Internet lo oscurecía igual (29/10/2026, Samsung S20 FE) */
-:root { color-scheme: dark; }
+:root { color-scheme: only dark; }
 /* fuentes en pesos fijos (no variables): se ven igual en todos los motores */
 @font-face { font-family: 'Fredoka'; src: url(../assets/fonts/fredoka-400.woff2) format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Fredoka'; src: url(../assets/fonts/fredoka-600.woff2) format('woff2'); font-weight: 600; font-display: swap; }
