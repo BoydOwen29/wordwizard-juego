@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.54.2',
+    version: '2.54.3',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -196,7 +196,7 @@
       this.instalarPorLink();
       setTimeout(() => this.revisarPagoMP(), 2000);
       this.avisoModoComputadora();
-      this.medirBarraApp();
+      this.medirBarraApp(); this.medirModoOscuro();
       document.addEventListener('visibilitychange', () => { if (!document.hidden && this.pantalla === 'p-juego') this.pantallaPrendida(true); });
       // que el navegador no borre el progreso cuando le falta lugar (Chrome lo da solo; Firefox preguntaría, ahí no se pide)
       try { if (navigator.storage && navigator.storage.persist && !/firefox/i.test(navigator.userAgent)) navigator.storage.persisted().then((p) => { if (!p) navigator.storage.persist().catch(() => {}); }).catch(() => {}); } catch (e) { /* nada */ }
@@ -442,6 +442,21 @@
         try { const k = 'ww.barraApp'; if (localStorage.getItem(k) === this.hoy) return; localStorage.setItem(k, this.hoy); } catch (e) { return; }
         if (window.WWReportes && WWReportes.error) WWReportes.error('Diagnóstico: la app abrió con la barra de Chrome', { alto: innerHeight, pantalla: screen.height, sobra });
       }, 4000);
+    },
+
+    /**
+     * Celular con el modo oscuro prendido (29/10/2026, Samsung S20 FE que oscurecía el juego): se avisa una sola vez qué
+     * navegador muestra el juego y qué dice de los colores, para saber quién lo oscurece (Chrome o Samsung Internet).
+     */
+    medirModoOscuro() {
+      if (!window.matchMedia || !matchMedia('(prefers-color-scheme: dark)').matches) return;
+      try { const k = 'ww.diagOscuro'; if (localStorage.getItem(k)) return; localStorage.setItem(k, this.hoy); } catch (e) { return; }
+      setTimeout(() => {
+        if (window.WWReportes && WWReportes.error) WWReportes.error('Diagnóstico: celular con modo oscuro', {
+          ua: navigator.userAgent.slice(0, 220), app: /^android-app:/.test(document.referrer || '') ? document.referrer.slice(0, 60) : '',
+          esquema: getComputedStyle(document.documentElement).colorScheme, standalone: matchMedia('(display-mode: standalone)').matches,
+        });
+      }, 5000);
     },
 
     /** Que el celular no apague la pantalla en medio de una partida (si el navegador lo permite). */
