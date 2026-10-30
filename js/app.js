@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.54.3',
+    version: '2.54.4',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -449,10 +449,14 @@
      * navegador muestra el juego y qué dice de los colores, para saber quién lo oscurece (Chrome o Samsung Internet).
      */
     medirModoOscuro() {
-      if (!window.matchMedia || !matchMedia('(prefers-color-scheme: dark)').matches) return;
-      try { const k = 'ww.diagOscuro'; if (localStorage.getItem(k)) return; localStorage.setItem(k, this.hoy); } catch (e) { return; }
+      // en la app de Play siempre (un navegador que oscurece por su cuenta le dice a la página que el celular está en claro)
+      const oscuro = !!window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches, enApp = /^android-app:/.test(document.referrer || '') || (/Android/.test(navigator.userAgent) && !!window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+      if (!oscuro && !enApp) return;
+      const k = 'ww.diagNavegador';
+      try { if (localStorage.getItem(k)) return; } catch (e) { return; }
       setTimeout(() => {
-        if (window.WWReportes && WWReportes.error) WWReportes.error('Diagnóstico: celular con modo oscuro', {
+        try { localStorage.setItem(k, this.hoy); } catch (e) { /* nada */ }
+        if (window.WWReportes && WWReportes.error) WWReportes.error('Diagnóstico: navegador y modo oscuro', { oscuro,
           ua: navigator.userAgent.slice(0, 220), app: /^android-app:/.test(document.referrer || '') ? document.referrer.slice(0, 60) : '',
           esquema: getComputedStyle(document.documentElement).colorScheme, standalone: matchMedia('(display-mode: standalone)').matches,
         });
