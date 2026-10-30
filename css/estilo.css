@@ -1,5 +1,6 @@
-/* el juego tiene sus propios colores: que el modo oscuro automático del celular (Chrome, Samsung) no los invierta (23/10/2026) */
-:root { color-scheme: only light; }
+/* el juego ya es oscuro y lo dice: así el modo oscuro automático (Chrome, Samsung Internet) no lo vuelve a oscurecer.
+   Con "only light" (23/10) Chrome lo respetaba, pero Samsung Internet lo oscurecía igual (29/10/2026, Samsung S20 FE) */
+:root { color-scheme: dark; }
 /* fuentes en pesos fijos (no variables): se ven igual en todos los motores */
 @font-face { font-family: 'Fredoka'; src: url(../assets/fonts/fredoka-400.woff2) format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Fredoka'; src: url(../assets/fonts/fredoka-600.woff2) format('woff2'); font-weight: 600; font-display: swap; }
@@ -1624,7 +1625,7 @@ body.lugar-pradera #p-juego .hud, body.lugar-pradera #p-juego .progreso, body.lu
 .cartel-cap.hilo-robledal { background: #3a2a20; } .cartel-cap.hilo-cumbres { background: #4a5a66; }
 /* ajustes del sistema que cambian cómo se ve el juego (23/10/2026, docs/AUDITORIA-DISPOSITIVOS.md) */
 /* Samsung Internet fuerza su modo oscuro salvo que la página diga que ya tiene uno: el juego ya es oscuro */
-@media (prefers-color-scheme: dark) { :root { --modo-oscuro-del-sistema: 1; } }
+@media (prefers-color-scheme: dark) { :root { --modo-oscuro-del-sistema: 1; } html { background-color: var(--noche); } }
 /* iPhone con "Invertir colores": se vuelven a invertir para que el juego se vea como es */
 @media (inverted-colors: inverted) { html { filter: invert(1) hue-rotate(180deg); } }
 /* celular acostado: no entra; se pide girarlo */

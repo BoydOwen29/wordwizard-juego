@@ -21,7 +21,7 @@
   function contexto() {
     const ua = navigator.userAgent;
     const sistema = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Windows/i.test(ua) ? 'Windows' : /Mac/i.test(ua) ? 'Mac' : 'otro';
-    const nav = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /Firefox\//.test(ua) ? 'Firefox' : 'otro';
+    const nav = /SamsungBrowser\//.test(ua) ? 'Samsung Internet' : /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /Firefox\//.test(ua) ? 'Firefox' : 'otro';
     const app = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) ? 'instalada' : 'navegador';
     return {
       version: (window.WW_VERSION || '?').slice(0, 20),
