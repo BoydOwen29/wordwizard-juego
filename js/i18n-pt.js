@@ -45,7 +45,7 @@ window.WWI18n && WWI18n.registrar('pt', {   // si i18n.js no llegó, index.html 
 
   // ---------------------------------------------------------------- treino
   'PRÁCTICA': 'TREINO',
-  'Elegí el largo de la palabra base. Sin reloj: jugás hasta que quieras y podés pedir pistas gratis.': 'Escolha o tamanho da palavra-base. Sem relógio: jogue o quanto quiser e peça dicas grátis.',
+  'Elegí el largo de la palabra base y cómo jugar: 3 minutos contra el reloj, o sin fin, con pistas gratis.': 'Escolha o tamanho da palavra-base e como jogar: 3 minutos contra o relógio, ou sem fim, com dicas grátis.',
   'letras': 'letras', 'Con reloj de 3 minutos': 'Com relógio de 3 minutos',
 
   // ---------------------------------------------------------------- torre

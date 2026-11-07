@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.54.4',
+    version: '2.54.5',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     practica: { tiempo: 180 },
@@ -977,12 +977,12 @@
         ]);
       });
       $('btn-practica').addEventListener('click', () => { Audio.click(); this.mostrar('p-practica'); });
-      // el reloj de Práctica se recuerda (apagado = sin fin)
+      // el reloj de Práctica se recuerda (de entrada, 3 minutos)
       const ponerReloj = (on) => {
         $('practica-reloj').checked = on;
         document.querySelectorAll('.modo-op').forEach((b) => { const sel = (b.dataset.reloj === '1') === on; b.classList.toggle('sel', sel); b.setAttribute('aria-checked', sel); });
       };
-      try { ponerReloj(localStorage.getItem('ww.practica.reloj') === '1'); } catch (e) { /* sin almacenamiento */ }
+      try { ponerReloj(localStorage.getItem('ww.practica.reloj') !== '0'); } catch (e) { /* sin almacenamiento */ }
       document.querySelectorAll('.modo-op').forEach((b) => b.addEventListener('click', () => {
         Audio.click(); const on = b.dataset.reloj === '1'; ponerReloj(on);
         try { localStorage.setItem('ww.practica.reloj', on ? '1' : '0'); } catch (e) { /* sin almacenamiento */ }
