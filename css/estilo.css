@@ -1652,3 +1652,22 @@ body.lugar-pradera #p-juego .hud, body.lugar-pradera #p-juego .progreso, body.lu
 @keyframes flechaArriba { 50% { transform: translateY(-8px); } }
 #modal.oculto .flecha-ios { display: none; }
 @media (prefers-reduced-motion: reduce) { .flecha-ios, .guia-pulso { animation: none; } }
+
+/* v2.55 Estrellas por piso (Torre y capítulos) y la última vida */
+.estrellas-piso { display: flex; justify-content: center; gap: 10px; margin: 2px 0 0; }
+.estrellas-piso span { display: inline-flex; width: 42px; height: 42px; opacity: .22; }
+.estrellas-piso span:nth-child(2) { transform: translateY(-8px); }
+.estrellas-piso .ic { width: 100%; height: 100%; }
+.estrellas-piso span.on { opacity: 1; }
+.estrellas-piso span.nueva { opacity: .22; animation: estrellaNueva .5s var(--spring) forwards; }
+.estrellas-piso span:nth-child(2).nueva { animation-name: estrellaNueva2; }
+@keyframes estrellaNueva { 0% { opacity: .22; transform: scale(.6); } 60% { opacity: 1; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes estrellaNueva2 { 0% { opacity: .22; transform: translateY(-8px) scale(.6); } 60% { opacity: 1; transform: translateY(-8px) scale(1.3); } 100% { opacity: 1; transform: translateY(-8px) scale(1); } }
+.estrellas-meta { margin: 4px 0 2px; font-size: calc(12.5px * var(--letra, 1)); color: var(--texto-suave); text-align: center; }
+.aviso-ultima { color: var(--coral); font-weight: 700; }
+.mapa-estrellas, .cap-estrellas { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; font-size: calc(12px * var(--letra, 1)); color: var(--oro); }
+.mapa-estrellas { display: flex; }
+.mapa-estrellas .ic, .cap-estrellas .ic { width: 1.1em; height: 1.1em; }
+.cap-tanda { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 6px 0 0; }
+.cap-tanda > .ic { width: 20px; height: 20px; }
+@media (prefers-reduced-motion: reduce) { .estrellas-piso span.nueva { animation-duration: .01s; } }

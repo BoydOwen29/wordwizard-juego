@@ -88,6 +88,12 @@
   const DEL_DIA = /^(misiones|torreHoy|practicasHoy)$/;
   function juntar(b, l, n, k) {
     if (DEL_DIA.test(k) && !igual(l, n)) { const d = delDia(l, n, k); if (d) return d; }
+    // estrellas de cada piso (v2.55): queda la mejor de cada lado, nunca se suman
+    if (k === 'estrellas' && (esObj(l) || esObj(n))) {
+      const out = copia(esObj(n) ? n : {});
+      for (const [c, v] of Object.entries(esObj(l) ? l : {})) out[c] = Math.max(Number(out[c]) || 0, Number(v) || 0);
+      return out;
+    }
     if (l === undefined) return b === undefined ? copia(n) : undefined;   // lo borró este dispositivo (o nunca lo tuvo)
     if (n === undefined) return b === undefined ? copia(l) : undefined;
     if (igual(l, b)) return copia(n);

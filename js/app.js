@@ -66,9 +66,10 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.54.5',
+    version: '2.55.0',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
+    monedasEstrella: 3,   // v2.55: cada estrella nueva de un piso (Torre y capítulos), dentro del tope diario de la Torre
     practica: { tiempo: 180 },
     precios: { pista: 10, tiempo: 15, ojo: 25, escudo: 12, vela: 60 },
     // cuántas veces se puede usar cada poder en un mismo piso de la Torre: ayudan a destrabar, no reemplazan jugar
@@ -809,7 +810,36 @@
       return true;
     },
 
-    novedades() {
+    novedades() { return this.novedades244() || this.novedades255(); },
+    /** v2.55 (11/11/2026): para el que ya subió la Torre o jugó un capítulo, una vez: estrellas y vidas que pesan. */
+    novedades255() {
+      const p = Estado.perfil;
+      if (!p || (p.vistos && p.vistos.nov255)) return false;
+      const jugo = (p.arcade && p.arcade.partidas > 0) || Object.keys(p.torre && p.torre.primera || {}).length > 0;
+      if (!jugo || String(p.creado) > '2026-11-12T00:00:00') return false;
+      const est = [1, 2, 3].map((i) => `<span class="${i === 1 ? 'on' : 'nueva'}">${WWIconos.html('estrella')}</span>`).join('');
+      return this.pasosNovedad('nov255', [
+        { t: T('¡ESTRELLAS EN LA TORRE!'), h: `<div class="estrellas-piso">${est}</div><p>${T('Cada piso tiene <b>3 estrellas</b>: una por el objetivo, otra por encontrar <b>la mitad de las palabras</b> y la tercera por <b>encontrarlas todas</b>.')}</p><p>${T('Cada estrella nueva da monedas, aunque repitas el piso. También en los capítulos de Aventura.')}</p>` },
+        { t: T('LAS VIDAS PESAN'), h: `<div class="modal-silabo" data-pose="cast"></div><p>${T('Tenés 3 vidas por subida. <b>Si las perdés todas, volvés al piso 1</b>: ya no se arranca desde el último jefe.')}</p><p>${T('En los capítulos, lo mismo: sin vidas, el capítulo vuelve a empezar. Lo que ya ganaste (ranking, estrellas, monedas) queda.')}</p>` },
+      ]);
+    },
+    /** Muestra novedades de a un paso; al terminar, las marca como vistas con su clave. */
+    pasosNovedad(clave, pasos) {
+      const p = Estado.perfil;
+      const paso = (i) => {
+        const s = pasos[i], ultimo = i === pasos.length - 1;
+        this.modal(`<h3>${s.t}</h3>${s.h}<p class="modal-nota">${i + 1} / ${pasos.length}</p>`, [
+          { texto: ultimo ? T('¡A jugar!') : T('Siguiente'), clase: 'btn-primario', accion: () => {
+            if (ultimo) { p.vistos = Object.assign({}, p.vistos, { [clave]: true }); Estado.guardar(); }
+            else setTimeout(() => paso(i + 1), 120);
+          } },
+        ]);
+        document.querySelectorAll('#modal-caja .estrellas-piso .nueva').forEach((x, j) => { x.style.animationDelay = (400 + j * 420) + 'ms'; });
+      };
+      setTimeout(() => { if (this.pantalla === 'p-menu' && $('modal').classList.contains('oculto')) paso(0); }, 450);
+      return true;
+    },
+    novedades244() {
       const p = Estado.perfil;
       if (!p || (p.vistos && p.vistos.nov244)) return false;
       const jugo = (p.stats && p.stats.partidas > 0) || (p.arcade && p.arcade.partidas > 0);
@@ -970,7 +1000,7 @@
         Audio.click();
         const t = this._torre;
         if (!t || !t.pa || t.pa.arcade.cerrada) return this.verCampanas();
-        this.modal(`<h3>¿BAJAR DE LA TORRE?</h3><p>Tu subida queda guardada en el piso ${t.pa.arcade.piso}: la seguís cuando quieras.</p>`, [
+        this.modal(`<h3>¿BAJAR DE LA TORRE?</h3><p>Tu subida queda guardada en el piso ${t.pa.arcade.piso}: la seguís cuando quieras.</p><p class="modal-nota">${esc(T('Si la terminás, la próxima arranca en el piso 1.'))}</p>`, [
           { texto: 'Guardar y salir', clase: 'btn-primario', accion: () => { this.guardarSubida(t.pa.arcade); this.irMenu(); } },
           { texto: 'Seguir subiendo', clase: 'btn-secundario' },
           { texto: 'Terminar la subida', clase: 'btn-peligro', accion: () => this.cerrarArcade(t.pa) },
@@ -1345,7 +1375,7 @@
         tiempoTotal: tiempo, deadline: tiempo ? Date.now() + tiempo * 1000 : null, restante: tiempo, timer: null,
         inicio: Date.now(), terminada: false, pistas: [], ojos: new Set(), escudo: false,
         rangoIdx: 0, monedasGanadas: 0, mejorPalabra: '',
-        arcade: modo === 'arcade' ? (anterior || { piso: 1, vidas: CONFIG.arcade.vidas, puntajeTotal: 0, palabrasTotal: 0, usadas: [], monedas: 0, jefes: 0, cap: opts.cap || null }) : null,
+        arcade: modo === 'arcade' ? (anterior || { piso: 1, vidas: opts.vidas || CONFIG.arcade.vidas, puntajeTotal: 0, palabrasTotal: 0, usadas: [], monedas: 0, jefes: 0, cap: opts.cap || null }) : null,
         objetivo, jefe, nombreJefe: jefe ? (cap ? T(cap.jefe) : WW.nombreJefe(piso)) : '',
         // el Viento Ladrón (jefe de la Pradera): cada 20 s tapa una letra de las fichas durante 6 s
         rafaga: jefe && cap && cap.id === 'pradera' ? { prox: Date.now() + 14000, idx: null, fin: 0, aviso: false }
@@ -1767,6 +1797,7 @@
 
       // Torre: al llegar al objetivo no se corta; el reloj sigue y lo que venga suma como extra
       if (pa.modo === 'arcade' && !pa.superado && pa.puntosPiso >= pa.objetivo) this.objetivoLogrado();
+      else if (pa.modo === 'arcade' && pa.superado) this.avisoEstrella(pa);
       if (pa.nEnc >= pa.total) { this.congelarReloj(pa); setTimeout(() => (pa.modo === 'arcade' ? this.pisoSuperado('completa') : this.terminar('completo')), 900); }
     },
 
@@ -1893,7 +1924,7 @@
       if (pa.congelado) return;
       if (pa.opts.guia) return this.terminarGuia(true);
       if (pa.superado) return this.pisoSuperado('subir');
-      const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'archivo' ? 'Si salís, este desafío del archivo no se guarda.' : pa.arcade && pa.arcade.cap ? T('Los pisos que pasaste quedan: seguís desde el próximo cuando vuelvas.') : pa.modo === 'arcade' ? 'Tu subida queda guardada, pero este piso cuenta como intento: perdés una vida (si es la última, te la guardo).' : 'La práctica no se guarda.';
+      const aviso = pa.modo === 'diario' ? 'El reloj sigue corriendo aunque salgas. Podés volver desde el menú si queda tiempo.' : pa.modo === 'archivo' ? 'Si salís, este desafío del archivo no se guarda.' : pa.arcade && pa.arcade.cap ? T('Los pisos que pasaste quedan, pero este cuenta como intento: perdés una vida (si es la última, te la guardo).') : pa.modo === 'arcade' ? 'Tu subida queda guardada, pero este piso cuenta como intento: perdés una vida (si es la última, te la guardo).' : 'La práctica no se guarda.';
       this.modal(`<h3>¿SALIR?</h3><p>${aviso}</p>`, [
         { texto: 'Seguir jugando', clase: 'btn-secundario' },
         { texto: 'Salir', clase: 'btn-peligro', accion: () => { if (pa.modo === 'practica' || pa.modo === 'archivo') this.abandonarPractica(); else if (pa.modo === 'diario') this.salirDiario(); else this.dejarPiso(pa); } },
@@ -2372,11 +2403,24 @@
         this.confeti(35);
       }
       this.magos.juego.animar('happy', 1400);
-      setTimeout(() => { if (this.partida === pa && !pa.terminada) this.globo('¡Piso ganado! Lo que sumes ahora es extra', 'wow'); }, 1300);
+      // después del festejo, la próxima meta: la segunda estrella (o la tercera, si ya llegó a la mitad)
+      setTimeout(() => {
+        if (this.partida !== pa || pa.terminada) return;
+        if (this.estrellasPiso(pa) >= 2) { pa.avisoEst = 2; this.globo(T('¡Piso ganado con dos estrellas! Encontralas todas para la tercera'), 'wow'); }
+        else this.globo(T('¡Piso ganado! Con la mitad de las palabras, segunda estrella'), 'wow');
+      }, 1300);
       const b = $('btn-terminar');
       b.textContent = 'Subir ▲';
       b.classList.remove('oculto'); b.classList.add('btn-subir');
       this.renderProgreso(); this.renderPoderes();
+    },
+
+    /** Con el piso ya ganado: festejo chico cuando llega a la mitad de las palabras (segunda estrella). La tercera cierra el piso sola. */
+    avisoEstrella(pa) {
+      if ((pa.avisoEst || 1) >= 2 || this.estrellasPiso(pa) < 2) return;
+      pa.avisoEst = 2;
+      Audio.moneda(); this.confeti(20);
+      this.banner(WWIconos.html('estrella'), T('¡SEGUNDA ESTRELLA!'), T('Ahora, todas las palabras'), 'oro');
     },
 
     /** Cierre del piso: por tiempo (con el objetivo cumplido), porque tocó "Subir" o porque encontró todas. */
@@ -2393,10 +2437,21 @@
       let bonusPts = bonusPiso + bonusTiempo;
       const cap = pa.arcade.cap, t = cap ? this.capitulo(cap) : this.torre(), nuevo = !(pa.arcade.piso in t.primera);
       if (pa.jefe) { bonusMonedas += 10; bonusPts += 40; pa.arcade.jefes += 1; if (!cap) { p.arcade.jefes = (p.arcade.jefes || 0) + 1; t.checkpoint = Math.max(t.checkpoint || 0, pa.arcade.piso); } }
-      if (cap) { t.mejorPiso = Math.max(t.mejorPiso || 0, pa.arcade.piso); if (pa.arcade.piso >= this.datosCap(cap).pisos) t.terminado = true; }
+      if (cap) {
+        const yaTerminado = !!t.terminado;
+        t.mejorPiso = Math.max(t.mejorPiso || 0, pa.arcade.piso);
+        if (pa.arcade.piso >= this.datosCap(cap).pisos) t.terminado = true;
+        // la tanda del capítulo queda guardada con sus vidas: salir y volver no las rellena
+        if (t.terminado) t.subida = null;
+        else if (!yaTerminado) t.subida = { avance: pa.arcade.piso, vidas: pa.arcade.vidas };
+      }
       // repetir un piso ya pasado no da monedas ni cambia el ranking: cuenta lo que hiciste la primera vez
       if (!nuevo) bonusMonedas = 0;
       else { t.primera[pa.arcade.piso] = pa.puntos + bonusPts; pa.arcade.puntosNuevos = (pa.arcade.puntosNuevos || 0) + pa.puntos + bonusPts; pa.arcade.pisosNuevos = (pa.arcade.pisosNuevos || 0) + 1; }
+      // estrellas (v2.55): ★ el objetivo, ★★ la mitad de las palabras, ★★★ todas. Cada estrella nueva da monedas,
+      // también al repetir el piso: es lo que hace volver, sin que repetir sea una fábrica de monedas (hay 3 por piso)
+      const est = this.estrellasPiso(pa), estAntes = (t.estrellas && t.estrellas[pa.arcade.piso]) || 0;
+      if (est > estAntes) { t.estrellas = Object.assign({}, t.estrellas, { [pa.arcade.piso]: est }); bonusMonedas += (est - estAntes) * CONFIG.monedasEstrella; }
       // tope diario de monedas de la Torre
       const hoyTorre = this.torreHoy();
       const ganadas = bonusMonedas;
@@ -2418,7 +2473,7 @@
       const sig = pa.arcade.piso + 1;
       if (!cap) this.mision('piso', sig);
       this.anunciarLogros(Logros.evaluar(p, { tipo: 'piso' }));
-      const info = { pa, bonusPts, bonusMonedas, rest, extra, bonusPiso, bonusTiempo, topeAlcanzado, repetido: !nuevo };
+      const info = { pa, bonusPts, bonusMonedas, rest, extra, bonusPiso, bonusTiempo, topeAlcanzado, repetido: !nuevo, est, estAntes };
       this._tModalPiso = setTimeout(() => this.resumenPiso(info), motivo === 'subir' ? 350 : 1100);
     },
 
@@ -2433,12 +2488,16 @@
         fila('Palabras', pa.encontradas.length),
         fila('Bonus del piso', '+' + (info.bonusPiso + (pa.jefe ? 40 : 0))),
         info.bonusTiempo ? fila('Tiempo sobrante', `+${info.bonusTiempo} (${info.rest} s)`) : '',
-        info.repetido ? fila('Ya lo habías pasado', pa.arcade.cap ? 'no suma monedas' : 'no suma monedas ni ranking', 'extra') : fila(info.topeAlcanzado ? 'Monedas (tope del día)' : 'Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`),
+        info.repetido ? fila(T('Ya lo habías pasado'), T(pa.arcade.cap ? 'solo suman las estrellas nuevas' : 'solo suman las estrellas nuevas, no el ranking'), 'extra') : '',
+        !info.repetido || info.bonusMonedas || info.topeAlcanzado ? fila(info.topeAlcanzado ? 'Monedas (tope del día)' : 'Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`) : '',
         fila(pa.arcade.cap ? 'Total del capítulo' : 'Total de la subida', pa.arcade.puntajeTotal + ' pts', 'total'),
       ].filter(Boolean).join('');
-      const titulo = pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`;
+      const titulo = info.est >= 3 ? esc(T('¡PISO PERFECTO!')) : pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`;
+      // las estrellas del piso: las nuevas se encienden de a una (v2.55)
+      const estHtml = `<div class="estrellas-piso" role="img" aria-label="${esc(T('{n} de 3 estrellas', { n: info.est }))}">${[1, 2, 3].map((i) => `<span class="${i <= info.est ? (i > info.estAntes ? 'nueva' : 'on') : ''}">${WWIconos.html('estrella')}</span>`).join('')}</div>
+        <p class="estrellas-meta">${esc(T(info.est >= 3 ? 'Encontraste todas las palabras del piso' : info.est === 2 ? 'Encontrá todas las palabras para la tercera estrella' : 'Encontrá la mitad de las palabras para la segunda estrella'))}</p>`;
       // las palabras del piso: las que hiciste y las que te faltaron (pedido de los testers, 14/10)
-      this.modal(`<h3>${titulo}</h3><div class="modal-silabo" data-pose="happy"></div><ul class="resumen-piso">${filas}</ul>
+      this.modal(`<h3>${titulo}</h3><div class="modal-silabo" data-pose="happy"></div>${estHtml}<ul class="resumen-piso">${filas}</ul>
         <button class="btn-link-cuenta" id="piso-ver">Ver las palabras del piso</button>
         <div id="piso-palabras" class="res-palabras piso-palabras oculto">${this.htmlPalabras({ base: pa.base, encontradas: pa.encontradas, nucleo: pa.nucleo })}</div>`, [
         pa.arcade.cap
@@ -2449,10 +2508,29 @@
         Audio.click(); const l = $('piso-palabras'); l.classList.toggle('oculto');
         $('piso-ver').textContent = l.classList.contains('oculto') ? 'Ver las palabras del piso' : 'Ocultar las palabras';
       });
+      // primero las estrellas nuevas, con sonido y chispas; después las cuentas de a una
+      const nuevas = [...document.querySelectorAll('.estrellas-piso .nueva')];
+      nuevas.forEach((s, i) => {
+        s.style.animationDelay = (300 + i * 420) + 'ms';
+        setTimeout(() => { if (this.partida === pa && !pa.arcade.cerrada) { Audio.moneda(); this.confeti(info.est >= 3 && i === nuevas.length - 1 ? 70 : 18); } }, 300 + i * 420);
+      });
+      if (info.est >= 3 && nuevas.length) setTimeout(() => { if (this.partida === pa) Audio.victoria(); }, 300 + nuevas.length * 420);
+      else if (pa.jefe) setTimeout(() => { if (this.partida === pa) Audio.logro(); }, 300);
+      const desde = 300 + nuevas.length * 420;
       const lis = document.querySelectorAll('.resumen-piso li');
-      lis.forEach((li, i) => { li.style.animationDelay = (250 + i * 260) + 'ms'; });
-      lis.forEach((li, i) => setTimeout(() => Audio.tecla(), 250 + i * 260));
+      lis.forEach((li, i) => { li.style.animationDelay = (desde + i * 260) + 'ms'; });
+      lis.forEach((li, i) => setTimeout(() => Audio.tecla(), desde + i * 260));
     },
+
+    /** Estrellas de un piso recién ganado: ★ el objetivo, ★★ la mitad de las palabras, ★★★ todas (sin contar las del ojo arcano). */
+    estrellasPiso(pa) {
+      const propias = pa.nEnc - [...pa.ojos].filter((w) => pa.nucleo.has(w)).length;
+      if (pa.total && propias >= pa.total) return 3;
+      if (pa.total && propias >= Math.ceil(pa.total / 2)) return 2;
+      return 1;
+    },
+    /** Estrellas juntadas en la Torre o en un capítulo (la mejor de cada piso). */
+    estrellasDe(t) { return Object.values((t && t.estrellas) || {}).reduce((s, n) => s + (Number(n) || 0), 0); },
 
     renderTienda() {
       const p = Estado.perfil, cont = $('tienda');
@@ -2592,17 +2670,29 @@
         pa.arcade.vidas -= 1;
         pa.arcade.puntajeTotal += pa.puntos;
         pa.arcade.palabrasTotal += pa.encontradas.length;
-        this.guardarSubida(pa.arcade);
+        // lo guardado apunta al último piso pasado: si se cierra la app acá, el que perdió se vuelve a jugar
+        if (pa.arcade.cap) this.guardarVidasCap(pa.arcade); else this.guardarSubida(Object.assign({}, pa.arcade, { piso: pa.arcade.piso - 1 }));
+        Audio.vida(); this.vineta('flash-rojo');
+        this.magos.juego.animar('sad', 1500);
+        if (pa.jefe) this.magos.jefe.animar('happy', 1500);
+        const falta = pa.jefe ? `Le quedaban ${pa.objetivo - pa.puntosPiso} HP.` : `Te faltaron ${pa.objetivo - pa.puntosPiso} pts para el objetivo.`;
+        const cab = pa.jefe ? `${esc(pa.nombreJefe.toUpperCase())} RESISTIÓ` : '¡SE ACABÓ EL TIEMPO!';
         if (pa.arcade.vidas > 0) {
-          Audio.vida(); this.vineta('flash-rojo');
-          this.magos.juego.animar('sad', 1500);
-          if (pa.jefe) this.magos.jefe.animar('happy', 1500);
-          this.modal(`<h3>${pa.jefe ? `${esc(pa.nombreJefe.toUpperCase())} RESISTIÓ` : '¡SE ACABÓ EL TIEMPO!'}</h3><div class="modal-silabo" data-pose="sad"></div><p>${pa.jefe ? `Le quedaban ${pa.objetivo - pa.puntosPiso} HP.` : `Te faltaron ${pa.objetivo - pa.puntosPiso} pts para el objetivo.`} Te quedan ${WWIconos.html('corazon').repeat(pa.arcade.vidas)}.</p><p>Otra palabra, mismo piso.</p>`, [
+          // v2.55: perder todas las vidas manda al piso 1, así que la última se avisa
+          const ultima = pa.arcade.vidas === 1 ? `<p class="aviso-ultima">${esc(T(pa.arcade.cap ? 'Te queda una sola vida: si la perdés, el capítulo vuelve a empezar.' : 'Te queda una sola vida: si la perdés, volvés al piso 1.'))}</p>` : '';
+          this.modal(`<h3>${cab}</h3><div class="modal-silabo" data-pose="sad"></div><p>${falta} Te quedan ${WWIconos.html('corazon').repeat(pa.arcade.vidas)}.</p>${ultima}<p>Otra palabra, mismo piso.</p>`, [
             { texto: 'Reintentar piso ' + pa.arcade.piso, clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { piso: pa.arcade.piso, continuar: true, usadas: pa.arcade.usadas, reintento: true, cap: pa.arcade.cap || undefined }) },
-            { texto: 'Rendirse', clase: 'btn-secundario', accion: () => this.cerrarArcade(pa) },
+            { texto: T('Seguir después'), clase: 'btn-secundario', accion: () => { if (pa.arcade.cap) return this.cerrarCap(pa); pa.arcade.cerrada = true; this.irMenu(); } },
           ]);
           return;
         }
+        // sin vidas: la subida (o la tanda del capítulo) termina y la próxima arranca de cero
+        this.sacudir(true);
+        const repetido = pa.arcade.cap && this.capitulo(pa.arcade.cap).terminado;
+        this.modal(`<h3>${esc(T('¡SIN VIDAS!'))}</h3><div class="modal-silabo" data-pose="sad"></div><p>${falta}</p><p>${esc(T(repetido ? 'Se terminó esta vuelta. El capítulo ya es tuyo.' : pa.arcade.cap ? 'Se terminó la tanda: el capítulo vuelve a empezar desde el piso 1.' : 'Se terminó la subida: la próxima arranca en el piso 1. Lo que ya ganaste queda.'))}</p>`, [
+          { texto: T('Ver cómo me fue'), clase: 'btn-primario', accion: () => this.cerrarArcade(pa) },
+        ]);
+        return;
       } else if (pa.modo === 'arcade') {
         pa.arcade.puntajeTotal += pa.puntos;
         pa.arcade.palabrasTotal += pa.encontradas.length;
@@ -3952,7 +4042,9 @@
           const k = this.capitulo(c.id);
           if (c.requiere && !this.capitulo(c.requiere).terminado) return { tipo: 'bloqueado', txt: T('Primero terminá {c}', { c: T(this.datosCap(c.requiere).n) }), pct: 0 };
           if (k.terminado) return { tipo: 'hecho', txt: T('Terminado'), pct: 100 };
-          if (k.mejorPiso) return { tipo: 'jugando', txt: T('Piso {n} de {t}', { n: k.mejorPiso, t: c.pisos }), pct: k.mejorPiso / c.pisos * 100 };
+          const av = this.tandaCap(c.id).avance;
+          if (av) return { tipo: 'jugando', txt: T('Piso {n} de {t}', { n: av, t: c.pisos }), pct: av / c.pisos * 100 };
+          if (k.mejorPiso) return { tipo: 'jugando', txt: T('Vuelve a empezar'), pct: 0 };
           return { tipo: 'nuevo', txt: T('Incluido en tu Pase'), pct: 0 };
         }
         return pase ? { tipo: 'pronto', txt: T('Muy pronto · incluido en tu Pase') } : { tipo: 'pase', txt: T('Con el Pase de Mago') };
@@ -4176,12 +4268,12 @@
       const C = this.datosCap(id); if (!C) return;
       const c = this.capitulo(id), primera = !c.visto;
       if (primera) { c.visto = true; Estado.guardar(); }
-      const sig = c.terminado ? 1 : Math.min(C.pisos, (c.mejorPiso || 0) + 1);
+      const tanda = this.tandaCap(id), sig = c.terminado ? 1 : tanda.avance + 1;
       const texto = c.terminado ? T('Ya lo terminaste. Podés jugarlo de nuevo: no suma monedas.')
         : primera ? `${T(C.historia)} ${T(C.ayudaTexto)}`
-          : sig === C.pisos ? T('Te falta el último: {j}.', { j: T(C.jefe) }) : T('Vas por el piso {n} de {t}.', { n: sig, t: C.pisos });
-      this.modal(`<h3>${esc(T(C.n).toUpperCase())}</h3><div class="novedad-ilu">${WWCampanas.escena(id, !!c.terminado)}</div>${this.cartelCap(id, c.terminado ? C.pisos : sig - 1)}<p>${esc(texto)}</p>`, [
-        { texto: c.terminado ? T('Jugar de nuevo') : sig === C.pisos ? T('Enfrentar {x}', { x: T(C.contra) }) : T('Jugar el piso {n}', { n: sig }), clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { cap: id, piso: sig }) },
+          : sig === C.pisos ? T('Te falta el último: {j}.', { j: T(C.jefe) }) : sig === 1 && (c.mejorPiso || 0) > 0 ? T('Se acabaron las vidas: el capítulo vuelve a empezar.') : T('Vas por el piso {n} de {t}.', { n: sig, t: C.pisos });
+      this.modal(`<h3>${esc(T(C.n).toUpperCase())}</h3><div class="novedad-ilu">${WWCampanas.escena(id, !!c.terminado)}</div>${this.cartelCap(id, c.terminado ? C.pisos : sig - 1)}<p>${esc(texto)}</p><p class="cap-tanda">${c.terminado ? '' : WWIconos.html('corazon').repeat(tanda.vidas) + WWIconos.html('corazonVacio').repeat(CONFIG.arcade.vidas - tanda.vidas)}${this.estrellasDe(c) ? ` <span class="cap-estrellas">${WWIconos.html('estrella')} ${esc(T('{n} de {t} estrellas', { n: this.estrellasDe(c), t: C.pisos * 3 }))}</span>` : ''}</p>`, [
+        { texto: c.terminado ? T('Jugar de nuevo') : sig === C.pisos ? T('Enfrentar {x}', { x: T(C.contra) }) : T('Jugar el piso {n}', { n: sig }), clase: 'btn-primario', accion: () => this.nuevaPartida('arcade', { cap: id, piso: sig, vidas: c.terminado ? CONFIG.arcade.vidas : tanda.vidas }) },
       ], { cerrar: true });
     },
 
@@ -4229,7 +4321,7 @@
       this.ponerLugar(null);   // de vuelta al bosque (el fondo del capítulo no se queda en el libro)
       this.verCampanas();
       const sinVidas = a.vidas <= 0 && !this.capitulo(a.cap).terminado;
-      if (xp || sinVidas) this.toast(`<div><b>${xp ? `+${xp} XP` : esc(T(this.datosCap(a.cap).n))}</b>${sinVidas ? `<br><small>${esc(T('Se acabaron las vidas: seguís desde el piso {n}', { n: Math.min(this.datosCap(a.cap).pisos, (this.capitulo(a.cap).mejorPiso || 0) + 1) }))}</small>` : ''}</div>`);
+      if (xp || sinVidas) this.toast(`<div><b>${xp ? `+${xp} XP` : esc(T(this.datosCap(a.cap).n))}</b>${sinVidas ? `<br><small>${esc(T('Se acabaron las vidas: el capítulo vuelve a empezar.'))}</small>` : ''}</div>`);
       this.anunciarLogros(nuevos);
     },
 
@@ -4252,8 +4344,22 @@
     /** Foto de la subida en el perfil, para seguirla otro día. enPiso: el piso que se está jugando ahora. */
     guardarSubida(a, enPiso) {
       const p = Estado.perfil;
-      p.subida = { v: 2, piso: a.piso, vidas: a.vidas, puntajeTotal: a.puntajeTotal, palabrasTotal: a.palabrasTotal, usadas: a.usadas.slice(-60), monedas: a.monedas, jefes: a.jefes, desde: a.desde || 1, enPiso: enPiso || null, fecha: this.hoy };
+      p.subida = { v: 2, piso: a.piso, vidas: a.vidas, puntajeTotal: a.puntajeTotal, palabrasTotal: a.palabrasTotal, usadas: a.usadas.slice(-60), monedas: a.monedas, jefes: a.jefes, desde: a.desde || 1, enPiso: enPiso || null, fecha: this.hoy, puntosNuevos: a.puntosNuevos || 0, pisosNuevos: a.pisosNuevos || 0 };
       Estado.guardar();
+    },
+    /** Capítulo: después de perder una vida, la tanda guarda las que quedan (sin vidas, vuelve a empezar). Terminado, no guarda nada. */
+    guardarVidasCap(a) {
+      const c = this.capitulo(a.cap);
+      if (c.terminado) return;
+      c.subida = a.vidas > 0 ? { avance: Math.max(0, a.piso - 1), vidas: a.vidas } : { avance: 0, vidas: CONFIG.arcade.vidas };
+      Estado.guardar();
+    },
+    /** Dónde sigue un capítulo y con cuántas vidas. Los que venían de antes de la v2.55 siguen desde su mejor piso, con vidas llenas. */
+    tandaCap(id) {
+      const c = this.capitulo(id), C = this.datosCap(id);
+      if (c.terminado) return { avance: 0, vidas: CONFIG.arcade.vidas };
+      const s = c.subida && typeof c.subida === 'object' ? c.subida : { avance: c.mejorPiso || 0, vidas: CONFIG.arcade.vidas };
+      return { avance: Math.min(C.pisos - 1, Math.max(0, s.avance || 0)), vidas: Math.min(CONFIG.arcade.vidas, Math.max(1, s.vidas || CONFIG.arcade.vidas)) };
     },
 
     /** Partida "de mentira" para volver al mapa con una subida guardada (o desde un checkpoint). */
@@ -4272,7 +4378,7 @@
       if (p.subida && p.subida.v !== 2) { p.subida = null; Estado.guardar(); }
       const s = p.subida;
       if (s && s.vidas > 0) {
-        const arcade = { piso: s.piso, vidas: s.vidas, puntajeTotal: s.puntajeTotal, palabrasTotal: s.palabrasTotal, usadas: s.usadas || [], monedas: s.monedas || 0, jefes: s.jefes || 0, desde: s.desde || 1 };
+        const arcade = { piso: s.piso, vidas: s.vidas, puntajeTotal: s.puntajeTotal, palabrasTotal: s.palabrasTotal, usadas: s.usadas || [], monedas: s.monedas || 0, jefes: s.jefes || 0, desde: s.desde || 1, puntosNuevos: s.puntosNuevos || 0, pisosNuevos: s.pisosNuevos || 0 };
         let aviso = '';
         // se cerró la app a mitad de un piso: ese intento cuenta, pero nunca se lleva la última vida
         if (s.enPiso) {
@@ -4284,15 +4390,9 @@
         this.guardarSubida(arcade);
         return this.verTorre({ pa });
       }
-      const cp = Math.min(this.torre().checkpoint || 0, WWMapa.PISOS_CAPITULO - 5);
-      if (!cp) return this.verTorre();
-      this.modal(`<h3>LA TORRE ARCANA</h3><div class="modal-silabo" data-pose="happy"></div><p>¿Desde dónde subís?</p><p>Último jefe vencido: <b>${esc(WW.nombreJefe(cp))}</b></p><p class="modal-nota">El puntaje de la subida cuenta desde donde arranques.</p>`, [
-        { texto: `Desde el piso ${cp + 1}`, clase: 'btn-primario', accion: () => {
-          const pa = this.partidaTorre({ piso: cp, vidas: CONFIG.arcade.vidas, puntajeTotal: 0, palabrasTotal: 0, usadas: [], monedas: 0, jefes: 0, desde: cp + 1 }, 'checkpoint');
-          this.verTorre({ pa });
-        } },
-        { texto: 'Desde el piso 1', clase: 'btn-secundario', accion: () => this.verTorre() },
-      ], { cerrar: true });
+      // v2.55 (11/11/2026): sin checkpoint. Si se acabaron las vidas, la subida nueva arranca en el piso 1
+      // (pedido de un jugador del Pase: "la Torre se pasa fácil, le falta adrenalina"; docs/TORRE-VIDAS.md, opción A)
+      return this.verTorre();
     },
 
     /** Salir a mitad de un piso: cuenta como intento (sin sacar la última vida) y la subida queda guardada. */
@@ -4302,7 +4402,8 @@
       this.limpiarSeleccion(); this.limpiarEfectos();
       this.anotarTiempo(pa);
       const a = pa.arcade;
-      if (a.cap) { a.puntajeTotal += pa.puntos; return this.cerrarCap(pa); }   // el capítulo sigue desde el último piso pasado
+      // el capítulo sigue desde el último piso pasado; dejar un piso a medias cuenta como intento (nunca se lleva la última vida)
+      if (a.cap) { if (a.vidas > 1) a.vidas -= 1; this.guardarVidasCap(a); a.puntajeTotal += pa.puntos; return this.cerrarCap(pa); }
       if (a.vidas > 1) a.vidas -= 1;
       a.puntajeTotal += pa.puntos;
       a.palabrasTotal += pa.encontradas.length;
@@ -4325,7 +4426,9 @@
         ? `<b>${pa.retomada === 'checkpoint' ? `Arrancás después de ${esc(WW.nombreJefe(hecho))}` : 'Seguís tu subida'}</b><small>${pa.retomada === 'checkpoint' ? 'Vidas llenas y puntaje desde cero.' : `Llevás ${pa.arcade.puntajeTotal} pts en esta subida`}</small>${pa.avisoVida ? `<small>${pa.avisoVida}</small>` : ''}${jefeSig}`
         : pa
         ? `<b>${pa.jefe ? `¡${esc(pa.nombreJefe)} vencido!` : `¡Piso ${hecho} superado!`}</b><small>Llevás ${pa.arcade.puntajeTotal} pts en esta subida</small>${jefeSig}`
-        : `<b>La Torre Arcana: 20 pisos</b><small>Las mismas palabras para todos, de la más fácil a la más difícil. Tenés 3 vidas y cada 5 pisos hay un jefe.${this.marcaTorre(p).piso ? ` Llegaste al piso ${this.marcaTorre(p).piso}.` : ''}</small>`;
+        : `<b>La Torre Arcana: 20 pisos</b><small>Las mismas palabras para todos, de la más fácil a la más difícil. Cada 5 pisos hay un jefe. Tenés 3 vidas: si las perdés todas, volvés al piso 1.${this.marcaTorre(p).piso ? ` Llegaste al piso ${this.marcaTorre(p).piso}.` : ''}</small>`;
+      const est = this.estrellasDe(this.torre());
+      if (est) $('mapa-info').insertAdjacentHTML('beforeend', `<small class="mapa-estrellas">${WWIconos.html('estrella')} ${esc(T('{n} de {t} estrellas', { n: est, t: WWMapa.PISOS_CAPITULO * 3 }))}</small>`);
       const hoyT = this.torreHoy();
       $('mapa-info').insertAdjacentHTML('beforeend', `<small class="mapa-tope">${WWIconos.html('moneda')} La Torre te dio ${hoyT.monedas} de ${CONFIG.topeTorre} monedas hoy${hoyT.monedas >= CONFIG.topeTorre ? ' · mañana hay más' : ''}</small>`);
       const btn = $('mapa-jugar');
