@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.55.0',
+    version: '2.55.1',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     monedasEstrella: 3,   // v2.55: cada estrella nueva de un piso (Torre y capítulos), dentro del tope diario de la Torre
@@ -819,7 +819,7 @@
       if (!jugo || String(p.creado) > '2026-11-12T00:00:00') return false;
       const est = [1, 2, 3].map((i) => `<span class="${i === 1 ? 'on' : 'nueva'}">${WWIconos.html('estrella')}</span>`).join('');
       return this.pasosNovedad('nov255', [
-        { t: T('¡ESTRELLAS EN LA TORRE!'), h: `<div class="estrellas-piso">${est}</div><p>${T('Cada piso tiene <b>3 estrellas</b>: una por el objetivo, otra por encontrar <b>la mitad de las palabras</b> y la tercera por <b>encontrarlas todas</b>.')}</p><p>${T('Cada estrella nueva da monedas, aunque repitas el piso. También en los capítulos de Aventura.')}</p>` },
+        { t: T('¡ESTRELLAS EN LA TORRE!'), h: `<div class="estrellas-piso">${est}</div><p>${T('Cada piso tiene <b>3 estrellas</b>: una por el objetivo, otra por encontrar <b>un tercio de las palabras</b> y la tercera por llegar a <b>la mitad</b>.')}</p><p>${T('Cada estrella nueva da monedas, aunque repitas el piso. También en los capítulos de Aventura.')}</p>` },
         { t: T('LAS VIDAS PESAN'), h: `<div class="modal-silabo" data-pose="cast"></div><p>${T('Tenés 3 vidas por subida. <b>Si las perdés todas, volvés al piso 1</b>: ya no se arranca desde el último jefe.')}</p><p>${T('En los capítulos, lo mismo: sin vidas, el capítulo vuelve a empezar. Lo que ya ganaste (ranking, estrellas, monedas) queda.')}</p>` },
       ]);
     },
@@ -2406,8 +2406,9 @@
       // después del festejo, la próxima meta: la segunda estrella (o la tercera, si ya llegó a la mitad)
       setTimeout(() => {
         if (this.partida !== pa || pa.terminada) return;
-        if (this.estrellasPiso(pa) >= 2) { pa.avisoEst = 2; this.globo(T('¡Piso ganado con dos estrellas! Encontralas todas para la tercera'), 'wow'); }
-        else this.globo(T('¡Piso ganado! Con la mitad de las palabras, segunda estrella'), 'wow');
+        if (this.estrellasPiso(pa) >= 3) { pa.avisoEst = 3; this.globo(T('¡Piso ganado con tres estrellas!'), 'wow'); }
+        else if (this.estrellasPiso(pa) >= 2) { pa.avisoEst = 2; this.globo(T('¡Piso ganado con dos estrellas! Llegá a la mitad para la tercera'), 'wow'); }
+        else this.globo(T('¡Piso ganado! Con un tercio de las palabras, segunda estrella'), 'wow');
       }, 1300);
       const b = $('btn-terminar');
       b.textContent = 'Subir ▲';
@@ -2415,12 +2416,14 @@
       this.renderProgreso(); this.renderPoderes();
     },
 
-    /** Con el piso ya ganado: festejo chico cuando llega a la mitad de las palabras (segunda estrella). La tercera cierra el piso sola. */
+    /** Con el piso ya ganado: festejo cuando llega a un tercio de las palabras (segunda estrella) y a la mitad (tercera). */
     avisoEstrella(pa) {
-      if ((pa.avisoEst || 1) >= 2 || this.estrellasPiso(pa) < 2) return;
-      pa.avisoEst = 2;
-      Audio.moneda(); this.confeti(20);
-      this.banner(WWIconos.html('estrella'), T('¡SEGUNDA ESTRELLA!'), T('Ahora, todas las palabras'), 'oro');
+      const est = this.estrellasPiso(pa);
+      if (est <= (pa.avisoEst || 1)) return;
+      pa.avisoEst = est;
+      Audio.moneda(); this.confeti(est >= 3 ? 50 : 20);
+      if (est >= 3) this.banner(WWIconos.html('estrella'), T('¡TERCERA ESTRELLA!'), T('Lo que sigue suma puntos'), 'oro');
+      else this.banner(WWIconos.html('estrella'), T('¡SEGUNDA ESTRELLA!'), T('Ahora, la mitad de las palabras'), 'oro');
     },
 
     /** Cierre del piso: por tiempo (con el objetivo cumplido), porque tocó "Subir" o porque encontró todas. */
@@ -2448,7 +2451,7 @@
       // repetir un piso ya pasado no da monedas ni cambia el ranking: cuenta lo que hiciste la primera vez
       if (!nuevo) bonusMonedas = 0;
       else { t.primera[pa.arcade.piso] = pa.puntos + bonusPts; pa.arcade.puntosNuevos = (pa.arcade.puntosNuevos || 0) + pa.puntos + bonusPts; pa.arcade.pisosNuevos = (pa.arcade.pisosNuevos || 0) + 1; }
-      // estrellas (v2.55): ★ el objetivo, ★★ la mitad de las palabras, ★★★ todas. Cada estrella nueva da monedas,
+      // estrellas (v2.55): ★ el objetivo, ★★ un tercio de las palabras, ★★★ la mitad. Cada estrella nueva da monedas,
       // también al repetir el piso: es lo que hace volver, sin que repetir sea una fábrica de monedas (hay 3 por piso)
       const est = this.estrellasPiso(pa), estAntes = (t.estrellas && t.estrellas[pa.arcade.piso]) || 0;
       if (est > estAntes) { t.estrellas = Object.assign({}, t.estrellas, { [pa.arcade.piso]: est }); bonusMonedas += (est - estAntes) * CONFIG.monedasEstrella; }
@@ -2492,10 +2495,10 @@
         !info.repetido || info.bonusMonedas || info.topeAlcanzado ? fila(info.topeAlcanzado ? 'Monedas (tope del día)' : 'Monedas', `+${info.bonusMonedas} ${WWIconos.html('moneda')}`) : '',
         fila(pa.arcade.cap ? 'Total del capítulo' : 'Total de la subida', pa.arcade.puntajeTotal + ' pts', 'total'),
       ].filter(Boolean).join('');
-      const titulo = info.est >= 3 ? esc(T('¡PISO PERFECTO!')) : pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`;
+      const titulo = info.est >= 3 ? esc(T('¡TRES ESTRELLAS!')) : pa.jefe ? `¡${esc(pa.nombreJefe.toUpperCase())} VENCIDO!` : `¡PISO ${pa.arcade.piso} SUPERADO!`;
       // las estrellas del piso: las nuevas se encienden de a una (v2.55)
       const estHtml = `<div class="estrellas-piso" role="img" aria-label="${esc(T('{n} de 3 estrellas', { n: info.est }))}">${[1, 2, 3].map((i) => `<span class="${i <= info.est ? (i > info.estAntes ? 'nueva' : 'on') : ''}">${WWIconos.html('estrella')}</span>`).join('')}</div>
-        <p class="estrellas-meta">${esc(T(info.est >= 3 ? 'Encontraste todas las palabras del piso' : info.est === 2 ? 'Encontrá todas las palabras para la tercera estrella' : 'Encontrá la mitad de las palabras para la segunda estrella'))}</p>`;
+        <p class="estrellas-meta">${esc(T(info.est >= 3 ? 'Encontraste la mitad de las palabras del piso o más' : info.est === 2 ? 'Llegá a la mitad de las palabras para la tercera estrella' : 'Encontrá un tercio de las palabras para la segunda estrella'))}</p>`;
       // las palabras del piso: las que hiciste y las que te faltaron (pedido de los testers, 14/10)
       this.modal(`<h3>${titulo}</h3><div class="modal-silabo" data-pose="happy"></div>${estHtml}<ul class="resumen-piso">${filas}</ul>
         <button class="btn-link-cuenta" id="piso-ver">Ver las palabras del piso</button>
@@ -2522,11 +2525,15 @@
       lis.forEach((li, i) => setTimeout(() => Audio.tecla(), desde + i * 260));
     },
 
-    /** Estrellas de un piso recién ganado: ★ el objetivo, ★★ la mitad de las palabras, ★★★ todas (sin contar las del ojo arcano). */
+    /**
+     * Estrellas de un piso recién ganado: ★ el objetivo, ★★ un tercio de las palabras exigidas, ★★★ la mitad (sin contar las del
+     * ojo arcano). Umbrales del 11/11/2026 con los datos de los testers: en 200 desafíos de 3 minutos nadie encontró todas
+     * (máximo 89 %, mediana 40 %, la mitad o más en el 31 %); un piso dura 75 s, así que "todas" era imposible.
+     */
     estrellasPiso(pa) {
       const propias = pa.nEnc - [...pa.ojos].filter((w) => pa.nucleo.has(w)).length;
-      if (pa.total && propias >= pa.total) return 3;
-      if (pa.total && propias >= Math.ceil(pa.total / 2)) return 2;
+      if (pa.total && propias >= Math.ceil(pa.total / 2)) return 3;
+      if (pa.total && propias >= Math.ceil(pa.total / 3)) return 2;
       return 1;
     },
     /** Estrellas juntadas en la Torre o en un capítulo (la mejor de cada piso). */
