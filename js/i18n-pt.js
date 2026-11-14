@@ -453,6 +453,7 @@ window.WWI18n && WWI18n.registrar('pt', {   // si i18n.js no llegó, index.html 
   "Empaña letras: cada palabra que encontrás despeja una": "Embaça letras: cada palavra que você encontra limpa uma",
   "Esa la empañó la niebla: encontrá una palabra para despejarla": "A névoa embaçou essa: encontre uma palavra para limpá-la",
   "La niebla empañó una letra: encontrá una palabra para despejarla": "A névoa embaçou uma letra: encontre uma palavra para limpá-la",
+  "La niebla se corrió: ahí tenés letras para seguir": "A névoa se afastou: aí tem letras para continuar",
   "Doña Lenta: tranqui, el reloj espera 10 segundos": "Dona Lenta: calma, o relógio espera 10 segundos",
   "Te falta el último: {j}.": "Falta o último: {j}.",
   "Enfrentar {x}": "Enfrentar {x}",

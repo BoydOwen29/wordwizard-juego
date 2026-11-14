@@ -453,6 +453,7 @@ window.WWI18n && WWI18n.registrar('en', {   // si i18n.js no llegó, index.html 
   "Empaña letras: cada palabra que encontrás despeja una": "It fogs letters: every word you find clears one",
   "Esa la empañó la niebla: encontrá una palabra para despejarla": "The fog covered that one: find a word to clear it",
   "La niebla empañó una letra: encontrá una palabra para despejarla": "The fog covered a letter: find a word to clear it",
+  "La niebla se corrió: ahí tenés letras para seguir": "The fog lifted a little: you have letters to keep going",
   "Doña Lenta: tranqui, el reloj espera 10 segundos": "Mrs. Slow: easy, the clock waits 10 seconds",
   "Te falta el último: {j}.": "Only the last one left: {j}.",
   "Enfrentar {x}": "Face {x}",

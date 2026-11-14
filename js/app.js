@@ -66,7 +66,7 @@
   const $ = (id) => document.getElementById(id);
 
   const CONFIG = {
-    version: '2.55.1',
+    version: '2.55.2',
     diario: { tiempo: 180 },
     arcade: { tiempo: 75, tiempoJefe: 110, vidas: 3 },
     monedasEstrella: 3,   // v2.55: cada estrella nueva de un piso (Torre y capítulos), dentro del tope diario de la Torre
@@ -4210,12 +4210,32 @@
       const nb = pa.niebla, ahora = Date.now();
       if (pa.superado) return;
       if (!nb.aviso && ahora >= nb.prox - 1200 && nb.tapadas.length < 3) { nb.aviso = true; $('jefe-viento').classList.add('sopla'); }
+      // red de seguridad: si con las letras que se ven ya no sale ninguna palabra nueva, la niebla suelta una (si no, el piso queda trabado)
+      if (nb.tapadas.length && !this.quedaPalabra(pa, nb.tapadas)) {
+        const i = nb.tapadas.findIndex((_, k) => this.quedaPalabra(pa, nb.tapadas.filter((__, j) => j !== k)));
+        nb.tapadas.splice(i >= 0 ? i : 0, 1); this.renderFichas();
+        this.globo(T('La niebla se corrió: ahí tenés letras para seguir'), 'ok');
+      }
       if (ahora >= nb.prox) {
         nb.aviso = false; $('jefe-viento').classList.remove('sopla');
-        const libres = pa.orden.filter((i) => !pa.fichas[i].usada && !nb.tapadas.includes(i));
-        if (nb.tapadas.length < 3 && libres.length > 2) { nb.tapadas.push(azar(libres)); Audio.borrar(); this.renderFichas(); this.globo(T('La niebla empañó una letra: encontrá una palabra para despejarla'), 'mal'); }
+        // solo empaña una letra si con las que quedan a la vista todavía se puede armar alguna palabra no encontrada
+        const libres = pa.orden.filter((i) => !pa.fichas[i].usada && !nb.tapadas.includes(i) && this.quedaPalabra(pa, nb.tapadas.concat(i)));
+        if (nb.tapadas.length < 3 && libres.length) { nb.tapadas.push(azar(libres)); Audio.borrar(); this.renderFichas(); this.globo(T('La niebla empañó una letra: encontrá una palabra para despejarla'), 'mal'); }
         nb.prox = ahora + (nb.cada || 12000);
       }
+    },
+    /** ¿Con las letras sin tapar se puede armar alguna palabra que todavía no encontró? (para que la niebla nunca trabe el piso) */
+    quedaPalabra(pa, tapadas) {
+      // solo palabras conocidas (núcleo): una extra rara como "lui" no cuenta como salida (caso de Kensi, 13/11/2026)
+      for (const w of pa.nucleo) if (!pa.encontradasSet.has(w) && this.seArma(pa, w, tapadas)) return true;
+      return false;
+    },
+    /** ¿La palabra w sale con las fichas que no están en tapadas? */
+    seArma(pa, w, tapadas) {
+      const hay = {};
+      pa.fichas.forEach((f, i) => { if (!tapadas.includes(i)) hay[f.l] = (hay[f.l] || 0) + 1; });
+      for (const l of w) { if (!hay[l]) return false; hay[l]--; }
+      return true;
     },
 
     /** La Paciencia de Doña Lenta: una vez por piso, el reloj se queda quieto 10 segundos. */
@@ -4250,6 +4270,8 @@
       let cands = this.faltantes().filter((w) => w.length >= 6 && w !== pa.base);
       if (!cands.length) cands = this.faltantes().filter((w) => w.length >= 5 && w !== pa.base);
       if (!cands.length) { this.globo(T('Tomillo: ¡no te falta ninguna larga!'), 'wow'); return; }
+      // con niebla, mejor una que se pueda armar con las letras que se ven
+      if (pa.niebla && pa.niebla.tapadas.length) { const vis = cands.filter((x) => this.seArma(pa, x, pa.niebla.tapadas)); if (vis.length) cands = vis; }
       const w = azar(cands);
       let idx = pa.orden.find((i) => pa.fichas[i].l === w[0] && !this.tapada(pa, i));
       if (idx == null) idx = pa.orden.find((i) => pa.fichas[i].l === w[0]);
